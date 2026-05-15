@@ -15,7 +15,6 @@ import {
 } from "@/components/roast/roast-shared";
 import {
   enqueueAnalyze,
-  fetchMyRoasts,
   openAnalysisEventSource,
   RateLimitedError,
   uploadResumeMultipart,
@@ -63,27 +62,6 @@ export function RoastUpload() {
       esRef.current = null;
     };
   }, []);
-
-  /** Signed-in users with server saves land on dashboard unless `?new=1`. */
-  useEffect(() => {
-    if (!isSignedIn || skipSignedInRedirect) return;
-    let alive = true;
-    (async () => {
-      const tok = await getToken();
-      if (!tok || !alive) return;
-      try {
-        const items = await fetchMyRoasts(tok);
-        if (!alive || items.length === 0) return;
-        const pick = items.find((i) => i.analysis_status === "done") ?? items[0];
-        router.replace(`/dashboard?resume=${pick.resume_id}`);
-      } catch {
-        /* stay on upload */
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [getToken, isSignedIn, router, skipSignedInRedirect]);
 
   const waitForDone = useCallback(
     (resumeId: string, analysisId: string, startedAt: number) => {
