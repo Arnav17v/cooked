@@ -1,0 +1,41 @@
+---
+description: Backend conventions (FastAPI, SQLAlchemy, Alembic)
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend rules
+
+## LLM boundary
+
+LLM SDK imports (`google.generativeai`, `groq`, etc.) are allowed **only** inside `backend/app/services/llm/`. Anywhere else is a bug.
+
+- `services/llm/router.py` is the single entry point. Task-based: `analyze` + `questions` → Google (`GEMINI_MODEL`, Gemma/Gemini), `evaluate` + `feedback` → Groq. Cross-vendor failover on 429/5xx/timeout. Returns `degraded=True` when both fail.
+- Prompt caching enabled on every call.
+
+## Async + scheduled work
+
+- `BackgroundTasks` + SSE only. **No Redis. No Celery.**
+- The only scheduler is `APScheduler`, wired in `core/scheduler.py`, started on `app.startup`.
+- The daily retention job (`services/resume/retention.py`) nulls `resumes.raw_text`, deletes the R2 PDF, and stamps `raw_text_deleted_at` for rows older than 24h.
+
+## API
+
+- All routes prefixed `/api/v1/`.
+- Public routes use `share_slug`, never expose `analyses.id`, `users.id`, or any other UUID.
+- Validate every request and every LLM response with Pydantic / zod-equivalent.
+
+## Parsing + storage
+
+- `services/resume/parser.py` uses `pymupdf`. The **4000-word cap** is enforced here, before any LLM call.
+- Frontend never uploads to R2 directly. PDF flow: Frontend → FastAPI → R2 → pymupdf → Postgres.
+
+## Rate limit
+
+- **3 analyses per user per day**, enforced via `users.analyses_today` + `users.last_analysis_date` **before** the LLM call. `slowapi` per-IP is the second wall.
+
+## Schema
+
+- Every change is an Alembic migration. **No manual `ALTER TABLE` in production.**
+- Use `jsonb` (`score_breakdown`, `red_flags`, `rewritten_bullets`, `feedback`) so LLM-output shape can evolve. Record `prompt_version` on every analyses row.
+- Safe ops: add column with default, add table, add index. Dangerous ops (rename / drop / type change / NOT NULL with no default): use add → backfill → switch → drop.

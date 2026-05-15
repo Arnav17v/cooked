@@ -1,0 +1,53 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { ScoreCard } from "@/components/score/ScoreCard";
+import { fetchSharePayload } from "@/lib/api";
+
+type PageProps = { params: Promise<{ slug: string }> };
+
+function normalizeHeat(label: string | null | undefined): string {
+  const lower = (label ?? "Medium").trim().toLowerCase();
+  const map: Record<string, string> = {
+    easy: "Raw",
+    raw: "Raw",
+    medium: "Medium",
+    hard: "Hard",
+    cooked: "Cooked",
+  };
+  return map[lower] ?? "Medium";
+}
+
+export default async function SharePage({ params }: PageProps) {
+  const { slug } = await params;
+  const data = await fetchSharePayload(slug);
+  if (!data) {
+    notFound();
+  }
+
+  const heat = normalizeHeat(data.heat_label);
+  const scoreVal = data.cooked_score ?? data.score;
+  if (scoreVal === null || scoreVal === undefined) {
+    notFound();
+  }
+  const score = Math.min(100, Math.max(0, scoreVal));
+  const headline = data.one_liner ?? data.headline;
+
+  return (
+    <main className="mx-auto w-full max-w-md px-4 py-10">
+      <ScoreCard
+        cookedScore={score}
+        heatLabel={heat}
+        headline={headline}
+        targetRole={data.target_role ?? data.role}
+        degraded={data.degraded}
+      />
+
+      <p className="mt-10 text-center font-mono text-[11px] text-lc-dim">
+        <Link href="/" className="text-lc-orange hover:underline">
+          Roast yours → amicooked.app
+        </Link>
+      </p>
+    </main>
+  );
+}

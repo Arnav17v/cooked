@@ -1,0 +1,44 @@
+---
+description: Frontend conventions (Next.js 15, App Router)
+globs: frontend/**/*.{ts,tsx,js,jsx,css}
+alwaysApply: false
+---
+
+# Frontend rules
+
+## App Router
+
+- **Server Components by default.** Add `"use client"` only when the component needs state, effects, browser APIs, or event handlers.
+- Data fetching happens server-side via the FastAPI client in `frontend/src/lib/api.ts`. Frontend never talks to an LLM SDK.
+
+## Share / virality
+
+- Public score-card lives at `/share/[slug]`. Uses `share_slug`, never internal UUID.
+- Every share page must export a **dynamic OG image** via `@vercel/og` at `frontend/src/app/share/[slug]/opengraph-image.tsx` with `og:title`, `og:description`, and the score baked in.
+- `ScoreCard` is a single reusable component (`frontend/src/components/score/ScoreCard.tsx`) used by the demo result panel, the share page, and the OG image. Keep them visually identical.
+
+## Mobile-first
+
+- Score card must look perfect at **375px width** — that's the share screenshot context.
+- Every component is mobile-first; desktop breakpoints are progressive enhancement, not the baseline.
+
+## Async UX
+
+- Analysis takes 5–15 s. **Stream progress via SSE.** Show stages: *extracting resume… analyzing… generating questions…*
+- A blank spinner for >2 s is a bug. If it's slow, narrate why ("warming the model" handles the Render cold-start case).
+
+## Required states for every async surface
+
+Every component that calls an API must implement, visibly:
+
+1. Loading
+2. Error
+3. Empty
+4. Rate-limited (3/day cap)
+5. `degraded: true` (LLM fallback) — show an honest hint, not a hard error
+
+Happy-path-only PRs get bounced.
+
+## Styling
+
+LeetCode-inspired dark theme. Tokens live in `frontend/tailwind.config.ts` under `lc.*`. See `plans/design-system.md`.

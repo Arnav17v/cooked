@@ -1,0 +1,66 @@
+[project]
+name = "cooked-backend"
+version = "0.1.0"
+description = "Am I Cooked? backend — FastAPI service"
+requires-python = ">=3.11"
+dependencies = [
+    # Web framework
+    "fastapi[standard]>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+
+    # DB
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+
+    # Validation / config
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+
+    # Resume parsing (PDF via pdfplumber; pymupdf kept for emergency fallback)
+    "pdfplumber>=0.11.0",
+    "pymupdf>=1.25.0",
+
+    # LLM clients
+    "google-generativeai>=0.8.3",
+    "groq>=0.13.0",
+
+    # Object storage (R2 is S3-compatible)
+    "boto3>=1.35.0",
+
+    # Rate limiting
+    "slowapi>=0.1.9",
+
+    # Scheduled jobs (D-015)
+    "apscheduler>=3.10.4",
+
+    # Auth verification (added at build-order step 6)
+    "pyjwt[crypto]>=2.10.0",
+
+    # Misc
+    "httpx>=0.27.0",
+    "tenacity>=9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+    "types-python-jose",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]  # line length handled by formatter

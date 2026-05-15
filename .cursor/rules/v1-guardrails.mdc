@@ -1,0 +1,51 @@
+---
+description: Am I Cooked? v1 — product-wide guardrails (always apply)
+alwaysApply: true
+---
+
+# v1 guardrails
+
+Read `plans/` (especially `current-goals.md`, `decisions.md`, `tasks.md`) before non-trivial changes.
+
+## Scope (v1)
+
+Three must-have features, nothing else:
+
+1. Resume upload + Cooked Score (screenshot-able card)
+2. Resume red-flag detection with suggested rewrites
+3. 10–15 personalized interview questions from the user's exact bullets
+
+Stretch only if cheap: text-only answer practice, no rubric.
+
+**Banned in v1:** flashcards, rubric scoring, voice, JD targeting, "Can AI Replace Me?", community, ranked queues, credits, seminars, payments, subscription tiers, light theme.
+
+## Priority override
+
+After the core API works, **build the score card UI before anything else.** Do not default to building auth or dashboards first. Score card → /share/[slug] page → OG image. Then everything else.
+
+## Repo
+
+Monorepo with `frontend/` (Next.js) and `backend/` (FastAPI). No workspace tooling.
+
+## LLM
+
+- Free tier only. Google API (`GEMINI_MODEL`, default Gemma 4 31B IT + Gemini Flash fallback) + Groq Llama 3.3 70B. **No paid models.**
+- All LLM calls go through `backend/app/services/llm/router.py`. **The frontend never imports an LLM SDK.**
+- Task routing: `analyze` + `questions` → Google primary (`GEMINI_MODEL`); `evaluate` + `feedback` → Groq. Cross-vendor failover on 429/5xx.
+- Prompt caching enabled from day one.
+
+## Product invariants
+
+- **3 analyses per user per day**, enforced at DB level before any LLM call.
+- **4000-word input cap** enforced in `parser.py` before storage.
+- **Never expose internal UUIDs in public URLs.** Use `share_slug` only.
+- **`prompt_version` stored on every `analyses` row.**
+- **Raw resume text deleted after 24h** by the APScheduler retention sweep. Analysis output kept forever.
+
+## Async
+
+FastAPI `BackgroundTasks` + SSE for status. **No Redis, no Celery in v1.** APScheduler is the only scheduler.
+
+## Schema
+
+Every change goes through Alembic. **No manual `ALTER TABLE` in production.** `jsonb` columns absorb LLM-output evolution.

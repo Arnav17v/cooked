@@ -1,0 +1,2 @@
+Alembic migrations. Always go through `alembic revision --autogenerate` —
+never edit the DB by hand (D-012). See `plans/database-schema.md`.

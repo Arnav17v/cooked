@@ -1,0 +1,29 @@
+---
+description: Things explicitly NOT to build in v1
+alwaysApply: true
+---
+
+# v1 — do not build
+
+These have been considered and explicitly deferred. Do not bring them up as "while we're here" additions.
+
+## Hard skip — needs user approval to introduce
+
+- Traditional SEO surfaces (sitemap, robots.txt, blog, landing-page content farm). No content pages exist to rank.
+- Accessibility audit / WCAG conformance pass. v2.
+- i18n / multi-language. v2+.
+- PWA, service workers, offline mode. Overkill.
+- Heavy analytics. PostHog covers **pageview + analysis_started + analysis_completed + share_clicked**. Anything more bloats the free tier and adds noise.
+- Sentry / error-tracking SaaS. Use Render's stdout logs in v1.
+- Tests (unit, integration, e2e). No test infra in v1.
+- Storybook, design-token packages, monorepo workspace tooling.
+- Auth flows beyond Clerk's defaults. No magic links, no SSO providers, no roles.
+- Payment / Stripe / Razorpay. Pricing page is marketing-only until v2.
+- Redis, Celery, BullMQ, any worker queue.
+- A second database, a search index, a vector store.
+- Any LLM model that is not served on **Google AI Studio / Generative Language API** (`GEMINI_MODEL`: Gemini Flash family or Gemma open models) or **Groq Llama 3.3 70B** (both free tier).
+- Light theme. The brand is dark-first.
+
+## If you catch yourself doing one of the above
+
+Stop. Surface it in chat. Get explicit user approval before adding it. The cost of saying "no" is zero; the cost of bloating v1 is the whole product.
