@@ -4,7 +4,6 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy } from "lucide-react";
 
 import {
   isStructuredFlag,
@@ -15,6 +14,7 @@ import {
 } from "@/components/roast/roast-shared";
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
+import { ScoreShareActions } from "@/components/score/ScoreShareActions";
 import { QuizImprovementChart } from "@/components/roast/QuizImprovementChart";
 import {
   type FlagsResponse,
@@ -327,13 +327,6 @@ export function RoastDashboard() {
     };
   }, [displayScore, resolvedResumeId]);
 
-  function copyShareLink() {
-    const slug = liveScore?.share_slug;
-    if (!slug || typeof window === "undefined") return;
-    const url = `${window.location.origin}/share/${slug}`;
-    void navigator.clipboard.writeText(url);
-  }
-
   function openResume(id: string) {
     router.push(`/dashboard?resume=${id}`);
   }
@@ -554,11 +547,10 @@ export function RoastDashboard() {
             className="animate-dashboard-main-in flex-1 overflow-y-auto px-4 pb-16 pt-4 lg:px-8 lg:pt-6"
             aria-label="Roast detail"
           >
+            {resultTab !== "notes" ? (
             <div
               key={resultTab}
-              className={`animate-dashboard-panel-in mx-auto w-full ${
-                resultTab === "notes" ? "max-w-[820px]" : "max-w-[740px]"
-              }`}
+              className="animate-dashboard-panel-in mx-auto w-full max-w-[740px]"
               role="tabpanel"
             >
               {resultTab === "score" ? (
@@ -604,17 +596,17 @@ export function RoastDashboard() {
                         headline={headline}
                         showFooter
                         showTargetRole={false}
-                        showScoreLabel={false}
                         degraded={liveScore.degraded}
                       />
-                      <button
-                        type="button"
-                        onClick={() => copyShareLink()}
-                        className="mt-4 inline-flex h-9 items-center gap-2 rounded-md border border-lc-border bg-lc-elevated px-4 text-[12px] font-medium text-lc-text transition-transform duration-100 ease-out hover:-translate-y-px hover:border-lc-orange/50"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        copy share link
-                      </button>
+                      {liveScore.share_slug ? (
+                        <ScoreShareActions
+                          className="mt-4"
+                          score={displayScore ?? 0}
+                          shareSlug={liveScore.share_slug}
+                          heatLabel={liveScore.heat_label}
+                          headline={headline}
+                        />
+                      ) : null}
                     </div>
                   </div>
 
@@ -761,22 +753,30 @@ export function RoastDashboard() {
                 </div>
               ) : null}
 
-              {resolvedResumeId ? (
-                <div
-                  className={resultTab === "notes" ? "block" : "hidden"}
-                  aria-hidden={resultTab !== "notes"}
-                >
-                  <NotesStudyPage
-                    key={`${resolvedResumeId}-${notesRemountKey}`}
-                    resumeId={resolvedResumeId}
-                    embedded
-                    onNotesCreated={() => {
-                      setNotesRemountKey((k) => k + 1);
-                    }}
-                  />
-                </div>
-              ) : null}
             </div>
+            ) : null}
+
+            {resolvedResumeId ? (
+              <div
+                className={
+                  resultTab === "notes"
+                    ? "animate-dashboard-panel-in mx-auto block w-full max-w-[820px]"
+                    : "hidden"
+                }
+                role={resultTab === "notes" ? "tabpanel" : undefined}
+                aria-hidden={resultTab !== "notes"}
+              >
+                <NotesStudyPage
+                  key={`${resolvedResumeId}-${notesRemountKey}`}
+                  resumeId={resolvedResumeId}
+                  embedded
+                  notesTabActive={resultTab === "notes"}
+                  onNotesCreated={() => {
+                    setNotesRemountKey((k) => k + 1);
+                  }}
+                />
+              </div>
+            ) : null}
           </main>
         ) : null}
       </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ScoreCard } from "@/components/score/ScoreCard";
+import { ShareScorePanel } from "@/app/share/[slug]/share-score-panel";
 import { fetchSharePayload } from "@/lib/api";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -35,11 +35,12 @@ export default async function SharePage({ params }: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-10">
-      <ScoreCard
-        cookedScore={score}
+      <ShareScorePanel
+        score={score}
         heatLabel={heat}
         headline={headline}
         targetRole={data.target_role ?? data.role}
+        shareSlug={slug}
         degraded={data.degraded}
       />
 

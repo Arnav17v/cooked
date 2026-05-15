@@ -233,9 +233,16 @@ export type NotesStudyPageProps = {
   onNotesCreated?: () => void;
   /** When true, layout omits page chrome and quiz CTA (e.g. dashboard embed). */
   embedded?: boolean;
+  /** When false (dashboard on another tab), close/hide the section drawer. Default true. */
+  notesTabActive?: boolean;
 };
 
-export function NotesStudyPage({ resumeId, onNotesCreated, embedded = false }: NotesStudyPageProps) {
+export function NotesStudyPage({
+  resumeId,
+  onNotesCreated,
+  embedded = false,
+  notesTabActive = true,
+}: NotesStudyPageProps) {
   const router = useRouter();
   const { isSignedIn, getToken } = useAuth();
 
@@ -314,9 +321,13 @@ export function NotesStudyPage({ resumeId, onNotesCreated, embedded = false }: N
   }, []);
 
   useEffect(() => {
+    if (!notesTabActive) {
+      closeDrawer();
+      return;
+    }
     if (!highlightSectionId) return;
     openDrawer(highlightSectionId);
-  }, [highlightSectionId, openDrawer]);
+  }, [notesTabActive, highlightSectionId, openDrawer, closeDrawer]);
 
   useEffect(() => {
     if (!drawerSectionId) return;
@@ -820,7 +831,7 @@ export function NotesStudyPage({ resumeId, onNotesCreated, embedded = false }: N
         ) : null}
       </div>
 
-      {portalReady
+      {portalReady && notesTabActive
         ? createPortal(
             <AnimatePresence>
               {drawerSectionId && drawerSection ? (
