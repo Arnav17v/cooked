@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,7 +11,6 @@ import {
   Target,
 } from "lucide-react";
 
-import { HomeDashboardRedirect } from "@/components/home-dashboard-redirect";
 import { MarketingNav } from "@/components/marketing-nav";
 
 const pillars = [
@@ -78,9 +76,6 @@ function DifficultyPill({ level }: { level: string }) {
 export default function Home() {
   return (
     <main className="min-h-screen bg-lc-bg text-lc-text">
-      <Suspense fallback={null}>
-        <HomeDashboardRedirect />
-      </Suspense>
       <MarketingNav />
 
       {/* Hero */}
