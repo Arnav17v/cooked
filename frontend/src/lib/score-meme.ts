@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/lib/site-url";
+
 /** Score-tier meme assets in `public/score-memes/` (filenames must match). */
 
 export type ScoreMemeTier = {
@@ -35,8 +37,10 @@ export function isScoreMemeAnimated(src: string): boolean {
 }
 
 export function buildShareUrl(shareSlug: string, origin?: string): string {
-  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-  return `${base}/share/${shareSlug}`;
+  const base =
+    origin ??
+    (typeof window !== "undefined" ? window.location.origin : SITE_URL);
+  return `${base.replace(/\/$/, "")}/share/${shareSlug}`;
 }
 
 export function buildShareCaption(opts: {

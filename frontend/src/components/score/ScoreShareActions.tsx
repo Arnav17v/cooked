@@ -17,6 +17,7 @@ export type ScoreShareActionsProps = {
   heatLabel?: string | null;
   headline?: string | null;
   className?: string;
+  tone?: "default" | "landing";
 };
 
 type Flash = "link" | "caption" | "download" | "share" | null;
@@ -27,6 +28,7 @@ export function ScoreShareActions({
   heatLabel,
   headline,
   className = "",
+  tone = "default",
 }: ScoreShareActionsProps) {
   const [flash, setFlash] = useState<Flash>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -94,7 +96,9 @@ export function ScoreShareActions({
   }, [caption, shareUrl]);
 
   const btn =
-    "inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-lc-border bg-lc-elevated px-3 text-[12px] font-medium text-lc-text transition-transform duration-100 ease-out hover:-translate-y-px hover:border-lc-orange/50 disabled:cursor-not-allowed disabled:opacity-50";
+    tone === "landing"
+      ? "landing-dash-share-btn"
+      : "inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-lc-border bg-lc-elevated px-3 text-[12px] font-medium text-lc-text transition-transform duration-100 ease-out hover:-translate-y-px hover:border-lc-orange/50 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div className={className}>
@@ -119,7 +123,7 @@ export function ScoreShareActions({
           {flash === "caption" ? "Copied!" : "Copy caption"}
         </button>
       </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-lc-dim">
+      <p className={tone === "landing" ? "landing-dash-muted mt-2 text-[11px]" : "mt-2 text-[11px] leading-relaxed text-lc-dim"}>
         Save the meme, share to stories or messages, or post with your public score link.
       </p>
       {err ? (

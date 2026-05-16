@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { fetchSharePayload } from "@/lib/api";
+import { siteHostLabel } from "@/lib/site-url";
 
 export const runtime = "edge";
 
@@ -100,7 +101,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           </div>
         </div>
 
-        <div style={{ fontSize: 20, color: "#7a7a7a" }}>amicooked.app</div>
+        <div style={{ fontSize: 20, color: "#7a7a7a" }}>{siteHostLabel()}</div>
       </div>
     ),
     { ...size },

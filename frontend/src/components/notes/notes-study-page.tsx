@@ -846,14 +846,15 @@ export function NotesStudyPage({
 
       {portalReady && notesTabActive
         ? createPortal(
-            <AnimatePresence>
+            <div className="landing-v3 landing-notes-drawer-root">
+              <AnimatePresence>
               {drawerSectionId && drawerSection ? (
                 <>
                   <motion.button
                     key={`${drawerSectionId}-scrim`}
                     type="button"
                     aria-label="Close section"
-                    className="fixed inset-0 z-[199] bg-black/55 backdrop-blur-[1px]"
+                    className="landing-notes-drawer-scrim"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -865,32 +866,35 @@ export function NotesStudyPage({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="notes-drawer-title"
-                    className="fixed bottom-0 left-1/2 z-[200] flex h-[min(94dvh,calc(100dvh-0.5rem))] w-full max-w-full flex-col rounded-t-3xl border border-b-0 border-lc-border bg-lc-surface shadow-[0_-20px_60px_rgba(0,0,0,0.55)] md:w-[60%]"
+                    className="landing-notes-drawer-sheet"
                     initial={{ y: "100%", x: "-50%" }}
                     animate={{ y: 0, x: "-50%" }}
                     exit={{ y: "100%", x: "-50%" }}
                     transition={{ duration: 0.42, ease: EASE_DEFAULT }}
                   >
-                <div className="flex justify-center pt-2 pb-1" aria-hidden>
-                  <div className="h-1 w-12 rounded-full bg-lc-divider" />
+                <div className="landing-notes-drawer-handle-wrap" aria-hidden>
+                  <div className="landing-notes-drawer-handle" />
                 </div>
-                <header className="flex shrink-0 items-center gap-2 border-b border-lc-divider px-3 py-2.5 sm:px-5">
+                <header className="landing-notes-drawer-header">
                   <button
                     type="button"
                     onClick={closeDrawer}
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lc-muted transition-colors hover:bg-lc-elevated hover:text-lc-text"
+                    className="landing-notes-drawer-icon-btn"
                     aria-label="Close"
                   >
                     <X className="h-5 w-5" strokeWidth={2} />
                   </button>
-                  <h2 id="notes-drawer-title" className="min-w-0 flex-1 truncate text-[16px] font-medium text-lc-text">
-                    {drawerSection.title}
-                  </h2>
+                  <div className="min-w-0 flex-1">
+                    <p className="landing-notes-drawer-eyebrow">{"// section"}</p>
+                    <h2 id="notes-drawer-title" className="landing-notes-drawer-title">
+                      {drawerSection.title}
+                    </h2>
+                  </div>
                   {drawerEditing ? (
                     <button
                       type="button"
                       onClick={() => drawerEditorRef.current?.commit()}
-                      className="inline-flex h-9 shrink-0 items-center rounded-lg border border-lc-border bg-lc-elevated px-3.5 text-[13px] font-semibold text-lc-text transition-colors hover:border-lc-orange/50"
+                      className="landing-notes-drawer-done"
                     >
                       Done
                     </button>
@@ -898,13 +902,13 @@ export function NotesStudyPage({
                     <button
                       type="button"
                       onClick={() => setDrawerEditing(true)}
-                      className="inline-flex h-9 shrink-0 items-center rounded-lg bg-lc-orange px-3.5 text-[13px] font-semibold text-black transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orangeHover"
+                      className="landing-notes-drawer-edit"
                     >
                       Edit
                     </button>
                   )}
                 </header>
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
+                <div className="landing-notes-drawer-body">
                   {drawerEditing ? (
                     <div>
                       <NotesRichEditor
@@ -913,7 +917,9 @@ export function NotesStudyPage({
                         value={drawerDraft}
                         onBlurCommitted={onDrawerBlurCommitted}
                       />
-                      <p className="mt-2 text-[11px] text-lc-dim">{"// tap Done or leave the editor to save"}</p>
+                      <p className="landing-notes-drawer-hint">
+                        {"// tap Done or leave the editor to save"}
+                      </p>
                     </div>
                   ) : (
                     <NotesSectionReadPanel content={drawerDraft} />
@@ -922,7 +928,8 @@ export function NotesStudyPage({
                   </motion.div>
                 </>
               ) : null}
-            </AnimatePresence>,
+              </AnimatePresence>
+            </div>,
             document.body,
           )
         : null}

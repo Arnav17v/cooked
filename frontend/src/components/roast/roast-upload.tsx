@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Play, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 
 import { PipelineProgress } from "@/components/ui/pipeline-progress";
 import {
@@ -281,18 +281,15 @@ export function RoastUpload() {
   return (
     <>
       {skipSignedInRedirect ? (
-        <p className="mb-4 text-[13px] text-lc-muted">
-          Uploading a new resume —{" "}
-          <Link href="/dashboard" className="text-lc-orange hover:underline">
-            Back to dashboard
-          </Link>
+        <p className="landing-back-hint">
+          Uploading a new resume — <Link href="/dashboard">Back to dashboard</Link>
         </p>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-        <div className="flex flex-col gap-6">
+      <div className="landing-roast-grid">
+        <div className="landing-roast-col">
           <label className="block">
-            <span className="mb-2 block text-[12px] font-medium text-lc-muted">Target role</span>
+            <span className="landing-field-label">Target role</span>
             <input
               type="text"
               list="cooked-target-role-suggestions"
@@ -302,14 +299,14 @@ export function RoastUpload() {
               maxLength={128}
               placeholder={TARGET_ROLE_PLACEHOLDER}
               autoComplete="off"
-              className="h-11 w-full rounded-lg border border-lc-border bg-lc-elevated px-3 text-[14px] text-lc-text outline-none transition-colors placeholder:text-lc-dim focus:border-lc-orange disabled:opacity-50"
+              className="landing-field-input"
             />
             <datalist id="cooked-target-role-suggestions">
               {TARGET_ROLE_SUGGESTIONS.map((r) => (
                 <option key={r} value={r} />
               ))}
             </datalist>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-lc-dim">
+            <p className="landing-field-hint">
               Type the job you are aiming for — any title is fine. Examples: software developer, data
               analyst, marketing lead, PM intern, UX researcher.
             </p>
@@ -346,23 +343,23 @@ export function RoastUpload() {
                   setPasteMode(false);
                 }
               }}
-              className="flex min-h-[220px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-lc-border bg-lc-surface px-6 py-12 text-center transition-colors hover:border-lc-orange/50 disabled:opacity-50"
+              className="landing-roast-dropzone"
             >
-              <Upload className="mb-3 h-10 w-10 text-lc-dim" strokeWidth={1.5} />
-              <p className="text-[15px] font-medium text-lc-text">Drop your resume here (.pdf)</p>
-              <p className="mt-1 text-[12px] text-lc-dim">or click to choose a file</p>
+              <Upload className="landing-roast-dropzone-icon h-10 w-10" strokeWidth={1.5} />
+              <p className="landing-roast-dropzone-title">Drop your resume here (.pdf)</p>
+              <p className="landing-roast-dropzone-hint">or click to choose a file</p>
             </button>
           ) : pickedFile ? (
-            <div className="flex items-center gap-3 rounded-lg border border-lc-border bg-lc-surface px-4 py-3">
-              <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-lc-text">
+            <div className="landing-roast-file-row">
+              <span className="landing-roast-file-name">
                 {pickedFile.name}
-                <span className="text-lc-dim"> · {formatBytes(pickedFile.size)}</span>
+                <span className="landing-roast-file-meta"> · {formatBytes(pickedFile.size)}</span>
               </span>
               <button
                 type="button"
                 disabled={isRoasting}
                 onClick={clearFile}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-lc-border text-lc-muted hover:bg-lc-elevated hover:text-lc-text disabled:opacity-50"
+                className="landing-roast-file-remove"
                 aria-label="Remove file"
               >
                 <X className="h-4 w-4" />
@@ -377,9 +374,9 @@ export function RoastUpload() {
                 placeholder="Paste resume text…"
                 rows={12}
                 spellCheck={false}
-                className="w-full resize-y rounded-lg border border-lc-border bg-[#1a1a1a] p-4 font-mono text-[13px] leading-6 text-lc-text outline-none focus:border-lc-orange disabled:opacity-50"
+                className="landing-roast-textarea"
               />
-              <p className="mt-2 text-[11px] text-lc-dim">Minimum ~30 words before you can run.</p>
+              <p className="landing-field-hint">Minimum ~30 words before you can run.</p>
             </div>
           )}
 
@@ -392,7 +389,7 @@ export function RoastUpload() {
                   setPasteMode(true);
                   clearFile();
                 }}
-                className="text-[13px] text-lc-orange hover:underline disabled:opacity-50"
+                className="landing-text-link"
               >
                 Paste text instead
               </button>
@@ -404,50 +401,45 @@ export function RoastUpload() {
                   setPasteMode(false);
                   setResumePaste("");
                 }}
-                className="text-[13px] text-lc-orange hover:underline disabled:opacity-50"
+                className="landing-text-link"
               >
                 Use PDF instead
               </button>
             ) : null}
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="landing-roast-actions">
             <button
               type="button"
               onClick={() => void roastResume()}
               disabled={isRoasting || !hasStagedInput || !hasRole}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-lc-orange px-6 text-[14px] font-semibold text-black transition-colors hover:bg-lc-orangeHover disabled:cursor-not-allowed disabled:opacity-40"
+              className="landing-btn-primary"
             >
-              <Play className="h-4 w-4 fill-current" strokeWidth={2.5} />
-              {isRoasting ? "Running…" : "Run roast"}
+              <span>{isRoasting ? "Running…" : "Run roast"}</span>
             </button>
             {runFinished ? (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-lc-border px-5 text-[13px] font-medium text-lc-text hover:bg-lc-elevated"
-              >
+              <button type="button" onClick={resetForm} className="landing-btn-ghost">
                 Clear & try again
               </button>
             ) : null}
           </div>
 
-          <p className="text-[11px] leading-relaxed text-lc-dim">
+          <p className="landing-roast-disclaimer">
             Resume text is processed on our backend and sent to AI providers. Raw text is deleted within
             24 hours; roast output and your share link stay until you delete them.
           </p>
         </div>
 
-        <div className="flex min-h-[420px] flex-col rounded-xl border border-lc-border bg-lc-surface">
-          <div className="border-b border-lc-border bg-lc-header px-4 py-2.5 font-mono text-[11px] text-lc-muted">
-            roast.log
-          </div>
+        <div className="landing-log-panel">
+          <div className="landing-log-header">roast.log</div>
 
-          <div className="flex flex-1 flex-col p-5">
-            {isRoasting ? <PipelineProgress className="mb-4" percent={progressPct} /> : null}
-            <div className="min-h-[140px] font-mono text-[12px] leading-relaxed text-lc-muted">
+          <div className="landing-log-body">
+            {isRoasting ? (
+              <PipelineProgress className="mb-4" percent={progressPct} tone="landing" />
+            ) : null}
+            <div className="landing-log-lines">
               {terminalLines.length === 0 ? (
-                <span className="text-lc-dim">—</span>
+                <span className="landing-log-empty">—</span>
               ) : (
                 terminalLines.map((line, i) => (
                   <div key={`${i}-${line.slice(0, 12)}`} className="whitespace-pre-wrap">
@@ -459,15 +451,13 @@ export function RoastUpload() {
             </div>
 
             {rateLimited && errorMessage ? (
-              <div className="mt-4 rounded-lg border border-lc-hard/40 bg-lc-hard/10 p-3 text-[13px] text-lc-text">
-                <span className="font-mono text-lc-hard">429</span> {errorMessage}
+              <div className="landing-alert-rate">
+                <code>429</code> {errorMessage}
               </div>
             ) : null}
 
             {!rateLimited && errorMessage && runFinished ? (
-              <div className="mt-4 rounded-lg border border-lc-orange/25 bg-lc-orange/5 p-3 text-[13px] text-lc-muted">
-                <span className="text-lc-text">{errorMessage}</span>
-              </div>
+              <div className="landing-alert-error">{errorMessage}</div>
             ) : null}
           </div>
         </div>

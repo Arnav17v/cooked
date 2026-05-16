@@ -13,6 +13,7 @@ import {
   type ResultTabId,
 } from "@/components/roast/roast-shared";
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
+import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
 import { ScoreShareActions } from "@/components/score/ScoreShareActions";
 import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
@@ -222,6 +223,9 @@ export function RoastDashboard() {
     let cancelled = false;
     setHydrating(true);
     setHydrateError(null);
+    setLiveScore(null);
+    setLiveFlags(null);
+    setLiveQuestions([]);
 
     (async () => {
       try {
@@ -403,12 +407,8 @@ export function RoastDashboard() {
     );
   }
 
-  if (resolving || (hydrating && !hydrateError && !liveScore)) {
-    return (
-      <div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-lc-border bg-lc-surface p-10">
-        <p className="font-mono text-[13px] text-lc-muted">Loading dashboard…</p>
-      </div>
-    );
+  if (resolving || (hydrating && !hydrateError)) {
+    return <DashboardSkeleton />;
   }
 
   if (!resolvedResumeId && !resolving) {
@@ -433,7 +433,7 @@ export function RoastDashboard() {
   const previewFlags = flags.slice(0, 2);
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col lg:flex-row">
+    <div className="landing-dash-root flex min-h-[calc(100vh-4rem)] flex-col lg:flex-row">
       {/* Mobile top */}
       <div className="border-b border-lc-divider px-4 py-3 lg:hidden">
         <div className="flex items-baseline justify-between gap-3">
@@ -562,41 +562,29 @@ export function RoastDashboard() {
               role="tabpanel"
             >
               {resultTab === "score" ? (
-                <div className="space-y-8">
-                  <div>
-                    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="tabular-nums text-[42px] font-semibold leading-none sm:text-5xl" style={{ color: heatColor }}>
-                        {countScore}
+                <div className="space-y-10">
+                  <section>
+                    <p className="landing-dash-eyebrow">{"// what this means"}</p>
+                    <p className="landing-dash-body mt-3 max-w-xl">
+                      <span className="font-medium" style={{ color: heatColor }}>
+                        {heatNorm}
                       </span>
-                      <span className="text-[15px] text-lc-muted sm:text-base">
-                        / 100 <span className="text-lc-dim">·</span>{" "}
-                        <span className="font-medium" style={{ color: heatColor }}>
-                          {heatNorm}
-                        </span>
-                      </span>
-                    </p>
-                    {headline ? (
-                      <button
-                        type="button"
-                        onClick={() => setLinerExpanded((e) => !e)}
-                        className={`mt-3 max-w-xl text-left text-[14px] italic leading-relaxed text-lc-muted transition-opacity duration-200 ease-out ${
-                          linerExpanded ? "" : "line-clamp-4"
-                        } ${scoreAnimDone ? "opacity-100" : "opacity-0"}`}
-                      >
-                        &ldquo;{headline}&rdquo;
-                      </button>
-                    ) : null}
-                    <p className="mt-6 font-mono text-[10px] uppercase tracking-wide text-lc-dim">{"// what this means"}</p>
-                    <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-lc-muted">
-                      {heatNorm} — {heatMeaningLine(liveScore.heat_label ?? "")}
+                      {" — "}
+                      {heatMeaningLine(liveScore.heat_label ?? "")}
                     </p>
                     {liveScore.degraded ? (
-                      <p className="mt-3 text-[12px] text-lc-dim">Providers were flaky for this run — take the verdict with extra salt.</p>
+                      <p className="landing-dash-muted mt-3 text-[12px]">
+                        Providers were flaky for this run — take the verdict with extra salt.
+                      </p>
                     ) : null}
-                  </div>
+                  </section>
 
-                  <div>
-                    <p className="mb-3 font-mono text-[10px] uppercase tracking-wide text-lc-dim">{"// share your score"}</p>
+                  <section>
+                    <p className="landing-dash-eyebrow mb-4">{"// share your score"}</p>
+                    <p className="landing-dash-muted mb-4 max-w-md text-[13px]">
+                      Screenshot the card or use the buttons below — your score, heat, and roast line are on the
+                      share link.
+                    </p>
                     <div className="max-w-md">
                       <ScoreCard
                         cookedScore={displayScore ?? 0}
@@ -609,6 +597,7 @@ export function RoastDashboard() {
                       {liveScore.share_slug ? (
                         <ScoreShareActions
                           className="mt-4"
+                          tone="landing"
                           score={displayScore ?? 0}
                           shareSlug={liveScore.share_slug}
                           heatLabel={liveScore.heat_label}
@@ -616,10 +605,10 @@ export function RoastDashboard() {
                         />
                       ) : null}
                     </div>
-                  </div>
+                  </section>
 
-                  <div>
-                    <p className="mb-4 font-mono text-[10px] uppercase tracking-wide text-lc-dim">
+                  <section>
+                    <p className="landing-dash-eyebrow mb-4">
                       {"// "}
                       {flags.length} things to fix
                     </p>
@@ -652,7 +641,7 @@ export function RoastDashboard() {
                         see all flags →
                       </button>
                     ) : null}
-                  </div>
+                  </section>
                 </div>
               ) : null}
 

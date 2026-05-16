@@ -1,3 +1,4 @@
+import { siteHostLabel } from "@/lib/site-url";
 import { clampCookedScore, getScoreMemeSrc } from "@/lib/score-meme";
 
 export type ScoreCardProps = {
@@ -44,7 +45,7 @@ export function ScoreCard({
   const memeSrc = getScoreMemeSrc(score);
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-lc-border bg-gradient-to-b from-lc-elevated to-lc-surface p-5 shadow-[0_0_0_1px_rgba(255,161,22,0.08)]">
+    <div className="score-card-root relative overflow-hidden rounded-xl border border-lc-border bg-gradient-to-b from-lc-elevated to-lc-surface p-5 shadow-[0_0_0_1px_rgba(255,161,22,0.08)]">
       {showFooter ? (
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-lc-orange">
@@ -114,7 +115,7 @@ export function ScoreCard({
       ) : null}
 
       {showFooter ? (
-        <p className="mt-5 font-mono text-[10px] text-lc-dim">amicooked.app</p>
+        <p className="mt-5 font-mono text-[10px] text-lc-dim">{siteHostLabel()}</p>
       ) : null}
     </div>
   );

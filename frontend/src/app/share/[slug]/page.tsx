@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ShareScorePanel } from "@/app/share/[slug]/share-score-panel";
 import { fetchSharePayload } from "@/lib/api";
+import { siteHostLabel } from "@/lib/site-url";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -46,7 +47,7 @@ export default async function SharePage({ params }: PageProps) {
 
       <p className="mt-10 text-center font-mono text-[11px] text-lc-dim">
         <Link href="/" className="text-lc-orange hover:underline">
-          Roast yours → amicooked.app
+          Roast yours → {siteHostLabel()}
         </Link>
       </p>
     </main>

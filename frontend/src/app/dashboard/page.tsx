@@ -1,23 +1,23 @@
 import { Suspense } from "react";
 
-import { MarketingNav } from "@/components/marketing-nav";
+import { LandingCustomCursor } from "@/components/landing/landing-custom-cursor";
+import { LandingNav } from "@/components/landing/landing-nav";
+import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
 import { RoastDashboard } from "@/components/roast/roast-dashboard";
+
+import "../landing-v3.css";
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-lc-bg text-lc-text">
-      <MarketingNav />
-      <div className="mx-auto max-w-6xl px-4 py-6 md:px-5 md:py-10">
-        <Suspense
-          fallback={
-            <div className="rounded-xl border border-lc-border bg-lc-surface p-10 text-center font-mono text-[13px] text-lc-muted">
-              Loading dashboard…
-            </div>
-          }
-        >
+    <div className="landing-v3 landing-dash-app">
+      <LandingCustomCursor />
+      <LandingNav />
+
+      <div className="landing-page landing-dash-page">
+        <Suspense fallback={<DashboardSkeleton />}>
           <RoastDashboard />
         </Suspense>
       </div>
-    </main>
+    </div>
   );
 }
