@@ -1017,8 +1017,19 @@ html.landing-cursor-vim .landing-cur-ring {
     transition: opacity 0.22s ease;
   }
 
-  .landing-v3 .landing-nav--open .landing-nav-scrim {
+  .landing-v3 .landing-nav-scrim--visible {
     opacity: 1;
+    pointer-events: auto;
+  }
+
+  .landing-v3 .landing-nav-portal {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+  }
+
+  .landing-v3 .landing-nav-portal[aria-hidden="false"] {
     pointer-events: auto;
   }
 
@@ -1038,9 +1049,13 @@ html.landing-cursor-vim .landing-cur-ring {
     pointer-events: none;
   }
 
-  .landing-v3 .landing-nav--open .landing-nav-panel {
+  .landing-v3 .landing-nav-panel--open {
     transform: translateX(0);
     pointer-events: auto;
+  }
+
+  .landing-v3 .landing-nav-scrim {
+    z-index: 98;
   }
 
   .landing-v3 .landing-nav-panel-inner {
@@ -1483,6 +1498,11 @@ html.landing-cursor-vim .landing-cur-ring {
 }
 
 /* Dashboard (landing theme) */
+.landing-v3.landing-dash-app {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 .landing-v3.landing-dash-app .landing-dash-page {
   max-width: 1200px;
   padding-bottom: 48px;
