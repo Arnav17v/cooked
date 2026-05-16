@@ -6,9 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Play, Upload, X } from "lucide-react";
 
+import { PipelineProgress } from "@/components/ui/pipeline-progress";
 import {
   formatBytes,
   LAST_RESUME_LS,
+  ROAST_STEP_PROGRESS,
   STAGE_LINES,
   TARGET_ROLE_PLACEHOLDER,
   TARGET_ROLE_SUGGESTIONS,
@@ -41,6 +43,7 @@ export function RoastUpload() {
   const [rateLimited, setRateLimited] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [runFinished, setRunFinished] = useState(false);
+  const [progressPct, setProgressPct] = useState(0);
 
   const bearer = useCallback(async () => {
     if (!isSignedIn) return undefined;
@@ -92,6 +95,8 @@ export function RoastUpload() {
                 seenSteps.add(payload.step);
                 const line = STAGE_LINES[payload.step];
                 if (line) appendLine(line);
+                const pct = ROAST_STEP_PROGRESS[payload.step];
+                if (pct != null) setProgressPct(pct);
               }
 
               if (payload.step === "done" || payload.step === "error") {
@@ -130,6 +135,20 @@ export function RoastUpload() {
                           ? "→ generating interview questions…"
                           : null;
                   if (mapped) appendLine(mapped);
+                  const stageKey =
+                    stage === "scoring_resume"
+                      ? "scoring"
+                      : stage === "flagging_weak_bullets"
+                        ? "flagging"
+                        : stage === "generating_questions"
+                          ? "questions"
+                          : stage === "extracting"
+                            ? "extracting"
+                            : null;
+                  if (stageKey) {
+                    const pct = ROAST_STEP_PROGRESS[stageKey];
+                    if (pct != null) setProgressPct(pct);
+                  }
                 }
               }
               if (payload.status === "done" || payload.status === "failed") {
@@ -163,7 +182,7 @@ export function RoastUpload() {
         };
       });
     },
-    [appendLine],
+    [appendLine, setProgressPct],
   );
 
   const pasteWordCount = pasteMode
@@ -186,6 +205,7 @@ export function RoastUpload() {
     setErrorMessage(null);
     setRunFinished(false);
     setTerminalLines([]);
+    setProgressPct(5);
 
     const startedAt = Date.now();
 
@@ -201,17 +221,22 @@ export function RoastUpload() {
         fd.append("resume_text", resumePaste);
       }
 
+      setProgressPct(12);
       appendLine("→ extracting text…");
       const uploaded = await uploadResumeMultipart(fd, auth);
+      setProgressPct(22);
       appendLine("✓ extracted");
       if (uploaded.truncated) {
         appendLine("(truncated to 4000-word cap)");
       }
 
+      setProgressPct(26);
       appendLine("→ enqueueing roast…");
       const queued = await enqueueAnalyze(uploaded.resume_id, auth);
+      setProgressPct(28);
 
       const final = await waitForDone(queued.resume_id, queued.analysis_id, startedAt);
+      setProgressPct(100);
 
       if (final.step === "error") {
         throw new Error(final.reason === "quota_exceeded" ? "Daily limit" : final.reason);
@@ -250,6 +275,7 @@ export function RoastUpload() {
     setRunFinished(false);
     setErrorMessage(null);
     setRateLimited(false);
+    setProgressPct(0);
   }
 
   return (
@@ -418,6 +444,7 @@ export function RoastUpload() {
           </div>
 
           <div className="flex flex-1 flex-col p-5">
+            {isRoasting ? <PipelineProgress className="mb-4" percent={progressPct} /> : null}
             <div className="min-h-[140px] font-mono text-[12px] leading-relaxed text-lc-muted">
               {terminalLines.length === 0 ? (
                 <span className="text-lc-dim">—</span>

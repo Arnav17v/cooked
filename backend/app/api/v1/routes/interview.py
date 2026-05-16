@@ -21,6 +21,8 @@ class InterviewStartBody(BaseModel):
     resume_id: uuid.UUID
     role: str = Field(min_length=1, max_length=512)
     hard_mode: bool = False
+    #: 3 = short, 10 = medium, 20 = long. Omit to use server default.
+    question_count: int | None = Field(default=None, ge=1, le=20)
 
 
 class InterviewAnswerBody(BaseModel):
@@ -49,6 +51,7 @@ async def interview_start(
             role=body.role,
             clerk_subject=clerk_subject,
             hard_mode=body.hard_mode,
+            question_count=body.question_count,
         )
         await session.commit()
         return out
@@ -97,12 +100,6 @@ async def interview_score(
     session: AsyncSession = Depends(get_session),  # noqa: B008
     clerk_subject: str | None = Depends(optional_clerk_subject),
 ) -> dict[str, object]:
-    n = get_settings().interview_batch_question_count
-    if len(body.answers) != n:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Exactly {n} answers required",
-        )
     try:
         out = await interview_service.score_quiz(
             session,

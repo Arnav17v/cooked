@@ -15,7 +15,9 @@ import {
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
 import { ScoreShareActions } from "@/components/score/ScoreShareActions";
+import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
 import { QuizImprovementChart } from "@/components/roast/QuizImprovementChart";
+import { quizCountForLength, type QuizLengthId } from "@/lib/quiz-length";
 import {
   type FlagsResponse,
   type MyRoastItem,
@@ -82,6 +84,7 @@ export function RoastDashboard() {
   const [resultTab, setResultTab] = useState<ResultTabId>("score");
   const [myRoasts, setMyRoasts] = useState<MyRoastItem[]>([]);
   const [quizStarting, setQuizStarting] = useState(false);
+  const [quizLength, setQuizLength] = useState<QuizLengthId>("medium");
   const [quizErr, setQuizErr] = useState<string | null>(null);
   const [quizScores, setQuizScores] = useState<StoredQuizScore[]>([]);
   const [notesRemountKey, setNotesRemountKey] = useState(0);
@@ -338,7 +341,12 @@ export function RoastDashboard() {
       liveScore?.role?.trim() ||
       myRoasts.find((i) => i.resume_id === resolvedResumeId)?.target_role?.trim() ||
       "Software Engineer";
-    const handoff: QuizStartHandoff = { resumeId: resolvedResumeId, role, hard_mode: false };
+    const handoff: QuizStartHandoff = {
+      resumeId: resolvedResumeId,
+      role,
+      hard_mode: false,
+      question_count: quizCountForLength(quizLength),
+    };
     try {
       window.localStorage.setItem(QUIZ_START_HANDOFF_KEY, JSON.stringify(handoff));
     } catch {
@@ -736,6 +744,12 @@ export function RoastDashboard() {
                         <p className="text-[13px] text-lc-muted">answering these out loud is the point.</p>
                       </>
                     ) : null}
+                    <QuizLengthPicker
+                      className="mt-2"
+                      value={quizLength}
+                      onChange={setQuizLength}
+                      disabled={quizStarting}
+                    />
                     <button
                       type="button"
                       disabled={quizStarting}

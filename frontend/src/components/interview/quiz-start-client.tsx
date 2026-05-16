@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { PipelineProgress } from "@/components/ui/pipeline-progress";
 import { startInterviewQuiz } from "@/lib/api";
+import { quizCountForLength } from "@/lib/quiz-length";
 import {
   QUIZ_START_HANDOFF_KEY,
   type QuizStartHandoff,
@@ -55,6 +57,11 @@ export function QuizStartClient() {
       const resumeId = typeof handoff.resumeId === "string" ? handoff.resumeId.trim() : "";
       const role = typeof handoff.role === "string" ? handoff.role.trim() : "";
       const hardMode = Boolean(handoff.hard_mode);
+      const rawCount = handoff.question_count;
+      const questionCount =
+        typeof rawCount === "number" && rawCount > 0
+          ? rawCount
+          : quizCountForLength("medium");
 
       if (!resumeId || !role) {
         if (!cancelled) {
@@ -71,6 +78,7 @@ export function QuizStartClient() {
           role,
           token ? { token } : undefined,
           hardMode,
+          questionCount,
         );
         if (cancelled) return;
 
@@ -120,9 +128,10 @@ export function QuizStartClient() {
         aria-hidden
       />
       <p className="mt-10 font-mono text-[15px] font-medium text-lc-text">Making your questions…</p>
+      <PipelineProgress className="mt-6 w-full max-w-sm" percent={42} />
       <p className="mt-4 text-[14px] leading-relaxed text-lc-muted">
         We&apos;re reading your roast and asking the model to generate interview prompts grounded in what you
-        actually wrote. This usually takes a few seconds.
+        actually wrote.
       </p>
       <p className="mt-6 font-mono text-[11px] uppercase tracking-wide text-lc-dim">Do not close this tab</p>
     </div>

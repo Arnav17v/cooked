@@ -40,6 +40,9 @@ from app.services.users.limits import assert_can_start_quiz
 
 log = logging.getLogger(__name__)
 
+# Static batch quiz lengths exposed to the client (short / medium / long).
+ALLOWED_BATCH_QUESTION_COUNTS = frozenset({3, 10, 20})
+
 # Adaptive (turn-by-turn) interview length — separate from static batch quiz size in Settings.
 _ADAPTIVE_SESSION_TURNS = 10
 
@@ -354,6 +357,17 @@ async def _try_reuse_incomplete_batch_session(
     return out
 
 
+def _resolve_batch_question_count(question_count: int | None) -> int:
+    if question_count is None:
+        return get_settings().interview_batch_question_count
+    if question_count not in ALLOWED_BATCH_QUESTION_COUNTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="question_count must be 3 (short), 10 (medium), or 20 (long)",
+        )
+    return question_count
+
+
 async def _pg_advisory_lock_resume(session: AsyncSession, resume_id: uuid.UUID) -> None:
     """Serialize ``start_session`` per resume when using PostgreSQL."""
     bind = session.get_bind()
@@ -372,6 +386,7 @@ async def start_session(
     role: str,
     clerk_subject: str | None,
     hard_mode: bool,
+    question_count: int | None = None,
 ) -> dict[str, object]:
     r = role.strip()
     if not r:
@@ -385,7 +400,7 @@ async def start_session(
             detail="Resume text is no longer available; upload again.",
         )
 
-    batch_n = get_settings().interview_batch_question_count
+    batch_n = _resolve_batch_question_count(question_count)
 
     await _pg_advisory_lock_resume(session, resume.id)
     reused = await _try_reuse_incomplete_batch_session(
@@ -487,13 +502,6 @@ async def score_quiz(
     answers: list[str],
     clerk_subject: str | None,
 ) -> dict[str, object]:
-    batch_n = get_settings().interview_batch_question_count
-    if len(answers) != batch_n:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Exactly {batch_n} answers required",
-        )
-
     cleaned = [a.strip() for a in answers]
     if any(not a for a in cleaned):
         raise HTTPException(
@@ -523,8 +531,15 @@ async def score_quiz(
         )
 
     qs = pq.get("questions")
-    if not isinstance(qs, list) or len(qs) != batch_n:
+    if not isinstance(qs, list) or len(qs) < 1:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="corrupt quiz session")
+    batch_n = len(qs)
+
+    if len(answers) != batch_n:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Exactly {batch_n} answers required",
+        )
 
     resume = await require_resume_readable(session, row.resume_id, clerk_subject)
     text = (resume.raw_text or "").strip()
@@ -668,7 +683,8 @@ async def submit_answer(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no pending question")
 
     if pending.get("kind") == "static":
-        n_ans = get_settings().interview_batch_question_count
+        qs = pending.get("questions")
+        n_ans = len(qs) if isinstance(qs, list) else 0
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"This quiz is scored in one step — use POST /interview/score with all {n_ans} answers.",

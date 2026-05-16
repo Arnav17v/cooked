@@ -7,4 +7,6 @@ export type QuizStartHandoff = {
   role: string;
   /** When true, `POST /interview/start` uses `hard_mode: true`. */
   hard_mode?: boolean;
+  /** Batch size: 3 (short), 10 (medium), or 20 (long). */
+  question_count?: number;
 };

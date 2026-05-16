@@ -331,11 +331,17 @@ export async function startInterviewQuiz(
   role: string,
   auth?: ApiAuth,
   hardMode = false,
+  questionCount = 10,
 ): Promise<InterviewStartResponse> {
   const res = await fetch(`${getApiBase()}/api/v1/interview/start`, {
     method: "POST",
     headers: jsonPostHeaders(auth?.token),
-    body: JSON.stringify({ resume_id: resumeId, role, hard_mode: hardMode }),
+    body: JSON.stringify({
+      resume_id: resumeId,
+      role,
+      hard_mode: hardMode,
+      question_count: questionCount,
+    }),
   });
   if (!res.ok) {
     const body = await res.text();

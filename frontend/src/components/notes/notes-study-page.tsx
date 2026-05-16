@@ -8,7 +8,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 
+import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
+import { LONG_RUN_TIME_HINT } from "@/components/ui/pipeline-progress";
 import { isDevMode } from "@/lib/dev";
+import { quizCountForLength, type QuizLengthId } from "@/lib/quiz-length";
 import { EASE_DEFAULT } from "@/lib/motion-easing";
 import {
   clearNotesSessionCache,
@@ -264,6 +267,7 @@ export function NotesStudyPage({
   const [generateStatusIdx, setGenerateStatusIdx] = useState(0);
   const [renewErr, setRenewErr] = useState<string | null>(null);
   const [renewBusy, setRenewBusy] = useState(false);
+  const [quizLength, setQuizLength] = useState<QuizLengthId>("medium");
 
   const notesRef = useRef<NotesGetResponse | null>(null);
   useEffect(() => {
@@ -652,7 +656,12 @@ export function NotesStudyPage({
   function startQuizFromNotes() {
     if (typeof window === "undefined") return;
     const role = roleLabel.trim() || "Software Engineer";
-    const handoff: QuizStartHandoff = { resumeId, role, hard_mode: false };
+    const handoff: QuizStartHandoff = {
+      resumeId,
+      role,
+      hard_mode: false,
+      question_count: quizCountForLength(quizLength),
+    };
     try {
       window.localStorage.setItem(QUIZ_START_HANDOFF_KEY, JSON.stringify(handoff));
     } catch {
@@ -687,6 +696,7 @@ export function NotesStudyPage({
         <div className="mt-8 h-2 w-full max-w-sm overflow-hidden rounded-full bg-lc-elevated">
           <div className="h-full w-[45%] rounded-full bg-lc-orange animate-notes-gen-bar" />
         </div>
+        <p className="mt-3 text-[12px] leading-relaxed text-lc-muted">{LONG_RUN_TIME_HINT}</p>
         <p className="mt-4 text-[13px] text-lc-muted">{GENERATE_STATUS_CYCLE[generateStatusIdx]}</p>
       </div>
     );
@@ -701,11 +711,12 @@ export function NotesStudyPage({
             {generateErr}
           </p>
         ) : null}
+        <p className="mt-6 text-[12px] leading-relaxed text-lc-muted">{LONG_RUN_TIME_HINT}</p>
         <button
           type="button"
           disabled={emptyGenerating}
           onClick={() => void onCreateNotes()}
-          className="mt-8 inline-flex h-11 min-w-[11rem] items-center justify-center rounded-lg bg-lc-orange px-6 text-[13px] font-semibold text-black transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orangeHover disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 inline-flex h-11 min-w-[11rem] items-center justify-center rounded-lg bg-lc-orange px-6 text-[13px] font-semibold text-black transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orangeHover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {emptyGenerating ? "generating…" : "create notes"}
         </button>
@@ -717,13 +728,14 @@ export function NotesStudyPage({
     <div className={embedded ? "w-full" : "w-full max-md:-mx-5 max-md:px-0"}>
       {embedded ? (
         pollUpdating ? (
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 space-y-2">
             <span className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-lc-muted">
               <span className="inline-block animate-spin font-mono" aria-hidden>
                 ↻
               </span>
               <span>updating notes…</span>
             </span>
+            <p className="text-[12px] text-lc-dim">{LONG_RUN_TIME_HINT}</p>
           </div>
         ) : null
       ) : (
@@ -802,10 +814,11 @@ export function NotesStudyPage({
 
         {!embedded ? (
           <div className="mt-10 border-t border-lc-divider pt-8">
+            <QuizLengthPicker value={quizLength} onChange={setQuizLength} />
             <button
               type="button"
               onClick={() => startQuizFromNotes()}
-              className="inline-flex h-10 items-center rounded-lg border border-lc-orange/50 bg-lc-orange/10 px-5 text-[13px] font-semibold text-lc-orange transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orange/20"
+              className="mt-4 inline-flex h-10 items-center rounded-lg border border-lc-orange/50 bg-lc-orange/10 px-5 text-[13px] font-semibold text-lc-orange transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orange/20"
             >
               quiz me on this
             </button>

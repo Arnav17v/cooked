@@ -31,6 +31,14 @@ export const STAGE_LINES: Record<string, string> = {
   questions: "→ generating interview questions…",
 };
 
+/** Approximate roast.log progress % after each pipeline step (SSE). */
+export const ROAST_STEP_PROGRESS: Record<string, number> = {
+  extracting: 32,
+  scoring: 55,
+  flagging: 72,
+  questions: 88,
+};
+
 /** Browser hint for anonymous refresh; signed-in saves use `/me/roasts` + Bearer. */
 export const LAST_RESUME_LS = "cooked_last_resume_v1";
 
