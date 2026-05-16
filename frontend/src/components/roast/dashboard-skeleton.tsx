@@ -5,11 +5,12 @@ function Shimmer({ className = "" }: { className?: string }) {
 export function DashboardSkeleton() {
   return (
     <div className="landing-dash-root" aria-busy="true" aria-label="Loading dashboard">
-      <div className="border-b border-[var(--lv-rule)] px-4 py-4 lg:hidden">
-        <Shimmer className="h-9 w-20" />
-        <div className="mt-4 flex gap-2">
+      <div className="landing-dash-mobile-bar lg:hidden">
+        <Shimmer className="h-10 w-28" />
+        <Shimmer className="mt-3 h-[3px] w-full" />
+        <div className="landing-dash-mobile-tabs mt-3.5">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Shimmer key={i} className="h-8 w-16 rounded-sm" />
+            <Shimmer key={i} className="min-h-[44px] w-full" />
           ))}
         </div>
       </div>

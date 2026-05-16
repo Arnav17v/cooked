@@ -368,12 +368,9 @@ export function RoastDashboard() {
     return null;
   }
 
-  function NavRow({ mobile }: { mobile?: boolean }) {
+  function MobileTabBar() {
     return (
-      <nav
-        className={mobile ? "flex gap-1 overflow-x-auto pb-2 lg:hidden" : "hidden flex-col gap-0.5 lg:flex"}
-        aria-label="Roast sections"
-      >
+      <nav className="landing-dash-mobile-tabs" role="tablist" aria-label="Roast sections">
         {NAV.map(({ id, label }) => {
           const active = resultTab === id;
           const c = navCount(id);
@@ -384,9 +381,33 @@ export function RoastDashboard() {
               role="tab"
               aria-selected={active}
               onClick={() => setResultTab(id)}
-              className={`relative flex h-9 shrink-0 items-center rounded-sm pl-3 pr-2 text-left text-[13px] transition-colors duration-100 ease-out hover:text-lc-text ${
+              className={`landing-dash-mobile-tab${active ? " landing-dash-mobile-tab--active" : ""}`}
+            >
+              <span className="landing-dash-mobile-tab-label">{label}</span>
+              {c !== null ? <span className="landing-dash-mobile-tab-count">{c}</span> : null}
+            </button>
+          );
+        })}
+      </nav>
+    );
+  }
+
+  function NavRow() {
+    return (
+      <nav className="hidden flex-col gap-0.5 lg:flex" aria-label="Roast sections">
+        {NAV.map(({ id, label }) => {
+          const active = resultTab === id;
+          const c = navCount(id);
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setResultTab(id)}
+              className={`relative flex h-9 w-full items-center rounded-sm pl-3 pr-2 text-left text-[13px] transition-colors duration-100 ease-out hover:text-lc-text ${
                 active ? "text-lc-text" : "text-lc-muted"
-              } ${mobile ? "min-w-[5.5rem] justify-center px-3" : "w-full"}`}
+              }`}
             >
               <span
                 className={`pointer-events-none absolute left-0 top-1 bottom-1 w-0.5 origin-left rounded-full bg-lc-orange transition-transform duration-150 ease-out ${
@@ -435,16 +456,35 @@ export function RoastDashboard() {
   return (
     <div className="landing-dash-root flex min-h-[calc(100vh-4rem)] flex-col lg:flex-row">
       {/* Mobile top */}
-      <div className="border-b border-lc-divider px-4 py-3 lg:hidden">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="tabular-nums text-[28px] font-semibold leading-none" style={{ color: heatColor }}>
-            {displayScore !== null ? countScore : "—"}
-          </p>
-          <p className="text-[13px] text-lc-muted">
-            <span className="text-lc-dim">·</span> {heatNorm}
-          </p>
-        </div>
-        <NavRow mobile />
+      <div className="landing-dash-mobile-bar lg:hidden">
+        {displayScore !== null ? (
+          <div className="landing-dash-mobile-score">
+            <div className="landing-dash-mobile-score-row">
+              <span className="landing-dash-mobile-score-num" style={{ color: heatColor }}>
+                {countScore}
+              </span>
+              <span className="landing-dash-mobile-score-denom">/ 100</span>
+              <span className="landing-dash-mobile-score-heat" style={{ color: heatColor }}>
+                {heatNorm}
+              </span>
+            </div>
+            <div
+              className="landing-dash-mobile-score-track"
+              role="progressbar"
+              aria-valuenow={displayScore}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="landing-dash-mobile-score-fill"
+                style={{ width: `${displayScore}%`, backgroundColor: heatColor }}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="landing-dash-mobile-score-empty">—</p>
+        )}
+        <MobileTabBar />
       </div>
 
       {/* Desktop sidebar */}
