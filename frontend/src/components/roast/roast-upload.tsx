@@ -286,7 +286,7 @@ export function RoastUpload() {
         </p>
       ) : null}
 
-      <div className="landing-roast-grid">
+      <div className="landing-roast-grid min-w-0">
         <div className="landing-roast-col">
           <label className="block">
             <span className="landing-field-label">Target role</span>

@@ -1152,10 +1152,93 @@ html.landing-cursor-vim .landing-cur-ring {
 
   .landing-v3 .landing-roast-grid {
     grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .landing-v3 .landing-roast-hero {
+    padding: 40px 0 28px;
+  }
+
+  .landing-v3 .landing-roast-form {
+    padding: 28px 0 56px;
+  }
+
+  .landing-v3 .landing-roast-col {
+    gap: 20px;
+  }
+
+  .landing-v3 .landing-roast-sub {
+    max-width: none;
+    font-size: 13px;
+  }
+
+  .landing-v3 .landing-roast-dropzone {
+    min-height: 168px;
+    padding: 28px 16px;
+  }
+
+  .landing-v3 .landing-roast-textarea {
+    min-height: 200px;
+  }
+
+  .landing-v3 .landing-roast-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .landing-v3 .landing-roast-actions .landing-btn-primary,
+  .landing-v3 .landing-roast-actions .landing-btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .landing-v3 .landing-log-panel {
+    min-height: 260px;
+  }
+
+  .landing-v3 .landing-log-body {
+    padding: 16px;
+  }
+
+  .landing-v3 .landing-log-lines {
+    min-height: 100px;
+  }
+
+  .landing-v3 .landing-back-hint {
+    margin-bottom: 16px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-v3.landing-roast-app .landing-page {
+    padding: 0 16px;
+  }
+
+  .landing-v3 .landing-roast-title {
+    font-size: 1.75rem;
+  }
+
+  .landing-v3 .landing-btn-primary {
+    padding: 14px 20px;
   }
 }
 
 /* Roast upload page */
+.landing-v3.landing-roast-app {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .landing-v3 .landing-roast-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+}
+
 .landing-v3 .landing-roast-hero {
   padding: 72px 0 40px;
   border-bottom: 1px solid var(--lv-rule);
@@ -1188,6 +1271,7 @@ html.landing-cursor-vim .landing-cur-ring {
   grid-template-columns: 1fr 1fr;
   gap: 48px;
   align-items: start;
+  min-width: 0;
 }
 
 .landing-v3 .landing-roast-col {
@@ -1801,8 +1885,15 @@ html.landing-cursor-vim .landing-cur-ring {
 
 .landing-notes-drawer-handle-wrap {
   display: flex;
+  flex-shrink: 0;
   justify-content: center;
   padding: 10px 0 6px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.landing-notes-drawer-handle-wrap:active {
+  cursor: grabbing;
 }
 
 .landing-notes-drawer-handle {

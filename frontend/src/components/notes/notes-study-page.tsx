@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useDragControls } from "motion/react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 
@@ -357,6 +357,17 @@ export function NotesStudyPage({
   );
 
   const drawerDraft = drawerSectionId ? (drafts[drawerSectionId] ?? drawerSection?.content ?? "") : "";
+
+  const drawerDragControls = useDragControls();
+
+  const onDrawerDragEnd = useCallback(
+    (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
+      if (info.offset.y > 72 || info.velocity.y > 420) {
+        closeDrawer();
+      }
+    },
+    [closeDrawer],
+  );
 
   const readHighlightFromStorage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -867,12 +878,22 @@ export function NotesStudyPage({
                     aria-modal="true"
                     aria-labelledby="notes-drawer-title"
                     className="landing-notes-drawer-sheet"
+                    drag="y"
+                    dragControls={drawerDragControls}
+                    dragListener={false}
+                    dragConstraints={{ top: 0 }}
+                    dragElastic={{ top: 0, bottom: 0.5 }}
+                    onDragEnd={onDrawerDragEnd}
                     initial={{ y: "100%", x: "-50%" }}
                     animate={{ y: 0, x: "-50%" }}
                     exit={{ y: "100%", x: "-50%" }}
                     transition={{ duration: 0.42, ease: EASE_DEFAULT }}
                   >
-                <div className="landing-notes-drawer-handle-wrap" aria-hidden>
+                <div
+                  className="landing-notes-drawer-handle-wrap"
+                  aria-hidden
+                  onPointerDown={(e) => drawerDragControls.start(e)}
+                >
                   <div className="landing-notes-drawer-handle" />
                 </div>
                 <header className="landing-notes-drawer-header">

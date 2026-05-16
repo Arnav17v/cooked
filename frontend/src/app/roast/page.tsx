@@ -8,7 +8,7 @@ import "../landing-v3.css";
 
 export default function RoastPage() {
   return (
-    <div className="landing-v3">
+    <div className="landing-v3 landing-roast-app">
       <LandingCustomCursor />
       <LandingNav />
 
