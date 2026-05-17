@@ -176,6 +176,7 @@ async def generate_notes(
     user_prompt = notes_prompts.build_notes_generate_user_prompt(
         resume_text=resume.raw_text or "",
         role=(resume.target_role or "").strip(),
+        experience_level=resume.experience_level,
         flags=flags if isinstance(flags, list) else [],
         section_verdicts=section_verdicts if isinstance(section_verdicts, dict) else None,
         one_liner=str(analysis.one_liner or breakdown.get("one_liner") or breakdown.get("headline") or "")

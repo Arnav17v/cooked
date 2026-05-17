@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.services.resume.experience_level import experience_level_prompt_block
+
 NOTES_GENERATION_SYSTEM = """You are the candidate. You are writing notes to yourself the night before your interview.
 You have read your own resume and the roast analysis of it.
 
@@ -162,6 +164,7 @@ def build_notes_generate_user_prompt(
     *,
     resume_text: str,
     role: str,
+    experience_level: str,
     flags: list[Any],
     section_verdicts: dict[str, Any] | None,
     one_liner: str | None,
@@ -178,12 +181,15 @@ def build_notes_generate_user_prompt(
     }
     verdicts_json = json.dumps(verdicts_block, indent=2, ensure_ascii=False)
 
+    exp_block = experience_level_prompt_block(experience_level)
+
     return f"""RESUME:
 ---
 {resume_text}
 ---
 
 TARGET ROLE: {role.strip() or "n/a"}
+{exp_block}
 
 ROAST FLAGS:
 {flags_json}

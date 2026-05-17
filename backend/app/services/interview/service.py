@@ -421,6 +421,7 @@ async def start_session(
     system = build_question_bank_system_prompt(
         resume_text=text,
         role=r,
+        experience_level=resume.experience_level,
         hard_mode=hard_mode,
         question_count=batch_n,
         study_notes=study,

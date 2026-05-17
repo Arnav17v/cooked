@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+from app.services.resume.experience_level import experience_level_prompt_block
+
 
 def build_interview_system_prompt(
     *,
@@ -189,6 +191,7 @@ def build_question_bank_system_prompt(
     *,
     resume_text: str,
     role: str,
+    experience_level: str,
     hard_mode: bool,
     question_count: int,
     study_notes: list[dict[str, str]] | None = None,
@@ -215,6 +218,7 @@ Tag each question with BOTH:
 At least one of the two should be set when the question clearly maps to a section; prefer section_id when both are known.
 If a question doesn't map cleanly to any section, set both to null.
 """
+    exp_block = experience_level_prompt_block(experience_level)
     return f"""You write technical interview questions strictly from the candidate's resume below.
 The client will show all {question_count} questions at once; the candidate answers offline; an LLM scores later.
 Questions must be non-generic: an interviewer with this resume in front of them would ask these.
@@ -225,6 +229,7 @@ RESUME:
 ---
 
 TARGET ROLE: {role}
+{exp_block}
 {extra}{notes_block}
 RULES:
 - Mix buckets: from_resume (anchor to a resume bullet), gap (probe a hole), system_design (at most 2-3 if seniority fits).

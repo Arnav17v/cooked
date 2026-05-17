@@ -29,6 +29,8 @@ class Resume(Base):
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     target_role: Mapped[str] = mapped_column(String(128), nullable=False)
+    #: student | fresher | early | mid | senior | career_switch — calibrates LLM roast/notes
+    experience_level: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

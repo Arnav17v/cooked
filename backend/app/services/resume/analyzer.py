@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from app.schemas.llm_outputs import FlagItem, QuestionItem, RoastLLMOutput, SectionVerdictsObj
 from app.services.llm.router import LLMResult, LLMRouter
+from app.services.resume.experience_level import experience_level_prompt_block
 from app.services.resume.llm_input import normalize_whitespace, truncate_resume_for_llm
 from app.services.resume.sections import format_sections_line
 
@@ -81,10 +82,19 @@ def heat_label_from_score(score: int) -> str:
     return "Raw"
 
 
-def _build_user_prompt(*, role: str, resume_for_llm: str, word_count: int, sections_line: str) -> str:
+def _build_user_prompt(
+    *,
+    role: str,
+    experience_level: str,
+    resume_for_llm: str,
+    word_count: int,
+    sections_line: str,
+) -> str:
     schema_ref = _roast_output_schema_reference()
+    exp_block = experience_level_prompt_block(experience_level)
     return (
-        f"ROLE: {role.strip()}\n\n"
+        f"ROLE: {role.strip()}\n"
+        f"{exp_block}\n\n"
         "RESUME:\n---\n"
         f"{resume_for_llm}\n"
         "---\n\n"
@@ -181,6 +191,7 @@ def _normalize_questions(items: list[QuestionItem], resume_lower: str) -> list[Q
 async def roast_resume_with_llm(
     resume_text: str,
     target_role: str,
+    experience_level: str,
     *,
     max_output_tokens: int | None = None,
 ) -> tuple[RoastLLMOutput | None, LLMResult, str | None]:
@@ -194,6 +205,7 @@ async def roast_resume_with_llm(
     sections_line = format_sections_line(clean)
     user_prompt = _build_user_prompt(
         role=target_role,
+        experience_level=experience_level,
         resume_for_llm=body_for_llm,
         word_count=wc,
         sections_line=sections_line,

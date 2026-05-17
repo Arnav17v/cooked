@@ -68,6 +68,7 @@ async def run_analysis_pipeline(analysis_id: uuid.UUID) -> None:
             out, llm_res, err = await roast_resume_with_llm(
                 text,
                 resume.target_role,
+                resume.experience_level,
                 max_output_tokens=settings.llm_max_output_tokens,
             )
 

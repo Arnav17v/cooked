@@ -24,6 +24,42 @@ export const TARGET_ROLE_SUGGESTIONS = [
 export const TARGET_ROLE_PLACEHOLDER =
   "e.g. Software developer, Marketing lead, PM intern…";
 
+/** Sent with upload — calibrates roast, notes, and quiz difficulty. */
+export const EXPERIENCE_LEVEL_OPTIONS = [
+  {
+    value: "student",
+    label: "Student / intern",
+    hint: "Still in school or pre–first job",
+  },
+  {
+    value: "fresher",
+    label: "Fresher (0–1 yr)",
+    hint: "New grad or first role",
+  },
+  {
+    value: "early",
+    label: "Early career (1–3 yr)",
+    hint: "Some full-time experience",
+  },
+  {
+    value: "mid",
+    label: "Mid-level (3–6 yr)",
+    hint: "Solid ownership expected",
+  },
+  {
+    value: "senior",
+    label: "Senior (6+ yr)",
+    hint: "Scope and impact expected",
+  },
+  {
+    value: "career_switch",
+    label: "Career switcher",
+    hint: "Moving into this field",
+  },
+] as const;
+
+export type ExperienceLevelId = (typeof EXPERIENCE_LEVEL_OPTIONS)[number]["value"];
+
 export const STAGE_LINES: Record<string, string> = {
   extracting: "→ extracting…",
   scoring: "→ scoring…",

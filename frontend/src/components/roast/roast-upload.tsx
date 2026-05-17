@@ -12,8 +12,10 @@ import {
   LAST_RESUME_LS,
   ROAST_STEP_PROGRESS,
   STAGE_LINES,
+  EXPERIENCE_LEVEL_OPTIONS,
   TARGET_ROLE_PLACEHOLDER,
   TARGET_ROLE_SUGGESTIONS,
+  type ExperienceLevelId,
 } from "@/components/roast/roast-shared";
 import {
   enqueueAnalyze,
@@ -34,6 +36,7 @@ export function RoastUpload() {
   const { isSignedIn, getToken } = useAuth();
 
   const [role, setRole] = useState<string>("");
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevelId | "">("");
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
   const [resumePaste, setResumePaste] = useState("");
@@ -191,6 +194,7 @@ export function RoastUpload() {
 
   const hasStagedInput = Boolean(pickedFile) || (pasteMode && pasteWordCount >= 30);
   const hasRole = role.trim().length > 0;
+  const hasExperience = experienceLevel !== "";
 
   function clearFile() {
     setPickedFile(null);
@@ -198,7 +202,7 @@ export function RoastUpload() {
   }
 
   async function roastResume() {
-    if (!hasStagedInput || !role.trim()) return;
+    if (!hasStagedInput || !role.trim() || !experienceLevel) return;
 
     setIsRoasting(true);
     setRateLimited(false);
@@ -215,6 +219,7 @@ export function RoastUpload() {
 
       const fd = new FormData();
       fd.append("target_role", role.trim());
+      fd.append("experience_level", experienceLevel);
       if (pickedFile) {
         fd.append("file", pickedFile);
       } else {
@@ -276,6 +281,7 @@ export function RoastUpload() {
     setErrorMessage(null);
     setRateLimited(false);
     setProgressPct(0);
+    setExperienceLevel("");
   }
 
   return (
@@ -309,6 +315,28 @@ export function RoastUpload() {
             <p className="landing-field-hint">
               Type the job you are aiming for — any title is fine. Examples: software developer, data
               analyst, marketing lead, PM intern, UX researcher.
+            </p>
+          </label>
+
+          <label className="block">
+            <span className="landing-field-label">Experience level</span>
+            <select
+              value={experienceLevel}
+              onChange={(e) => setExperienceLevel(e.target.value as ExperienceLevelId | "")}
+              disabled={isRoasting}
+              className="landing-field-select"
+            >
+              <option value="">Select one…</option>
+              {EXPERIENCE_LEVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="landing-field-hint">
+              {experienceLevel
+                ? EXPERIENCE_LEVEL_OPTIONS.find((o) => o.value === experienceLevel)?.hint
+                : "Helps the AI calibrate the roast — e.g. don’t score a fresher like a staff engineer."}
             </p>
           </label>
 
@@ -412,7 +440,7 @@ export function RoastUpload() {
             <button
               type="button"
               onClick={() => void roastResume()}
-              disabled={isRoasting || !hasStagedInput || !hasRole}
+              disabled={isRoasting || !hasStagedInput || !hasRole || !hasExperience}
               className="landing-btn-primary"
             >
               <span>{isRoasting ? "Running…" : "Run roast"}</span>

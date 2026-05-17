@@ -34,6 +34,7 @@ from app.schemas.interview_quiz_scores import (
     MAX_QUIZ_SCORE_HISTORY,
     normalize_interview_quiz_scores,
 )
+from app.services.resume.experience_level import normalize_experience_level
 from app.services.resume.parser import ParsedResume, parse_pdf, parse_text, validate_min_words
 from app.services.resume.pipeline import run_analysis_pipeline
 from app.services.share.slug import allocate_share_slug
@@ -59,6 +60,7 @@ def _preview(text: str, *, max_len: int = 320) -> str:
 async def upload_resume(
     session: AsyncSession = Depends(get_session),  # noqa: B008
     target_role: str = Form(...),
+    experience_level: str = Form(...),
     resume_text: str | None = Form(None),
     file: UploadFile | None = File(None),  # noqa: B008
     clerk_subject: str | None = Depends(optional_clerk_subject),
@@ -70,6 +72,13 @@ async def upload_resume(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="target_role is required",
         )
+    try:
+        exp_level = normalize_experience_level(experience_level)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid experience_level",
+        ) from None
 
     user = await resolve_upload_user(
         session,
@@ -94,6 +103,7 @@ async def upload_resume(
         raw_text=None,
         file_url=None,
         target_role=role[:128],
+        experience_level=exp_level,
         interview_quiz_scores=carried_quiz_scores if carried_quiz_scores else None,
     )
     session.add(resume)
