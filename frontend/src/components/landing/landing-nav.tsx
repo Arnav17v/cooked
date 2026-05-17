@@ -98,7 +98,7 @@ export function LandingNav() {
   const mobileOverlay =
     mounted &&
     createPortal(
-      <div className="landing-v3 landing-nav-portal" aria-hidden={!menuOpen}>
+      <div className="landing-nav-portal" aria-hidden={!menuOpen}>
         <button
           type="button"
           className={`landing-nav-scrim${menuOpen ? " landing-nav-scrim--visible" : ""}`}
