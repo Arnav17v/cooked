@@ -12,8 +12,20 @@ export default {
   		fontFamily: {
   			sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
   			mono: ['var(--font-jetbrains)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+  			jetbrains: ['var(--font-jetbrains)', 'DM Mono', 'ui-monospace', 'monospace'],
+  			playfair: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
   		},
   		colors: {
+  			lv: {
+  				black: '#080705',
+  				surface: '#161410',
+  				rust: '#d44d1f',
+  				cream: {
+  					DEFAULT: '#f0e8d8',
+  					dim: '#a09080',
+  				},
+  				rule: 'rgba(240, 232, 216, 0.1)',
+  			},
   			lc: {
   				bg: '#1a1a1a',
   				surface: '#282828',
