@@ -291,11 +291,15 @@ export type InterviewFirstQuestion = {
   source_note_section_id?: string | null;
   /** Semantic tag from prep notes (e.g. experience:0, skills). */
   source_note_section_tag?: string | null;
+  /** Present on job-targeted quizzes — why this question fits the role/JD. */
+  why?: string | null;
+  question_type?: string | null;
 };
 
 export type InterviewStartResponse = {
   session_id: string;
   questions: InterviewFirstQuestion[];
+  job_targeted?: boolean;
 };
 
 export type InterviewPerAnswerFeedback = {
@@ -332,16 +336,22 @@ export async function startInterviewQuiz(
   auth?: ApiAuth,
   hardMode = false,
   questionCount = 10,
+  jobDescription?: string | null,
 ): Promise<InterviewStartResponse> {
+  const body: Record<string, unknown> = {
+    resume_id: resumeId,
+    role,
+    hard_mode: hardMode,
+    question_count: questionCount,
+  };
+  const jd = jobDescription?.trim();
+  if (jd) {
+    body.job_description = jd;
+  }
   const res = await fetch(`${getApiBase()}/api/v1/interview/start`, {
     method: "POST",
     headers: jsonPostHeaders(auth?.token),
-    body: JSON.stringify({
-      resume_id: resumeId,
-      role,
-      hard_mode: hardMode,
-      question_count: questionCount,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const body = await res.text();

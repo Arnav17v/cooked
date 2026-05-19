@@ -23,6 +23,8 @@ class InterviewStartBody(BaseModel):
     hard_mode: bool = False
     #: 3 = short, 10 = medium, 20 = long. Omit to use server default.
     question_count: int | None = Field(default=None, ge=1, le=20)
+    #: Optional per-quiz JD — not saved on the resume. Empty/omit = standard resume-only quiz.
+    job_description: str | None = Field(default=None, max_length=32_000)
 
 
 class InterviewAnswerBody(BaseModel):
@@ -52,6 +54,7 @@ async def interview_start(
             clerk_subject=clerk_subject,
             hard_mode=body.hard_mode,
             question_count=body.question_count,
+            job_description=body.job_description,
         )
         await session.commit()
         return out

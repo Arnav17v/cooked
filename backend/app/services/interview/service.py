@@ -25,6 +25,8 @@ from app.services.interview.prompts import (
     build_batch_score_system_prompt,
     build_batch_score_user_prompt,
     build_interview_system_prompt,
+    build_jd_batch_questions_user_prompt,
+    build_jd_question_bank_system_prompt,
     build_question_bank_system_prompt,
     build_turn_user_prompt,
 )
@@ -91,6 +93,34 @@ def _norm_bucket(raw: object) -> str:
     return "from_resume"
 
 
+def _bucket_from_question_type(raw: object) -> str:
+    t = str(raw or "").strip().lower()
+    if "system" in t and "design" in t:
+        return "system_design"
+    if "behaviour" in t or "behavior" in t:
+        return "gap"
+    return "from_resume"
+
+
+_MAX_JD_WORDS = 4000
+
+
+def _normalize_job_description(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    t = raw.strip()
+    if not t:
+        return None
+    words = t.split()
+    if len(words) > _MAX_JD_WORDS:
+        t = " ".join(words[:_MAX_JD_WORDS])
+    return t
+
+
+def _job_description_key(jd: str | None) -> str:
+    return (jd or "").strip()
+
+
 def _as_str(v: object | None) -> str | None:
     if v is None:
         return None
@@ -120,14 +150,27 @@ def _as_note_tag(val: object) -> str | None:
 
 
 def _pending_from_dict(data: dict[str, Any], *, difficulty_default: str) -> dict[str, Any]:
-    return {
+    qtype = _as_str(data.get("type")) or _as_str(data.get("question_type"))
+    if data.get("bucket") is not None and str(data.get("bucket")).strip():
+        bucket = _norm_bucket(data.get("bucket"))
+    elif qtype:
+        bucket = _bucket_from_question_type(qtype)
+    else:
+        bucket = "from_resume"
+    out: dict[str, Any] = {
         "question": str(data.get("question") or "").strip() or "What did you ship last?",
         "difficulty": _norm_diff(data.get("difficulty") or difficulty_default),
-        "bucket": _norm_bucket(data.get("bucket")),
+        "bucket": bucket,
         "source_bullet": _as_str(data.get("source_bullet")),
         "source_note_section_id": _parse_optional_section_id(data.get("source_note_section_id")),
         "source_note_section_tag": _as_note_tag(data.get("source_note_section_tag")),
     }
+    why = _as_str(data.get("why"))
+    if why:
+        out["why"] = why[:600]
+    if qtype:
+        out["question_type"] = qtype[:80]
+    return out
 
 
 def _clamp_score_final(raw: object) -> int:
@@ -309,6 +352,10 @@ def _build_start_response_from_session(inv: InterviewSession, *, batch_n: int) -
         }
         if q.get("source_note_section_tag"):
             item["source_note_section_tag"] = q["source_note_section_tag"]
+        if q.get("why"):
+            item["why"] = q["why"]
+        if q.get("question_type"):
+            item["question_type"] = q["question_type"]
         pub.append(item)
     return {"session_id": str(inv.id), "questions": pub}
 
@@ -321,6 +368,7 @@ async def _try_reuse_incomplete_batch_session(
     clerk_subject: str | None,
     hard_mode: bool,
     batch_n: int,
+    job_description: str | None,
 ) -> dict[str, object] | None:
     """If an in-progress static batch exists for the same resume + role + auth, return it.
 
@@ -342,6 +390,8 @@ async def _try_reuse_incomplete_batch_session(
     if (row.role or "").strip() != role.strip():
         return None
     if bool(row.hard_mode) != bool(hard_mode):
+        return None
+    if _job_description_key(row.job_description) != _job_description_key(job_description):
         return None
     uid = row.user_id
     if (uid or "") != (clerk_subject or ""):
@@ -387,6 +437,7 @@ async def start_session(
     clerk_subject: str | None,
     hard_mode: bool,
     question_count: int | None = None,
+    job_description: str | None = None,
 ) -> dict[str, object]:
     r = role.strip()
     if not r:
@@ -401,6 +452,7 @@ async def start_session(
         )
 
     batch_n = _resolve_batch_question_count(question_count)
+    jd = _normalize_job_description(job_description)
 
     await _pg_advisory_lock_resume(session, resume.id)
     reused = await _try_reuse_incomplete_batch_session(
@@ -410,6 +462,7 @@ async def start_session(
         clerk_subject=clerk_subject,
         hard_mode=hard_mode,
         batch_n=batch_n,
+        job_description=jd,
     )
     if reused is not None:
         return reused
@@ -418,18 +471,33 @@ async def start_session(
 
     study = await load_study_notes_for_prompt(session, resume.id)
 
-    system = build_question_bank_system_prompt(
-        resume_text=text,
-        role=r,
-        experience_level=resume.experience_level,
-        hard_mode=hard_mode,
-        question_count=batch_n,
-        study_notes=study,
-    )
-    user = build_batch_questions_user_prompt(
-        question_count=batch_n,
-        include_note_tagging=study is not None,
-    )
+    if jd:
+        system = build_jd_question_bank_system_prompt(
+            resume_text=text,
+            role=r,
+            experience_level=resume.experience_level,
+            job_description=jd,
+            hard_mode=hard_mode,
+            question_count=batch_n,
+            study_notes=study,
+        )
+        user = build_jd_batch_questions_user_prompt(
+            question_count=batch_n,
+            include_note_tagging=study is not None,
+        )
+    else:
+        system = build_question_bank_system_prompt(
+            resume_text=text,
+            role=r,
+            experience_level=resume.experience_level,
+            hard_mode=hard_mode,
+            question_count=batch_n,
+            study_notes=study,
+        )
+        user = build_batch_questions_user_prompt(
+            question_count=batch_n,
+            include_note_tagging=study is not None,
+        )
 
     data, _ = await interview_llm.generate_interview_json(
         full_system_prompt=system,
@@ -466,6 +534,7 @@ async def start_session(
         resume_id=resume.id,
         user_id=clerk_subject,
         role=r,
+        job_description=jd,
         history_summary=None,
         questions_asked=0,
         current_difficulty=str(ten[0].get("difficulty") or "medium"),
@@ -488,11 +557,16 @@ async def start_session(
         }
         if q.get("source_note_section_tag"):
             item["source_note_section_tag"] = q["source_note_section_tag"]
+        if q.get("why"):
+            item["why"] = q["why"]
+        if q.get("question_type"):
+            item["question_type"] = q["question_type"]
         pub.append(item)
 
     return {
         "session_id": str(inv_session.id),
         "questions": pub,
+        "job_targeted": bool(jd),
     }
 
 
@@ -564,6 +638,7 @@ async def score_quiz(
         resume_text=text,
         role=str(row.role),
         question_count=batch_n,
+        job_description=row.job_description,
     )
     usr_p = build_batch_score_user_prompt(qa_pairs=pairs)
 

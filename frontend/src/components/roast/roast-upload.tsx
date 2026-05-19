@@ -13,6 +13,7 @@ import {
   ROAST_STEP_PROGRESS,
   STAGE_LINES,
   EXPERIENCE_LEVEL_OPTIONS,
+  formatRoastFailure,
   TARGET_ROLE_PLACEHOLDER,
   TARGET_ROLE_SUGGESTIONS,
   type ExperienceLevelId,
@@ -145,9 +146,8 @@ export function RoastUpload() {
                   appendLine(`✓ done in ${secs}s`);
                   resolve(payload);
                 } else {
-                  const reason = "reason" in payload ? String(payload.reason) : "error";
-                  appendLine(`✗ failed: ${reason}`);
-                  resolve(payload);
+                  const reason = "reason" in payload ? String(payload.reason) : "unknown";
+                  resolve({ ...payload, step: "error", reason });
                 }
                 return;
               }
@@ -200,7 +200,6 @@ export function RoastUpload() {
                     resume_id: resumeId,
                   });
                 } else {
-                  appendLine(`✗ failed`);
                   resolve({ step: "error", reason: "analysis_failed" });
                 }
                 return;
@@ -216,7 +215,7 @@ export function RoastUpload() {
         es.onerror = () => {
           es.close();
           esRef.current = null;
-          reject(new Error("SSE connection dropped"));
+          reject(new Error("sse_connection_dropped"));
         };
       });
     },
@@ -244,6 +243,16 @@ export function RoastUpload() {
       clearFile();
     }
     setResumeInputMode(mode);
+  }
+
+  function showRoastFailure(raw: string, opts?: { rateLimited?: boolean }) {
+    const friendly = formatRoastFailure(raw);
+    if (opts?.rateLimited) {
+      setRateLimited(true);
+    }
+    setErrorMessage(friendly);
+    appendLine(`✗ ${friendly}`);
+    setRunFinished(true);
   }
 
   async function roastResume() {
@@ -289,7 +298,9 @@ export function RoastUpload() {
       setProgressPct(100);
 
       if (final.step === "error") {
-        throw new Error(final.reason === "quota_exceeded" ? "Daily limit" : final.reason);
+        const reason = "reason" in final ? String(final.reason) : "unknown";
+        showRoastFailure(reason);
+        return;
       }
 
       try {
@@ -300,18 +311,13 @@ export function RoastUpload() {
 
       router.push(`/dashboard?resume=${queued.resume_id}`);
     } catch (e) {
-      const msg =
+      const raw =
         e instanceof RateLimitedError
           ? e.message
           : e instanceof Error
             ? e.message
-            : "Request failed";
-      if (e instanceof RateLimitedError) {
-        setRateLimited(true);
-      }
-      setErrorMessage(msg);
-      appendLine(`✗ ${msg}`);
-      setRunFinished(true);
+            : "unknown";
+      showRoastFailure(raw, { rateLimited: e instanceof RateLimitedError });
     } finally {
       setIsRoasting(false);
     }

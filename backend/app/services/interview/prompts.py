@@ -271,7 +271,101 @@ Rules:
 - Vary difficulty and bucket across all questions.{note_rules}"""
 
 
-def build_batch_score_system_prompt(*, resume_text: str, role: str, question_count: int) -> str:
+def build_jd_question_bank_system_prompt(
+    *,
+    resume_text: str,
+    role: str,
+    experience_level: str,
+    job_description: str,
+    hard_mode: bool,
+    question_count: int,
+    study_notes: list[dict[str, str]] | None = None,
+) -> str:
+    extra = ""
+    if hard_mode:
+        extra = "\nHARD MODE: bias questions toward senior, unforgiving depth.\n"
+    notes_block = ""
+    if study_notes:
+        notes_json = json.dumps(study_notes, ensure_ascii=False, indent=2)
+        notes_block = f"""
+
+CANDIDATE'S STUDY NOTES:
+{notes_json}
+
+You may tie questions to these sections when relevant. Tag with source_note_section_id / source_note_section_tag when applicable (same rules as standard quizzes).
+"""
+    exp_block = experience_level_prompt_block(experience_level)
+    return f"""You are an expert technical interviewer conducting a real job interview.
+
+The client will show all {question_count} questions at once; the candidate answers offline; an LLM scores later.
+
+Candidate profile:
+- Target role: {role}
+{exp_block}
+
+CANDIDATE RESUME:
+---
+{resume_text}
+---
+
+JOB DESCRIPTION:
+---
+{job_description}
+---
+
+Generate {question_count} interview questions this specific candidate will actually face in this specific interview.
+
+Rules:
+- Calibrate difficulty strictly to the experience level above (fresher: fundamentals and projects only, no system design; senior: deep system design and scope).
+- Extract core requirements and keywords from the JOB DESCRIPTION. Weight questions toward what the JD explicitly asks for. If the JD mentions Redis, ask about Redis. If it mentions scale, ask about scale.
+- Reference the candidate's actual resume — specific projects, specific technologies they listed. Never ask generic questions any candidate could get.
+- Mix types: Technical, Behavioural, System Design (only if experience level allows), Resume-specific.
+- For each question include a "why" — one line explaining why this question is coming up for this role and candidate.
+- No two questions asking the same thing. No filler.
+
+{extra}{notes_block}
+OUTPUT: JSON only, no markdown fences."""
+
+
+def build_jd_batch_questions_user_prompt(
+    *, question_count: int, include_note_tagging: bool
+) -> str:
+    item: dict[str, object] = {
+        "question": "string",
+        "difficulty": "easy | medium | hard",
+        "type": "Technical | Behavioural | System Design | Resume-specific",
+        "why": "one line tying this question to the JD and/or resume",
+        "source_bullet": "resume substring or null",
+    }
+    note_rules = ""
+    if include_note_tagging:
+        item["source_note_section_id"] = "uuid or null"
+        item["source_note_section_tag"] = "tag or null"
+        note_rules = (
+            "\n- When study notes exist in the system prompt, set source_note_section_id / "
+            "source_note_section_tag when the question maps to a section."
+        )
+    return f"""Return a single JSON object with exactly one top-level key: "questions".
+
+The value must be an array of length **exactly {question_count}**. Each element:
+{json.dumps(item, indent=2)}
+
+Rules:
+- len(questions) MUST be {question_count}.
+- Every question must be traceable to the resume, the JD, or the experience level. No generic filler.
+- difficulty: easy, medium, or hard (lowercase).
+- type: exactly one of Technical, Behavioural, System Design, Resume-specific.
+- why: required, one concise line.
+- source_bullet: exact resume substring when the question anchors to a bullet, else null.{note_rules}"""
+
+
+def build_batch_score_system_prompt(
+    *,
+    resume_text: str,
+    role: str,
+    question_count: int,
+    job_description: str | None = None,
+) -> str:
     example_shape = {
         "final_score": 67,
         "one_liner": "short overall roast",
@@ -286,6 +380,14 @@ def build_batch_score_system_prompt(*, resume_text: str, role: str, question_cou
         ],
     }
     upper = question_count
+    jd_block = ""
+    if job_description and job_description.strip():
+        jd_block = f"""
+Job description for this interview (weight expectations accordingly):
+---
+{job_description.strip()}
+---
+"""
     return f"""You score a finished mock interview: {question_count} question/answer pairs appear in the user message.
 
 Resume (for judging honesty and depth vs claims):
@@ -294,7 +396,7 @@ Resume (for judging honesty and depth vs claims):
 ---
 
 Target role: {role}
-
+{jd_block}
 Output ONE JSON object only, no markdown. Key names (include all three top-level keys):
 
 {json.dumps(example_shape, indent=2)}

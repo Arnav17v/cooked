@@ -22,11 +22,9 @@ import { quizCountForLength, type QuizLengthId } from "@/lib/quiz-length";
 import {
   type FlagsResponse,
   type MyRoastItem,
-  type QuestionItem,
   type ScoreResponse,
   fetchMyRoasts,
   getFlags,
-  getQuestions,
   getScore,
 } from "@/lib/api";
 import { QUIZ_START_HANDOFF_KEY, type QuizStartHandoff } from "@/lib/interview-quiz-start-handoff";
@@ -80,7 +78,6 @@ export function RoastDashboard() {
 
   const [liveScore, setLiveScore] = useState<ScoreResponse | null>(null);
   const [liveFlags, setLiveFlags] = useState<FlagsResponse | null>(null);
-  const [liveQuestions, setLiveQuestions] = useState<QuestionItem[]>([]);
 
   const [resultTab, setResultTab] = useState<ResultTabId>("score");
   const [myRoasts, setMyRoasts] = useState<MyRoastItem[]>([]);
@@ -225,25 +222,17 @@ export function RoastDashboard() {
     setHydrateError(null);
     setLiveScore(null);
     setLiveFlags(null);
-    setLiveQuestions([]);
-
     (async () => {
       try {
         const token = await bearer();
         const auth = token ? { token } : undefined;
-        const [s, f, q] = await Promise.all([
+        const [s, f] = await Promise.all([
           getScore(resolvedResumeId, auth),
           getFlags(resolvedResumeId, auth),
-          getQuestions(resolvedResumeId, auth).catch(() => ({
-            questions: [] as QuestionItem[],
-            share_slug: "",
-            degraded: false,
-          })),
         ]);
         if (cancelled) return;
         setLiveScore(s);
         setLiveFlags(f);
-        setLiveQuestions(Array.isArray(q.questions) ? q.questions : []);
         setResultTab("score");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Could not load roast";
@@ -251,7 +240,6 @@ export function RoastDashboard() {
           setHydrateError(msg);
           setLiveScore(null);
           setLiveFlags(null);
-          setLiveQuestions([]);
         }
         try {
           window.localStorage.removeItem(LAST_RESUME_LS);
@@ -287,12 +275,6 @@ export function RoastDashboard() {
     () => myRoasts.find((r) => r.resume_id === resolvedResumeId),
     [myRoasts, resolvedResumeId],
   );
-
-  const fromResumeQuestions = useMemo(
-    () => liveQuestions.filter((q) => (q.bucket ?? "from_resume") !== "gap"),
-    [liveQuestions],
-  );
-  const gapQuestions = useMemo(() => liveQuestions.filter((q) => q.bucket === "gap"), [liveQuestions]);
 
   useEffect(() => {
     if (!openNotesTabFromUrl || !showResultTabs || !resolvedResumeId) return;
@@ -364,7 +346,7 @@ export function RoastDashboard() {
 
   function navCount(id: ResultTabId): number | null {
     if (id === "flags") return flags.length > 0 ? flags.length : null;
-    if (id === "questions") return liveQuestions.length > 0 ? liveQuestions.length : null;
+    if (id === "questions") return null;
     return null;
   }
 
@@ -718,59 +700,15 @@ export function RoastDashboard() {
                     </div>
                   ) : null}
 
-                  {fromResumeQuestions.length > 0 ? (
-                    <section>
-                      <p className="mb-6 font-mono text-[10px] uppercase tracking-wide text-lc-dim">{"// from your resume"}</p>
-                      <ul className="space-y-6">
-                        {fromResumeQuestions.map((q, i) => (
-                          <li key={`fr-${i}`} className="text-[14px] leading-relaxed text-lc-text">
-                            <p>
-                              <span className="text-lc-orange">→</span>{" "}
-                              <span className="text-lc-text">{q.question}</span>
-                            </p>
-                            {q.source_bullet ? (
-                              <p className="mt-3 hidden pl-4 font-mono text-[11px] leading-relaxed text-lc-dim md:block md:pl-5">
-                                &ldquo;{q.source_bullet}&rdquo;
-                              </p>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ) : null}
-
-                  {fromResumeQuestions.length > 0 && gapQuestions.length > 0 ? (
-                    <hr className="border-0 border-t border-lc-divider" />
-                  ) : null}
-
-                  {gapQuestions.length > 0 ? (
-                    <section>
-                      <p className="mb-6 font-mono text-[10px] uppercase tracking-wide text-lc-dim">
-                        {"// they'll ask because it's missing"}
-                      </p>
-                      <ul className="space-y-6">
-                        {gapQuestions.map((q, i) => (
-                          <li key={`gap-${i}`} className="text-[14px] leading-relaxed text-lc-text">
-                            <p>
-                              <span className="text-lc-orange">→</span> <span>{q.question}</span>
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ) : null}
-
-                  {liveQuestions.length === 0 ? (
-                    <p className="text-[14px] text-lc-muted">No interview questions for this run.</p>
-                  ) : null}
-
-                  <div className="mt-8 space-y-4 border-t border-lc-divider pt-8">
+                  <div className="space-y-4">
                     {quizScores.length === 0 ? (
                       <>
                         <p className="font-mono text-[10px] uppercase tracking-wide text-lc-dim">
                           {"// haven't tried the quiz yet"}
                         </p>
-                        <p className="text-[13px] text-lc-muted">answering these out loud is the point.</p>
+                        <p className="text-[13px] text-lc-muted">
+                          Start a practice quiz — questions are generated when you run it.
+                        </p>
                       </>
                     ) : null}
                     <QuizLengthPicker

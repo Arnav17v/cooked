@@ -24,6 +24,8 @@ class InterviewSession(Base):
     #: Clerk `sub` when the client authenticated at session start; anonymous ok.
     user_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Optional JD for this quiz only — not stored on the resume.
+    job_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     cache_handle: Mapped[str | None] = mapped_column(Text, nullable=True)
     history_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     questions_asked: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

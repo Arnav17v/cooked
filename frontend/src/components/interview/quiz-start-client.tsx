@@ -1,11 +1,20 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import Link from "next/link";
+import { Briefcase } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { PipelineProgress } from "@/components/ui/pipeline-progress";
+import { formatRoastFailure } from "@/components/roast/roast-shared";
+import {
+  QuizEditorPane,
+  QuizErrorPanel,
+  QuizFieldTextarea,
+  QuizLoadingPanel,
+  QuizMetaGrid,
+  QuizMetaRow,
+  QuizPrimaryButton,
+} from "@/components/interview/quiz-ui";
 import { startInterviewQuiz } from "@/lib/api";
 import { quizCountForLength } from "@/lib/quiz-length";
 import {
@@ -16,11 +25,23 @@ import {
 const META_PREFIX = "cooked_interview_meta_v1_";
 const SEED_PREFIX = "cooked_interview_seed_v1_";
 
+type Phase = "setup" | "starting" | "error";
+
+function quizLengthLabel(count: number): string {
+  if (count <= 3) return "Short · 3 questions";
+  if (count <= 10) return "Medium · 10 questions";
+  return "Long · 20 questions";
+}
+
 export function QuizStartClient() {
   const router = useRouter();
   const { isSignedIn, getToken } = useAuth();
-  const [phase, setPhase] = useState<"loading" | "error">("loading");
+
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [handoff, setHandoff] = useState<QuizStartHandoff | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [progressPct, setProgressPct] = useState(28);
 
   const bearer = useCallback(async () => {
     if (!isSignedIn) return undefined;
@@ -31,109 +52,147 @@ export function QuizStartClient() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let cancelled = false;
+    const raw = window.localStorage.getItem(QUIZ_START_HANDOFF_KEY);
+    if (!raw?.trim()) {
+      setPhase("error");
+      setErrorMsg("No quiz start context — open this from your roast dashboard.");
+      return;
+    }
 
-    (async () => {
-      const raw = window.localStorage.getItem(QUIZ_START_HANDOFF_KEY);
-      if (!raw?.trim()) {
-        if (!cancelled) {
-          setPhase("error");
-          setErrorMsg("No quiz start context — open this from your roast dashboard.");
-        }
-        return;
-      }
-
-      let handoff: QuizStartHandoff;
-      try {
-        handoff = JSON.parse(raw) as QuizStartHandoff;
-      } catch {
-        if (!cancelled) {
-          setPhase("error");
-          setErrorMsg("Invalid quiz handoff — try again from the dashboard.");
-        }
-        return;
-      }
-
-      const resumeId = typeof handoff.resumeId === "string" ? handoff.resumeId.trim() : "";
-      const role = typeof handoff.role === "string" ? handoff.role.trim() : "";
-      const hardMode = Boolean(handoff.hard_mode);
-      const rawCount = handoff.question_count;
-      const questionCount =
-        typeof rawCount === "number" && rawCount > 0
-          ? rawCount
-          : quizCountForLength("medium");
-
+    try {
+      const parsed = JSON.parse(raw) as QuizStartHandoff;
+      const resumeId = typeof parsed.resumeId === "string" ? parsed.resumeId.trim() : "";
+      const role = typeof parsed.role === "string" ? parsed.role.trim() : "";
       if (!resumeId || !role) {
-        if (!cancelled) {
-          setPhase("error");
-          setErrorMsg("Missing resume or role — start again from the dashboard.");
-        }
+        setPhase("error");
+        setErrorMsg("Missing resume or role — start again from the dashboard.");
         return;
       }
+      setHandoff(parsed);
+    } catch {
+      setPhase("error");
+      setErrorMsg("Invalid quiz handoff — try again from the dashboard.");
+    }
+  }, []);
+
+  const questionCount = useMemo(() => {
+    if (!handoff) return 10;
+    const rawCount = handoff.question_count;
+    return typeof rawCount === "number" && rawCount > 0 ? rawCount : quizCountForLength("medium");
+  }, [handoff]);
+
+  const jdWordCount = useMemo(
+    () => (jobDescription.trim() ? jobDescription.trim().split(/\s+/).filter(Boolean).length : 0),
+    [jobDescription],
+  );
+
+  async function onStartInterview() {
+    if (!handoff) return;
+
+    const resumeId = handoff.resumeId.trim();
+    const role = handoff.role.trim();
+    const hardMode = Boolean(handoff.hard_mode);
+    const jd = jobDescription.trim() || null;
+
+    setPhase("starting");
+    setErrorMsg(null);
+    setProgressPct(28);
+
+    try {
+      const token = await bearer();
+      const out = await startInterviewQuiz(
+        resumeId,
+        role,
+        token ? { token } : undefined,
+        hardMode,
+        questionCount,
+        jd,
+      );
+      setProgressPct(100);
 
       try {
-        const token = await bearer();
-        const out = await startInterviewQuiz(
-          resumeId,
-          role,
-          token ? { token } : undefined,
-          hardMode,
-          questionCount,
+        window.localStorage.removeItem(QUIZ_START_HANDOFF_KEY);
+        window.localStorage.setItem(
+          SEED_PREFIX + out.session_id,
+          JSON.stringify({ questions: out.questions }),
         );
-        if (cancelled) return;
-
-        try {
-          window.localStorage.removeItem(QUIZ_START_HANDOFF_KEY);
-          window.localStorage.setItem(
-            SEED_PREFIX + out.session_id,
-            JSON.stringify({ questions: out.questions }),
-          );
-          window.localStorage.setItem(
-            META_PREFIX + out.session_id,
-            JSON.stringify({ resumeId, role }),
-          );
-        } catch {
-          /* storage blocked */
-        }
-
-        router.replace(`/quiz/${out.session_id}`);
-      } catch (e) {
-        if (!cancelled) {
-          setPhase("error");
-          setErrorMsg(e instanceof Error ? e.message : "Could not start the quiz.");
-        }
+        window.localStorage.setItem(
+          META_PREFIX + out.session_id,
+          JSON.stringify({ resumeId, role, jobTargeted: Boolean(out.job_targeted) }),
+        );
+      } catch {
+        /* storage blocked */
       }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [bearer, router]);
+      router.replace(`/quiz/${out.session_id}`);
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : "Could not start the quiz.";
+      setPhase("error");
+      setErrorMsg(formatRoastFailure(raw));
+    }
+  }
 
   if (phase === "error") {
+    return <QuizErrorPanel message={errorMsg ?? "Something went wrong."} />;
+  }
+
+  if (phase === "starting") {
     return (
-      <div className="mx-auto max-w-lg px-5 py-24 text-center">
-        <p className="text-[14px] text-lc-muted">{errorMsg}</p>
-        <Link href="/dashboard" className="mt-8 inline-block text-lc-orange hover:underline">
-          Back to dashboard
-        </Link>
-      </div>
+      <QuizLoadingPanel
+        title="Making your questions…"
+        percent={progressPct}
+        detail={
+          jobDescription.trim()
+            ? "Tailoring questions to your job description and resume. Do not close this tab."
+            : "Reading your roast and generating interview prompts. Do not close this tab."
+        }
+      />
     );
   }
 
+  if (!handoff) {
+    return <QuizLoadingPanel title="Loading session…" />;
+  }
+
+  const hardMode = Boolean(handoff.hard_mode);
+  const hasJd = jobDescription.trim().length > 0;
+
   return (
-    <div className="mx-auto max-w-lg px-5 py-24 text-center">
-      <div
-        className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-lc-border border-t-lc-orange"
-        aria-hidden
-      />
-      <p className="mt-10 font-mono text-[15px] font-medium text-lc-text">Making your questions…</p>
-      <PipelineProgress className="mt-6 w-full max-w-sm" percent={42} />
-      <p className="mt-4 text-[14px] leading-relaxed text-lc-muted">
-        We&apos;re reading your roast and asking the model to generate interview prompts grounded in what you
-        actually wrote.
-      </p>
-      <p className="mt-6 font-mono text-[11px] uppercase tracking-wide text-lc-dim">Do not close this tab</p>
+    <div className="space-y-6">
+      <QuizEditorPane filename="session_config.json" icon={<Briefcase className="h-3.5 w-3.5 shrink-0 text-lv-rust" strokeWidth={2} />}>
+        <QuizMetaGrid>
+          <QuizMetaRow label="Target role" value={handoff.role} />
+          <QuizMetaRow label="Quiz length" value={quizLengthLabel(questionCount)} />
+          {hardMode ? <QuizMetaRow label="Mode" value="Hard" accent /> : null}
+        </QuizMetaGrid>
+      </QuizEditorPane>
+
+      <QuizEditorPane
+        filename={hasJd ? "job_description.txt" : "job_description.txt (optional)"}
+        footer={
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-sm text-[11px] leading-relaxed text-lv-cream/45">
+              JD is stored for this quiz only — not saved to your roast. Leave blank for the standard quiz.
+            </p>
+            <QuizPrimaryButton onClick={() => void onStartInterview()} className="shrink-0 sm:min-w-[240px]">
+              {hasJd ? "Start job-targeted interview" : "Start interview"}
+            </QuizPrimaryButton>
+          </div>
+        }
+      >
+        <QuizFieldTextarea
+          label="Job description"
+          value={jobDescription}
+          onChange={setJobDescription}
+          rows={7}
+          placeholder="Paste the posting — requirements, stack, responsibilities…"
+          hint={
+            jdWordCount > 0
+              ? `${jdWordCount} words — questions will lean on this JD plus your resume.`
+              : "Optional. Same roast can prep for Razorpay, Zepto, Groww — paste a different JD each time."
+          }
+        />
+      </QuizEditorPane>
     </div>
   );
 }

@@ -78,6 +78,105 @@ export const ROAST_STEP_PROGRESS: Record<string, number> = {
 /** Browser hint for anonymous refresh; signed-in saves use `/me/roasts` + Bearer. */
 export const LAST_RESUME_LS = "cooked_last_resume_v1";
 
+const ROAST_FAILURE_EXACT: Record<string, string> = {
+  models_unavailable:
+    "We're getting a lot of traffic right now. Please wait about 5 minutes and try again.",
+  too_short:
+    "Your resume looks too short to roast. Add more detail, or use Paste text and paste your full resume.",
+  no_resume_text:
+    "We couldn't read your resume. Try uploading again, or switch to Paste text and paste the full content.",
+  no_user: "Something went wrong with your session. Refresh the page and try again.",
+  not_found: "That roast couldn't be found. Start a new upload and try again.",
+  analysis_failed: "The roast didn't finish. Please try again in a few minutes.",
+  unknown: "Something went wrong. Please try again in a few minutes.",
+  quota_exceeded:
+    "You've hit today's roast limit (3 per day). Come back tomorrow for another run.",
+  invalid_experience_level: "Pick an experience level from the dropdown and try again.",
+  sse_connection_dropped:
+    "Connection lost while roasting. Check your internet and try again.",
+};
+
+function extractApiErrorDetail(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as { detail?: unknown };
+      if (typeof parsed.detail === "string") return parsed.detail;
+      if (Array.isArray(parsed.detail)) {
+        return parsed.detail
+          .map((item) =>
+            typeof item === "object" && item !== null && "msg" in item
+              ? String((item as { msg?: string }).msg)
+              : String(item),
+          )
+          .join(" ");
+      }
+    } catch {
+      /* plain text */
+    }
+  }
+  return trimmed;
+}
+
+/** Map backend / network errors to copy for roast.log and inline alerts. */
+export function formatRoastFailure(raw: string): string {
+  const detail = extractApiErrorDetail(raw);
+  const key = detail.toLowerCase().replace(/\s+/g, "_");
+
+  if (ROAST_FAILURE_EXACT[key]) return ROAST_FAILURE_EXACT[key];
+
+  const hay = detail.toLowerCase();
+
+  if (/daily roast limit|429|too many requests|rate.?limit/.test(hay)) {
+    return ROAST_FAILURE_EXACT.quota_exceeded;
+  }
+  if (/too short/.test(hay)) {
+    return ROAST_FAILURE_EXACT.too_short;
+  }
+  if (
+    /bucket|storage|credentials|r2\b|s3\b|encryption|could not store|incompletebody|put_object|nosuchbucket|accessdenied/.test(
+      hay,
+    )
+  ) {
+    return "We couldn't process that PDF. Switch to Paste text at the top and paste your resume content instead.";
+  }
+  if (
+    /only pdf|pdf uploads require|could not read|parse|extract|corrupt|invalid pdf|unreadable|scanned/.test(
+      hay,
+    )
+  ) {
+    return "We couldn't read that PDF. Try another file, or use Paste text and paste your resume instead.";
+  }
+  if (/provide resume_text|resume text is empty|expired or not uploaded/.test(hay)) {
+    return ROAST_FAILURE_EXACT.no_resume_text;
+  }
+  if (/sse connection|connection dropped|failed to fetch|network error|load failed/.test(hay)) {
+    return ROAST_FAILURE_EXACT.sse_connection_dropped;
+  }
+  if (/target_role|experience_level|invalid experience/.test(hay)) {
+    return "Fill in your target role and experience level, then try again.";
+  }
+  if (/413|too large|entity too large/.test(hay)) {
+    return "That PDF is too large. Use a shorter file, or switch to Paste text instead.";
+  }
+  if (/503|service unavailable|bad gateway|gateway timeout|502|504/.test(hay)) {
+    return "Our servers are busy or waking up. Wait about a minute and try again.";
+  }
+  if (/401|403|unauthorized|forbidden/.test(hay)) {
+    return "You may need to sign in again. Refresh the page and try once more.";
+  }
+  if (/404|not found/.test(hay)) {
+    return ROAST_FAILURE_EXACT.not_found;
+  }
+
+  if (/model|llm|provider|gemini|groq|openai|anthropic/.test(hay)) {
+    return ROAST_FAILURE_EXACT.models_unavailable;
+  }
+
+  return "Something went wrong on our end. Try again in a few minutes — or use Paste text if PDF upload keeps failing.";
+}
+
 export function isUuidShape(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     s.trim(),
