@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Upload, X } from "lucide-react";
+import { ClipboardPaste, Upload, X } from "lucide-react";
 
 import { PipelineProgress } from "@/components/ui/pipeline-progress";
 import {
@@ -30,6 +30,8 @@ const fieldInputClass =
 
 const selectChevron =
   "bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%3E%3Cpath%20fill%3D%22%23a89880%22%20d%3D%22M1%201l5%205%205-5%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_8px] bg-[position:right_14px_center] bg-no-repeat";
+
+type ResumeInputMode = "pdf" | "paste";
 
 function RoastPrimaryButton({
   children,
@@ -70,8 +72,8 @@ export function RoastUpload() {
 
   const [role, setRole] = useState<string>("");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevelId | "">("");
+  const [resumeInputMode, setResumeInputMode] = useState<ResumeInputMode>("pdf");
   const [pickedFile, setPickedFile] = useState<File | null>(null);
-  const [pasteMode, setPasteMode] = useState(false);
   const [resumePaste, setResumePaste] = useState("");
 
   const [isRoasting, setIsRoasting] = useState(false);
@@ -221,17 +223,27 @@ export function RoastUpload() {
     [appendLine, setProgressPct],
   );
 
-  const pasteWordCount = pasteMode
-    ? resumePaste.trim().split(/\s+/).filter(Boolean).length
-    : 0;
+  const pasteWordCount =
+    resumeInputMode === "paste" ? resumePaste.trim().split(/\s+/).filter(Boolean).length : 0;
 
-  const hasStagedInput = Boolean(pickedFile) || (pasteMode && pasteWordCount >= 30);
+  const hasStagedInput =
+    resumeInputMode === "pdf" ? Boolean(pickedFile) : pasteWordCount >= 30;
   const hasRole = role.trim().length > 0;
   const hasExperience = experienceLevel !== "";
 
   function clearFile() {
     setPickedFile(null);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function switchResumeInputMode(mode: ResumeInputMode) {
+    if (isRoasting || mode === resumeInputMode) return;
+    if (mode === "pdf") {
+      setResumePaste("");
+    } else {
+      clearFile();
+    }
+    setResumeInputMode(mode);
   }
 
   async function roastResume() {
@@ -308,7 +320,7 @@ export function RoastUpload() {
   function resetForm() {
     clearFile();
     setResumePaste("");
-    setPasteMode(false);
+    setResumeInputMode("pdf");
     setTerminalLines([]);
     setRunFinished(false);
     setErrorMessage(null);
@@ -387,21 +399,59 @@ export function RoastUpload() {
             </p>
           </label>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
-              if (f) {
-                setPickedFile(f);
-                setPasteMode(false);
-              }
-            }}
-          />
+          <div>
+            <span className="mb-2 block font-jetbrains text-[11px] uppercase tracking-widest text-lv-cream-dim">
+              Resume
+            </span>
+            <div
+              role="tablist"
+              aria-label="Resume input method"
+              className="mb-3 grid grid-cols-2 border border-lv-rule"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={resumeInputMode === "pdf"}
+                disabled={isRoasting}
+                onClick={() => switchResumeInputMode("pdf")}
+                className={`roast-input-mode-tab flex items-center justify-center gap-2 px-3 py-2.5 font-jetbrains text-[11px] uppercase tracking-wide transition-colors disabled:opacity-50 ${
+                  resumeInputMode === "pdf"
+                    ? "bg-lv-rust text-lv-cream"
+                    : "bg-lv-surface text-lv-cream-dim hover:text-lv-cream"
+                }`}
+              >
+                <Upload className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                Upload PDF
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={resumeInputMode === "paste"}
+                disabled={isRoasting}
+                onClick={() => switchResumeInputMode("paste")}
+                className={`roast-input-mode-tab flex items-center justify-center gap-2 border-l border-lv-rule px-3 py-2.5 font-jetbrains text-[11px] uppercase tracking-wide transition-colors disabled:opacity-50 ${
+                  resumeInputMode === "paste"
+                    ? "bg-lv-rust text-lv-cream"
+                    : "bg-lv-surface text-lv-cream-dim hover:text-lv-cream"
+                }`}
+              >
+                <ClipboardPaste className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                Paste text
+              </button>
+            </div>
 
-          {!pickedFile && !pasteMode ? (
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f) setPickedFile(f);
+              }}
+            />
+
+            {resumeInputMode === "pdf" && !pickedFile ? (
             <button
               type="button"
               disabled={isRoasting}
@@ -415,7 +465,6 @@ export function RoastUpload() {
                 const f = e.dataTransfer.files?.[0];
                 if (f?.type === "application/pdf") {
                   setPickedFile(f);
-                  setPasteMode(false);
                 }
               }}
               className="roast-dropzone flex min-h-[168px] w-full flex-col items-center justify-center border border-dashed border-lv-rust/35 bg-lv-surface px-4 py-10 text-center transition-colors hover:border-lv-rust hover:bg-lv-rust/[0.04] disabled:opacity-50 sm:min-h-[220px] sm:px-6 sm:py-12"
@@ -429,7 +478,7 @@ export function RoastUpload() {
                 or click to choose a file
               </p>
             </button>
-          ) : pickedFile ? (
+          ) : resumeInputMode === "pdf" && pickedFile ? (
             <div className="flex items-center gap-3 border border-lv-rule bg-lv-surface px-4 py-3.5">
               <span className="min-w-0 flex-1 truncate font-jetbrains text-[13px] text-lv-cream">
                 {pickedFile.name}
@@ -445,49 +494,24 @@ export function RoastUpload() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-          ) : (
+          ) : resumeInputMode === "paste" ? (
             <div>
               <textarea
                 value={resumePaste}
                 onChange={(e) => setResumePaste(e.target.value)}
                 disabled={isRoasting}
-                placeholder="Paste resume text…"
+                placeholder="Paste your full resume here — experience, projects, education…"
                 rows={12}
                 spellCheck={false}
                 className="roast-textarea w-full min-h-[200px] resize-y border border-lv-rule bg-lv-surface p-4 font-jetbrains text-[13px] leading-relaxed text-lv-cream outline-none focus:border-lv-rust disabled:opacity-50 sm:min-h-[280px]"
               />
               <p className="mt-2 text-[11px] leading-relaxed text-lv-cream/45">
-                Minimum ~30 words before you can run.
+                {pasteWordCount >= 30
+                  ? `${pasteWordCount} words — ready to roast`
+                  : `Minimum ~30 words (${pasteWordCount} so far)`}
               </p>
             </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-3">
-            {!pickedFile && !pasteMode ? (
-              <button
-                type="button"
-                disabled={isRoasting}
-                onClick={() => {
-                  setPasteMode(true);
-                  clearFile();
-                }}
-                className="roast-text-link border-0 bg-transparent p-0 font-jetbrains text-xs uppercase tracking-wide text-lv-rust hover:text-lv-cream hover:underline disabled:opacity-50"
-              >
-                Paste text instead
-              </button>
-            ) : pasteMode ? (
-              <button
-                type="button"
-                disabled={isRoasting}
-                onClick={() => {
-                  setPasteMode(false);
-                  setResumePaste("");
-                }}
-                className="roast-text-link border-0 bg-transparent p-0 font-jetbrains text-xs uppercase tracking-wide text-lv-rust hover:text-lv-cream hover:underline disabled:opacity-50"
-              >
-                Use PDF instead
-              </button>
-            ) : null}
+          ) : null}
           </div>
         </div>
 
