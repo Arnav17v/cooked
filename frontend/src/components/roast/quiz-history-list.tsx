@@ -27,9 +27,22 @@ type Props = {
 export function QuizHistoryList({ sessions, loading }: Props) {
   if (loading) {
     return (
-      <p className="font-mono text-[10px] uppercase tracking-wide text-lc-dim">
-        {"// loading past quizzes…"}
-      </p>
+      <div className="space-y-3">
+        <p className="font-mono text-[10px] uppercase tracking-wide text-lc-dim">
+          {"// past quizzes"}
+        </p>
+        <ul className="divide-y divide-lc-divider rounded-lg border border-lc-border bg-lc-surface/60">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <li key={`quiz-history-skeleton-${i}`} className="px-4 py-3">
+              <div className="animate-pulse">
+                <div className="mb-2 h-5 w-28 rounded bg-lc-elevated" />
+                <div className="mb-1 h-3 w-[85%] rounded bg-lc-elevated" />
+                <div className="h-3 w-[60%] rounded bg-lc-elevated" />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     );
   }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import dynamic from "next/dynamic";
@@ -51,6 +52,7 @@ export default function RootLayout({
           {children}
           <NotesUpdatedToastHost />
           <LlmDevToastHost />
+          <Analytics />
         </ClerkProvider>
       </body>
     </html>
