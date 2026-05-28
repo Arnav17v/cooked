@@ -1,7 +1,6 @@
 "use client";
 
 import type { InterviewFirstQuestion, InterviewPerAnswerFeedback } from "@/lib/api";
-import { siteHostLabel } from "@/lib/site-url";
 
 import { QuizPrimaryButton } from "@/components/interview/quiz-ui";
 
@@ -94,7 +93,6 @@ export function QuizAnalysisResults({
   const score = Math.min(100, Math.max(0, Math.round(finalScore)));
   const hero = performanceHeadline(score);
   const badge = sessionBadge(sessionId);
-  const year = new Date().getFullYear();
 
   return (
     <div className="relative text-lv-cream">
@@ -128,7 +126,7 @@ export function QuizAnalysisResults({
             </p>
 
             <p className="mt-8 font-jetbrains text-[11px] uppercase tracking-[0.2em] text-[#ff4d00]">
-              {"// summary critique"}
+              Summary critique
             </p>
             <blockquote className="mt-3 max-w-xl font-playfair text-[clamp(1.1rem,2.5vw,1.45rem)] font-normal leading-snug text-lv-cream">
               &ldquo;{headline}&rdquo;
@@ -163,7 +161,7 @@ export function QuizAnalysisResults({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="font-jetbrains text-[11px] uppercase tracking-[0.2em] text-[#ff4d00]">
-              {"// breakdown"}
+              Breakdown
             </p>
             <h2 className="mt-2 font-playfair text-[clamp(1.75rem,4vw,2.5rem)] font-normal text-lv-cream">
               Detailed evaluation
@@ -269,18 +267,6 @@ export function QuizAnalysisResults({
       <QuizPrimaryButton onClick={onBackToDashboard} className="min-w-[220px]">
         Back to dashboard
       </QuizPrimaryButton>
-
-      <footer className="mt-16 flex flex-col gap-4 border-t border-lv-rule pt-8 sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-jetbrains text-[10px] uppercase tracking-widest text-lv-cream/35">
-          © {year} {siteHostLabel()} {"// no_regrets_only_code"}
-        </p>
-        <nav className="flex flex-wrap gap-5 font-jetbrains text-[10px] uppercase tracking-widest text-lv-cream/35">
-          <span>Privacy</span>
-          <span>Security</span>
-          <span>API</span>
-          <span>Docs</span>
-        </nav>
-      </footer>
     </div>
   );
 }
