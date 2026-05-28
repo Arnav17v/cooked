@@ -8,7 +8,11 @@ type Props = {
 export default async function QuizResultsPage(props: Props) {
   const { session_id } = await props.params;
   return (
-    <QuizPageShell>
+    <QuizPageShell
+      eyebrow="// interview"
+      title="Quiz analysis"
+      description="Detailed breakdown from your completed mock interview."
+    >
       <QuizResultsClient sessionId={session_id} />
     </QuizPageShell>
   );
