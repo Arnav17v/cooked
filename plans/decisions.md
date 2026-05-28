@@ -265,6 +265,7 @@ Format:
   - **Update (D-016)**: For a **signed-in** user, a **new upload replaces** the prior `resumes` row (and cascaded analysis/notes/questions/sessions). Only **`resumes.interview_quiz_scores`** is carried forward onto the new resume (capped). Anonymous uploads still use a disposable user row per session (unchanged).
   - The cleanup job is single-instance-safe by design — Render's free tier runs one web service.
 - **Schema impact**: see [database-schema.md](./database-schema.md). Single new column on `resumes`, additive only ([D-012](#d-012-alembic-migrations--jsonb-as-evolution-buffer)).
+- **Update (D-017)**: The sweep is **opt-in** via `RAW_TEXT_RETENTION_ENABLED` (default off). Product default is to **keep** `raw_text` and R2 PDFs until re-upload.
 
 ---
 
@@ -280,6 +281,17 @@ Format:
   - On **static** `POST /interview/start`, **delete** all `interview_sessions` for that `resume_id` so old sessions and `section_quiz_tags` do not accumulate.
   - After **`POST /interview/score`**, **delete** the completed `interview_sessions` row (CASCADE removes `section_quiz_tags`). Weak flags on notes are already written before deletion.
 - **Consequences**: Old share slugs for prior resumes stop resolving after a new upload. `GET /interview/summary/{id}` only works while an adaptive session row still exists (batch quiz does not rely on it).
+
+---
+
+### D-017: Raw resume text retention is opt-in (default: keep)
+
+**Date**: 2026-05-20  
+**Status**: Accepted
+
+- **Context**: The 24h auto-delete ([D-015](#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup)) broke flows that still need `raw_text` (e.g. interview quiz) days after the roast.
+- **Decision**: `Settings.raw_text_retention_enabled` defaults to **false**. The APScheduler job still runs daily but **no-ops** unless the env flag is set. Operators who want the old privacy/footprint story set `RAW_TEXT_RETENTION_ENABLED=true` (and tune `RAW_TEXT_RETENTION_HOURS` if needed).
+- **Consequences**: Privacy copy must **not** claim automatic 24h deletion unless the flag is enabled in that deployment. DB/R2 grow with stored resumes until users replace roasts.
 
 ---
 

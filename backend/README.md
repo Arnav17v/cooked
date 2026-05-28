@@ -51,6 +51,6 @@ backend/
 - **Never expose `id` in public URLs.** Use `share_slug`.
 - **3 analyses/user/day** enforced in code before the LLM call.
 - **4000-word cap** enforced in `parser.py` before storage.
-- **Raw resume text deleted after 24h** by the retention sweep.
+- **Raw resume text:** kept by default; optional 24h-style delete if `RAW_TEXT_RETENTION_ENABLED=true` (retention sweep).
 
 See [`../.cursor/rules/backend.mdc`](../.cursor/rules/backend.mdc) and [`../plans/`](../plans/).

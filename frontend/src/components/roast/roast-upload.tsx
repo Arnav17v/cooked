@@ -25,6 +25,7 @@ import {
   uploadResumeMultipart,
   type AnalysisEventPayload,
 } from "@/lib/api";
+import { showLlmDevToast, type LlmDevEvent } from "@/lib/llm-dev-toast";
 
 const fieldInputClass =
   "roast-field-input w-full h-12 px-3.5 text-sm text-lv-cream bg-lv-surface border border-lv-rule outline-none transition-colors focus:border-lv-rust disabled:opacity-50 placeholder:text-lv-cream/35";
@@ -122,6 +123,10 @@ export function RoastUpload() {
             };
 
             if ("step" in payload && typeof payload.step === "string") {
+              if (payload.step === "llm_dev") {
+                showLlmDevToast(payload as LlmDevEvent);
+                return;
+              }
               if (payload.step === "extracting" && !queuedPrinted) {
                 queuedPrinted = true;
                 appendLine("→ queued…");
@@ -577,8 +582,9 @@ export function RoastUpload() {
         </div>
 
         <p className="text-[11px] leading-relaxed text-lv-cream/40 lg:col-start-1 lg:row-start-3">
-          Resume text is processed on our backend and sent to AI providers. Raw text is deleted within
-          24 hours; roast output and your share link stay until you delete them.
+          Resume text is processed on our backend and sent to AI providers. We keep your raw text so you
+          can run quizzes and follow-ups on the same roast; roast output and your share link stay until you
+          replace the upload.
         </p>
       </div>
     </>

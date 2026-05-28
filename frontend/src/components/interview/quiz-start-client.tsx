@@ -16,6 +16,7 @@ import {
   QuizPrimaryButton,
 } from "@/components/interview/quiz-ui";
 import { startInterviewQuiz } from "@/lib/api";
+import { showLlmDevTrace } from "@/lib/llm-dev-toast";
 import { quizCountForLength } from "@/lib/quiz-length";
 import {
   QUIZ_START_HANDOFF_KEY,
@@ -108,6 +109,7 @@ export function QuizStartClient() {
         questionCount,
         jd,
       );
+      showLlmDevTrace(out.dev_llm_trace);
       setProgressPct(100);
 
       try {

@@ -23,8 +23,8 @@ After the core API works, **build the score-card UI before anything else.** Do n
 - **DB**: Postgres on Railway. **All schema changes through Alembic.**
 - **LLM**: Google Generative Language API (default **Gemma 4 31B IT** + **Gemini 2.0 Flash** fallback via env) + Groq Llama 3.3 70B, **free tier only**, routed task-by-task. All calls go through `backend/app/services/llm/router.py`.
 - **Async**: FastAPI `BackgroundTasks` + SSE. **No Redis, no Celery.**
-- **Scheduling**: APScheduler (in-process). Used for the 24-hour raw-resume-text retention sweep.
-- **Storage**: Cloudflare R2 for PDFs (24h, then deleted).
+- **Scheduling**: APScheduler (in-process). Optional raw-text + R2 cleanup when `RAW_TEXT_RETENTION_ENABLED=true` (D-017; default off).
+- **Storage**: Cloudflare R2 for PDFs; blobs persist until optional retention sweep or user re-upload.
 - **Auth**: Clerk — wired in **only after** the core loop works.
 - **Analytics**: PostHog — wired in last.
 - **Deploy**: Vercel (frontend, root dir `frontend`) + Render (backend, root dir `backend`).
@@ -50,7 +50,7 @@ These auto-apply via `.cursor/rules/*.mdc`:
 - **4000-word input cap** enforced in `parser.py`.
 - **`share_slug` only in public URLs.** Never expose internal UUIDs.
 - **`prompt_version` on every `analyses` row.**
-- **Raw resume text deleted after 24 h** via APScheduler. Analysis output kept forever.
+- **Raw resume text:** optional 24h-style delete via APScheduler when `RAW_TEXT_RETENTION_ENABLED=true` (default off; D-017). Analysis output kept forever.
 - **Every async surface** has loading + error + empty + rate-limited + degraded states. Happy-path-only is a bug.
 - **Stream progress via SSE.** A blank spinner for >2s is a bug.
 

@@ -9,6 +9,9 @@ import "./globals.css";
 const NotesUpdatedToastHost = dynamic(() =>
   import("@/components/notes/notes-updated-toast-host").then((m) => m.NotesUpdatedToastHost),
 );
+const LlmDevToastHost = dynamic(() =>
+  import("@/components/dev/llm-dev-toast-host").then((m) => m.LlmDevToastHost),
+);
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,6 +50,7 @@ export default function RootLayout({
         <ClerkProvider>
           {children}
           <NotesUpdatedToastHost />
+          <LlmDevToastHost />
         </ClerkProvider>
       </body>
     </html>

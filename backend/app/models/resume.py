@@ -1,8 +1,9 @@
 """`resumes` table.
 
-`raw_text` and the corresponding R2 PDF are deleted 24h after creation by the
-APScheduler retention sweep (D-015). The `raw_text_deleted_at` timestamp is
-stamped at that point.
+`raw_text` and the R2 PDF may be deleted by the optional APScheduler retention
+sweep when ``RAW_TEXT_RETENTION_ENABLED=true`` (see D-017). Otherwise text
+persists until the user replaces their roast. ``raw_text_deleted_at`` is set
+when a sweep scrubs a row.
 """
 
 from __future__ import annotations

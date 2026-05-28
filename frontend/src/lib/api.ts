@@ -83,6 +83,21 @@ export type EnqueueAnalyzeResponse = {
 export type QuizScoreHistoryEntry = {
   final_score: number;
   at: string;
+  session_id?: string;
+};
+
+export type QuizHistorySessionItem = {
+  session_id: string;
+  final_score: number;
+  heat_label: string;
+  one_liner: string | null;
+  completed_at: string | null;
+  question_count: number;
+  has_full_results: boolean;
+};
+
+export type QuizHistoryResponse = {
+  sessions: QuizHistorySessionItem[];
 };
 
 export type ScoreResponse = {
@@ -150,10 +165,25 @@ export type SharePayload = {
 };
 
 /** SSE events from `/api/v1/resume/.../events` — `step`-first wire format */
+export type LlmDevTraceEvent = {
+  kind: string;
+  task?: string;
+  model?: string;
+  from_model?: string;
+  to_model?: string;
+  provider?: string;
+  from_provider?: string;
+  to_provider?: string;
+  reason?: string;
+  degraded?: boolean;
+  chain_index?: number;
+};
+
 export type AnalysisEventPayload =
   | {
       step: "extracting" | "scoring" | "flagging" | "questions";
     }
+  | { step: "llm_dev" } & LlmDevTraceEvent
   | {
       step: "done";
       resume_id: string;
@@ -300,6 +330,7 @@ export type InterviewStartResponse = {
   session_id: string;
   questions: InterviewFirstQuestion[];
   job_targeted?: boolean;
+  dev_llm_trace?: LlmDevTraceEvent[];
 };
 
 export type InterviewPerAnswerFeedback = {
@@ -309,12 +340,26 @@ export type InterviewPerAnswerFeedback = {
   analysis: string;
 };
 
+export type QuizResultsResponse = {
+  session_id: string;
+  resume_id: string;
+  final_score: number;
+  heat_label: string;
+  one_liner: string | null;
+  per_answer: InterviewPerAnswerFeedback[];
+  questions: InterviewFirstQuestion[];
+  answers: string[];
+  completed_at: string | null;
+};
+
 export type InterviewScoreResponse = {
+  session_id?: string;
   final_score: number;
   heat_label: string;
   one_liner: string | null;
   per_answer?: InterviewPerAnswerFeedback[];
   interview_quiz_scores?: QuizScoreHistoryEntry[];
+  dev_llm_trace?: LlmDevTraceEvent[];
 };
 
 export type InterviewGrade = {
@@ -355,7 +400,7 @@ export async function startInterviewQuiz(
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `${res.status} ${res.statusText}`);
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
   }
   return (await res.json()) as InterviewStartResponse;
 }
@@ -397,7 +442,7 @@ export async function submitInterviewAnswer(
 export async function fetchInterviewSummary(
   sessionId: string,
   auth?: ApiAuth,
-): Promise<Record<string, unknown>> {
+): Promise<QuizResultsResponse> {
   const res = await fetch(`${getApiBase()}/api/v1/interview/summary/${sessionId}`, {
     headers: headersWithAuth(auth?.token),
   });
@@ -408,7 +453,39 @@ export async function fetchInterviewSummary(
     const body = await res.text();
     throw new Error(body || `${res.status} ${res.statusText}`);
   }
-  return (await res.json()) as Record<string, unknown>;
+  return (await res.json()) as QuizResultsResponse;
+}
+
+export async function fetchQuizHistory(
+  resumeId: string,
+  auth?: ApiAuth,
+): Promise<QuizHistoryResponse> {
+  const q = new URLSearchParams({ resume_id: resumeId });
+  const res = await fetch(`${getApiBase()}/api/v1/interview/history?${q}`, {
+    headers: headersWithAuth(auth?.token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as QuizHistoryResponse;
+}
+
+export async function fetchQuizResults(
+  sessionId: string,
+  auth?: ApiAuth,
+): Promise<QuizResultsResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/interview/results/${sessionId}`, {
+    headers: headersWithAuth(auth?.token),
+  });
+  if (res.status === 404) {
+    throw new Error("Quiz results not found.");
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as QuizResultsResponse;
 }
 
 // --- Interview prep notes ---

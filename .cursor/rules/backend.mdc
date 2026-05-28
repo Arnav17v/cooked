@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## LLM boundary
 
-LLM SDK imports (`google.generativeai`, `groq`, etc.) are allowed **only** inside `backend/app/services/llm/`. Anywhere else is a bug.
+LLM SDK imports (`google.generativeai`, `google.genai`, `groq`, etc.) are allowed **only** inside `backend/app/services/llm/`. Anywhere else is a bug.
 
 - `services/llm/router.py` is the single entry point. Task-based: `analyze` + `questions` → Google (`GEMINI_MODEL`, Gemma/Gemini), `evaluate` + `feedback` → Groq. Cross-vendor failover on 429/5xx/timeout. Returns `degraded=True` when both fail.
 - Prompt caching enabled on every call.

@@ -10,14 +10,14 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
+from app import models  # noqa: F401  — registers tables on Base.metadata
 from app.core.config import get_settings
 from app.db.session import Base
-from app import models  # noqa: F401  — registers tables on Base.metadata
 
 config = context.config
 

@@ -3,7 +3,7 @@
 Wires:
 - CORS for the frontend origin (`ALLOWED_ORIGINS`).
 - The `/api/v1` router (health + resume + analysis + questions + practice + share).
-- APScheduler lifecycle (D-015 retention sweep) via the lifespan handler.
+- APScheduler lifecycle (optional raw-text retention sweep, D-015 / D-017) via the lifespan handler.
 
 Run locally:
     python -m uvicorn app.main:app --reload --port 8000
@@ -15,8 +15,8 @@ Render uses:
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

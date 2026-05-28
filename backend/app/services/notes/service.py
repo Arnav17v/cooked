@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import BackgroundTasks, HTTPException
+from pydantic import ValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,6 +19,7 @@ from app.models.analysis import Analysis
 from app.models.interview_session import InterviewSession
 from app.models.resume import Resume
 from app.models.resume_note import NotesSection, ResumeNote, SectionQuizTag
+from app.schemas.llm_outputs import NotesGenerateLLMOutput, NotesUpdateLLMOutput
 from app.services.interview import llm as interview_llm
 from app.services.notes import prompts as notes_prompts
 from app.services.notes.title_display import format_note_section_title_for_display
@@ -157,12 +160,12 @@ async def generate_notes(
             detail={"message": "Notes already exist for this resume", "notes_id": str(existing.notes_id)},
         )
 
-    analysis = await _latest_done_analysis(db, resume_id)
+    analysis, resume = await asyncio.gather(
+        _latest_done_analysis(db, resume_id),
+        db.scalar(select(Resume).where(Resume.id == resume_id)),
+    )
     if analysis is None:
         raise HTTPException(status_code=400, detail="No completed roast analysis for this resume")
-
-    stmt_resume = select(Resume).where(Resume.id == resume_id)
-    resume = (await db.execute(stmt_resume)).scalar_one_or_none()
     if resume is None or not (resume.raw_text or "").strip():
         raise HTTPException(status_code=400, detail="Resume text not available")
 
@@ -193,8 +196,13 @@ async def generate_notes(
     if not isinstance(raw, dict):
         raise HTTPException(status_code=502, detail="Notes generation returned invalid JSON")
 
-    sections_raw = raw.get("sections")
-    if not isinstance(sections_raw, list) or not sections_raw:
+    try:
+        parsed = NotesGenerateLLMOutput.model_validate(raw)
+    except ValidationError as exc:
+        raise HTTPException(status_code=502, detail="Notes generation returned invalid JSON") from exc
+
+    sections_raw = [s.model_dump() for s in parsed.sections]
+    if not sections_raw:
         raise HTTPException(status_code=502, detail="Notes generation missing sections")
 
     note = ResumeNote(resume_id=resume_id, user_id=clerk_subject)
@@ -423,7 +431,13 @@ async def _run_post_quiz_notes_update(resume_id: uuid.UUID, session_id: uuid.UUI
                 user_prompt=user_prompt,
                 max_output_tokens=8192,
             )
-            updated = None if not isinstance(raw, dict) else raw.get("updated_sections")
+            updated: list[dict[str, Any]] | None = None
+            if isinstance(raw, dict):
+                try:
+                    patch = NotesUpdateLLMOutput.model_validate(raw)
+                    updated = [s.model_dump() for s in patch.updated_sections]
+                except ValidationError:
+                    logger.warning("post-quiz notes update: invalid LLM JSON", exc_info=True)
             if isinstance(updated, list):
                 session_created = session_row.created_at
                 now = datetime.now(UTC)

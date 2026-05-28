@@ -25,7 +25,7 @@
 | Framework | FastAPI | Async. Hosted on Render (free 750 hrs/mo). |
 | Language | Python 3.11+ | |
 | Async work | FastAPI `BackgroundTasks` + SSE | **No Redis, no Celery in v1.** Banned by [D-011](./decisions.md#d-011-backend--infra-stack-fastapi--postgres--r2--clerk--posthog). |
-| Scheduled jobs | `APScheduler` (in-process) | Daily retention sweep. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup). |
+| Scheduled jobs | `APScheduler` (in-process) | Optional raw-text retention sweep when enabled — [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup) / [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep). |
 | ORM | SQLAlchemy (async) | |
 | Migrations | Alembic | Every schema change goes through a migration. See [database-schema.md](./database-schema.md) + [D-012](./decisions.md#d-012-alembic-migrations--jsonb-as-evolution-buffer). |
 | DB | PostgreSQL on Railway | Chosen because it does **not** pause on inactivity (unlike Supabase). |
@@ -163,7 +163,7 @@ Browser
 - **Prompt versioning** — every `analyses` row stores `prompt_version`. New prompts coexist with old data; `jsonb` columns evolve without migrations. See [D-012](./decisions.md#d-012-alembic-migrations--jsonb-as-evolution-buffer).
 - **Auth (Clerk)** — added in build-order step 6, **after** the core loop works without auth. Public share routes stay unauthenticated.
 - **Analytics (PostHog)** — wired in last (step 8).
-- **Data retention** — `APScheduler` runs a daily sweep that nulls `resumes.raw_text` and deletes the R2 PDF for any resume older than 24h. Analysis output is kept forever. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup).
+- **Data retention** — `APScheduler` can run a daily sweep that nulls `resumes.raw_text` and deletes the R2 PDF when `RAW_TEXT_RETENTION_ENABLED=true` (default off; [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep)). Analysis output is kept. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup).
 
 ## LLM provider strategy
 

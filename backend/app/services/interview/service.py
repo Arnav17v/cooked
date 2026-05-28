@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select, text
+from pydantic import ValidationError
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -19,6 +20,7 @@ from app.schemas.interview_quiz_scores import (
     MAX_QUIZ_SCORE_HISTORY,
     normalize_interview_quiz_scores,
 )
+from app.schemas.llm_outputs import QuizBatchScoreLLMOutput
 from app.services.interview import llm as interview_llm
 from app.services.interview.prompts import (
     build_batch_questions_user_prompt,
@@ -30,6 +32,7 @@ from app.services.interview.prompts import (
     build_question_bank_system_prompt,
     build_turn_user_prompt,
 )
+from app.services.llm.dev_trace_ctx import llm_dev_trace
 from app.services.notes.section_refs import hydrate_question_section_refs, resolve_note_section_id
 from app.services.notes.service import (
     WEAK_SCORE_THRESHOLD,
@@ -49,15 +52,44 @@ ALLOWED_BATCH_QUESTION_COUNTS = frozenset({3, 10, 20})
 _ADAPTIVE_SESSION_TURNS = 10
 
 
-def _append_interview_quiz_score(resume: Resume, final_score: int) -> None:
+def _append_interview_quiz_score(
+    resume: Resume,
+    final_score: int,
+    *,
+    session_id: uuid.UUID,
+) -> None:
     prev = normalize_interview_quiz_scores(resume.interview_quiz_scores)
     prev.append(
         {
             "final_score": max(0, min(100, int(final_score))),
             "at": datetime.now(UTC).isoformat(),
+            "session_id": str(session_id),
         },
     )
     resume.interview_quiz_scores = prev[-MAX_QUIZ_SCORE_HISTORY:]
+
+
+def _public_questions_from_bank(qs: list[object]) -> list[dict[str, Any]]:
+    """Client-safe question payloads for stored quiz results."""
+    pub: list[dict[str, Any]] = []
+    for qd in qs:
+        if not isinstance(qd, dict):
+            continue
+        q = _pending_from_dict(qd, difficulty_default="medium")
+        item: dict[str, Any] = {
+            "question": q["question"],
+            "difficulty": q["difficulty"],
+            "bucket": q["bucket"],
+            "source_note_section_id": q.get("source_note_section_id"),
+        }
+        if q.get("source_note_section_tag"):
+            item["source_note_section_tag"] = q["source_note_section_tag"]
+        if q.get("why"):
+            item["why"] = q["why"]
+        if q.get("question_type"):
+            item["question_type"] = q["question_type"]
+        pub.append(item)
+    return pub
 
 
 def _heat_label_from_final(score: int) -> str:
@@ -103,6 +135,46 @@ def _bucket_from_question_type(raw: object) -> str:
 
 
 _MAX_JD_WORDS = 4000
+_MAX_COMPLETED_QUIZ_SESSIONS = 5
+_UNVIEWED_SCORED_TTL_HOURS = 48
+
+
+async def _purge_unviewed_scored_sessions(session: AsyncSession, resume_id: uuid.UUID) -> None:
+    """Drop completed sessions scored 48h+ ago that were never opened via ``get_summary``."""
+    cutoff = datetime.now(UTC) - timedelta(hours=_UNVIEWED_SCORED_TTL_HOURS)
+    await session.execute(
+        delete(InterviewSession).where(
+            InterviewSession.resume_id == resume_id,
+            InterviewSession.completed_at.is_not(None),
+            InterviewSession.results_viewed_at.is_(None),
+            InterviewSession.completed_at < cutoff,
+        )
+    )
+
+
+async def _evict_oldest_completed_session_if_needed(session: AsyncSession, resume_id: uuid.UUID) -> None:
+    """LRU cap: keep at most ``_MAX_COMPLETED_QUIZ_SESSIONS - 1`` before inserting a new session."""
+    cnt = await session.scalar(
+        select(func.count())
+        .select_from(InterviewSession)
+        .where(
+            InterviewSession.resume_id == resume_id,
+            InterviewSession.completed_at.is_not(None),
+        )
+    )
+    if cnt is None or cnt < _MAX_COMPLETED_QUIZ_SESSIONS:
+        return
+    oldest = await session.scalar(
+        select(InterviewSession)
+        .where(
+            InterviewSession.resume_id == resume_id,
+            InterviewSession.completed_at.is_not(None),
+        )
+        .order_by(InterviewSession.created_at.asc())
+        .limit(1)
+    )
+    if oldest is not None:
+        await session.delete(oldest)
 
 
 def _normalize_job_description(raw: str | None) -> str | None:
@@ -469,40 +541,58 @@ async def start_session(
 
     await assert_can_start_quiz(session, resume.user_id)
 
+    await _purge_unviewed_scored_sessions(session, resume.id)
+    await _evict_oldest_completed_session_if_needed(session, resume.id)
+
     study = await load_study_notes_for_prompt(session, resume.id)
+    include_notes = study is not None
 
-    if jd:
-        system = build_jd_question_bank_system_prompt(
-            resume_text=text,
-            role=r,
-            experience_level=resume.experience_level,
-            job_description=jd,
-            hard_mode=hard_mode,
-            question_count=batch_n,
-            study_notes=study,
-        )
-        user = build_jd_batch_questions_user_prompt(
-            question_count=batch_n,
-            include_note_tagging=study is not None,
-        )
-    else:
-        system = build_question_bank_system_prompt(
-            resume_text=text,
-            role=r,
-            experience_level=resume.experience_level,
-            hard_mode=hard_mode,
-            question_count=batch_n,
-            study_notes=study,
-        )
-        user = build_batch_questions_user_prompt(
-            question_count=batch_n,
-            include_note_tagging=study is not None,
+    async def _call_question_batch(
+        count: int,
+        part_index: int | None,
+        part_total: int | None,
+    ) -> tuple[dict[str, object], bool]:
+        if jd:
+            system = build_jd_question_bank_system_prompt(
+                resume_text=text,
+                role=r,
+                experience_level=resume.experience_level,
+                job_description=jd,
+                hard_mode=hard_mode,
+                question_count=count,
+                study_notes=study,
+            )
+            user = build_jd_batch_questions_user_prompt(
+                question_count=count,
+                include_note_tagging=include_notes,
+                part_index=part_index,
+                part_total=part_total,
+            )
+        else:
+            system = build_question_bank_system_prompt(
+                resume_text=text,
+                role=r,
+                experience_level=resume.experience_level,
+                hard_mode=hard_mode,
+                question_count=count,
+                study_notes=study,
+            )
+            user = build_batch_questions_user_prompt(
+                question_count=count,
+                include_note_tagging=include_notes,
+                part_index=part_index,
+                part_total=part_total,
+            )
+        return await interview_llm.generate_interview_json(
+            full_system_prompt=system,
+            user_prompt=user,
         )
 
-    data, _ = await interview_llm.generate_interview_json(
-        full_system_prompt=system,
-        user_prompt=user,
-    )
+    with llm_dev_trace(f"interview-start:{resume.id}") as llm_trace:
+        data, _ = await interview_llm.generate_parallel_question_batches(
+            batch_n=batch_n,
+            call_one=_call_question_batch,
+        )
     raw_list = data.get("questions")
     ten = _normalize_question_batch(raw_list, batch_n)
     if len(ten) != batch_n:
@@ -521,14 +611,6 @@ async def start_session(
         await hydrate_question_section_refs(session, resume_id=resume.id, questions=ten)
 
     bank: dict[str, Any] = {"kind": "static", "questions": ten}
-
-    # Drop finished sessions only — never delete an in-progress row another tab may be scoring.
-    await session.execute(
-        delete(InterviewSession).where(
-            InterviewSession.resume_id == resume.id,
-            InterviewSession.completed_at.is_not(None),
-        )
-    )
 
     inv_session = InterviewSession(
         resume_id=resume.id,
@@ -563,11 +645,14 @@ async def start_session(
             item["question_type"] = q["question_type"]
         pub.append(item)
 
-    return {
+    out: dict[str, object] = {
         "session_id": str(inv_session.id),
         "questions": pub,
         "job_targeted": bool(jd),
     }
+    if llm_trace.events:
+        out["dev_llm_trace"] = llm_trace.events
+    return out
 
 
 async def score_quiz(
@@ -642,26 +727,41 @@ async def score_quiz(
     )
     usr_p = build_batch_score_user_prompt(qa_pairs=pairs)
 
-    data, _ = await interview_llm.generate_interview_json(
-        full_system_prompt=sys_p,
-        user_prompt=usr_p,
-    )
+    with llm_dev_trace(f"interview-score:{session_id}") as llm_trace:
+        data, _ = await interview_llm.generate_interview_json(
+            full_system_prompt=sys_p,
+            user_prompt=usr_p,
+            response_schema=QuizBatchScoreLLMOutput,
+        )
 
-    raw_score = data.get("final_score")
-    final_score = _clamp_score_final(raw_score)
+    try:
+        scored = QuizBatchScoreLLMOutput.model_validate(data)
+        final_score = _clamp_score_final(scored.final_score)
+        one_liner = scored.one_liner.strip()
+        per_answer = _normalize_per_answer(
+            [x.model_dump() for x in scored.per_answer],
+            cleaned,
+            expected=batch_n,
+        )
+    except ValidationError:
+        log.warning("interview score: LLM JSON validation failed", exc_info=True)
+        final_score = _clamp_score_final(data.get("final_score"))
+        one_liner = str(data.get("one_liner") or "").strip()
+        per_answer = _normalize_per_answer(data.get("per_answer"), cleaned, expected=batch_n)
     heat = _heat_label_from_final(final_score)
-    one_liner = str(data.get("one_liner") or "").strip()
-    per_answer = _normalize_per_answer(data.get("per_answer"), cleaned, expected=batch_n)
 
+    public_qs = _public_questions_from_bank(qs)
     summary: dict[str, Any] = {
         "final_score": final_score,
         "heat_label": heat,
         "per_answer": per_answer,
+        "questions": public_qs,
+        "answers": cleaned,
     }
     if one_liner:
         summary["one_liner"] = one_liner
 
-    _append_interview_quiz_score(resume, final_score)
+    _append_interview_quiz_score(resume, final_score, session_id=row.id)
 
     # Resolve section refs before adding tags so autoflush on SELECT cannot insert tags
     # while a concurrent ``start_session`` has removed the interview_sessions row.
@@ -722,14 +822,102 @@ async def score_quiz(
     row.questions_asked = batch_n
     await session.flush()
 
-    await session.delete(row)
-
-    return {
+    result: dict[str, object] = {
+        "session_id": str(row.id),
         "final_score": final_score,
         "heat_label": heat,
         "one_liner": one_liner or None,
         "per_answer": per_answer,
         "interview_quiz_scores": normalize_interview_quiz_scores(resume.interview_quiz_scores),
+    }
+    if llm_trace.events:
+        result["dev_llm_trace"] = llm_trace.events
+    return result
+
+
+async def list_quiz_history(
+    session: AsyncSession,
+    *,
+    resume_id: uuid.UUID,
+    clerk_subject: str | None,
+) -> dict[str, object]:
+    """Up to five completed mock quizzes for this resume (newest first)."""
+    await require_resume_readable(session, resume_id, clerk_subject)
+    stmt = (
+        select(InterviewSession)
+        .where(
+            InterviewSession.resume_id == resume_id,
+            InterviewSession.completed_at.is_not(None),
+        )
+        .order_by(InterviewSession.completed_at.desc())
+        .limit(_MAX_COMPLETED_QUIZ_SESSIONS)
+    )
+    rows = list((await session.execute(stmt)).scalars().all())
+    items: list[dict[str, object]] = []
+    for row in rows:
+        fs = row.final_summary if isinstance(row.final_summary, dict) else {}
+        try:
+            score = int(fs.get("final_score"))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            score = 0
+        items.append(
+            {
+                "session_id": str(row.id),
+                "final_score": max(0, min(100, score)),
+                "heat_label": str(fs.get("heat_label") or _heat_label_from_final(score)),
+                "one_liner": str(fs.get("one_liner") or "").strip() or None,
+                "completed_at": row.completed_at.isoformat() if row.completed_at else None,
+                "question_count": int(row.questions_asked or 0),
+                "has_full_results": bool(
+                    (isinstance(fs.get("questions"), list) and fs.get("questions"))
+                    or (isinstance(fs.get("per_answer"), list) and fs.get("per_answer"))
+                ),
+            }
+        )
+    return {"sessions": items}
+
+
+async def get_quiz_results(
+    session: AsyncSession,
+    *,
+    session_id: uuid.UUID,
+    clerk_subject: str | None,
+) -> dict[str, object]:
+    """Full scored quiz payload for the results UI (marks session as viewed)."""
+    row = await session.get(InterviewSession, session_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="session not found")
+
+    if row.user_id and clerk_subject and row.user_id != clerk_subject:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="session not found")
+
+    if row.completed_at is None or not isinstance(row.final_summary, dict):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="quiz results not found")
+
+    await require_resume_readable(session, row.resume_id, clerk_subject)
+
+    if row.results_viewed_at is None:
+        row.results_viewed_at = datetime.now(UTC)
+
+    fs = row.final_summary
+    per = fs.get("per_answer")
+    questions = fs.get("questions")
+    answers = fs.get("answers")
+    try:
+        final_score = int(fs.get("final_score"))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        final_score = 0
+
+    return {
+        "session_id": str(row.id),
+        "resume_id": str(row.resume_id),
+        "final_score": max(0, min(100, final_score)),
+        "heat_label": str(fs.get("heat_label") or _heat_label_from_final(final_score)),
+        "one_liner": str(fs.get("one_liner") or "").strip() or None,
+        "per_answer": per if isinstance(per, list) else [],
+        "questions": questions if isinstance(questions, list) else [],
+        "answers": answers if isinstance(answers, list) else [],
+        "completed_at": row.completed_at.isoformat() if row.completed_at else None,
     }
 
 
@@ -794,10 +982,16 @@ async def submit_answer(
         candidate_answer=ans,
     )
 
-    data, _ = await interview_llm.generate_interview_json(
-        full_system_prompt=system,
-        user_prompt=turn_user,
-    )
+    with llm_dev_trace(f"interview-answer:{session_id}") as llm_trace:
+        data, _ = await interview_llm.generate_interview_json(
+            full_system_prompt=system,
+            user_prompt=turn_user,
+        )
+
+    def _attach_dev_trace(payload: dict[str, object]) -> dict[str, object]:
+        if llm_trace.events:
+            payload["dev_llm_trace"] = llm_trace.events
+        return payload
 
     grade_raw = data.get("grade")
     if not isinstance(grade_raw, dict):
@@ -881,7 +1075,7 @@ async def submit_answer(
             resume_id=row.resume_id,
             weak_section_ids=weak_ids,
         )
-        return out
+        return _attach_dev_trace(out)
 
     next_diff = _norm_diff(data.get("next_difficulty") or row.current_difficulty)
     row.current_difficulty = next_diff
@@ -904,16 +1098,18 @@ async def submit_answer(
 
     await session.flush()
 
-    return {
-        "grade": {
-            "score": score,
-            "verdict": verdict,
-            "what_they_missed": missed,
-        },
-        "next_question": next_q_out,
-        "session_complete": False,
-        "final_summary": None,
-    }
+    return _attach_dev_trace(
+        {
+            "grade": {
+                "score": score,
+                "verdict": verdict,
+                "what_they_missed": missed,
+            },
+            "next_question": next_q_out,
+            "session_complete": False,
+            "final_summary": None,
+        }
+    )
 
 
 async def get_summary(
@@ -932,4 +1128,4 @@ async def get_summary(
     if row.completed_at is None or not row.final_summary:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="session not complete")
 
-    return dict(row.final_summary)
+    return await get_quiz_results(session, session_id=session_id, clerk_subject=clerk_subject)

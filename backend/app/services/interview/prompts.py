@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from app.services.resume.experience_level import experience_level_prompt_block
+from app.services.resume.llm_input import truncate_resume_for_llm
 
 
 def build_interview_system_prompt(
@@ -14,6 +15,7 @@ def build_interview_system_prompt(
     hard_mode: bool,
     study_notes: list[dict[str, str]] | None = None,
 ) -> str:
+    resume_text, _ = truncate_resume_for_llm(resume_text)
     extra = ""
     if hard_mode:
         extra = (
@@ -62,6 +64,9 @@ QUESTION RULES:
 - from_resume: must reference a specific bullet or project from this resume — impossible to answer generically
 - gap: targets something vague, missing, or unclaimed in the resume
 - system_design: scales the scenario to match the seniority implied by this resume
+- industry_standard: tests a core competency pillar expected for this role that the resume does
+  not address. Use once or twice per session to simulate a real "curveball" round.
+  Prefix the question text with the competency area (e.g. "On system design: ...", "On algorithms: ...").
 - never repeat a question already asked this session (the rolling summary lists prior questions)
 
 OUTPUT CONTRACT:
@@ -196,6 +201,7 @@ def build_question_bank_system_prompt(
     question_count: int,
     study_notes: list[dict[str, str]] | None = None,
 ) -> str:
+    resume_text, _ = truncate_resume_for_llm(resume_text)
     extra = ""
     if hard_mode:
         extra = "\nHARD MODE: bias questions toward senior, unforgiving depth.\n"
@@ -219,9 +225,21 @@ At least one of the two should be set when the question clearly maps to a sectio
 If a question doesn't map cleanly to any section, set both to null.
 """
     exp_block = experience_level_prompt_block(experience_level)
-    return f"""You write technical interview questions strictly from the candidate's resume below.
-The client will show all {question_count} questions at once; the candidate answers offline; an LLM scores later.
-Questions must be non-generic: an interviewer with this resume in front of them would ask these.
+    return f"""You generate a realistic interview question bank for a candidate.
+The client shows all {question_count} questions at once; the candidate answers offline; an LLM scores later.
+
+STEP 1 — ROLE COMPETENCY PILLARS:
+Before writing any questions, silently identify the 3 core competency pillars every
+interviewer for "{role}" will test, regardless of what is on the resume. Examples:
+  - Software Engineer (mid/senior): [System Design & Scalability, DSA & Algorithms, Concurrency & Reliability]
+  - Growth Marketer: [Paid Acquisition & CAC/LTV, Attribution & Analytics, A/B Testing & CRO]
+  - Product Manager: [Product Sense & Prioritisation, Metrics & Experimentation, Strategic Trade-offs]
+Derive the correct pillars from your training knowledge for the actual target role.
+
+STEP 2 — RESUME vs PILLAR:
+For each pillar, check: does the resume explicitly address this competency?
+  - If yes → you may ask a from_resume or gap question anchored to it.
+  - If no  → you MUST generate at least one industry_standard question for it.
 
 RESUME:
 ---
@@ -232,18 +250,35 @@ TARGET ROLE: {role}
 {exp_block}
 {extra}{notes_block}
 RULES:
-- Mix buckets: from_resume (anchor to a resume bullet), gap (probe a hole), system_design (at most 2-3 if seniority fits).
+- Mix buckets: from_resume (anchor to a resume bullet), gap (probe a resume hole),
+  system_design (at most 2-3 if seniority fits), industry_standard (pillars not on the resume).
+- Include at least 2 industry_standard questions (more if the resume is thin on fundamentals).
 - Difficulty progression is allowed (start medium, include easy and hard as needed).
 - No two questions asking the same thing. No fluff.
 
 OUTPUT: JSON only, no markdown fences."""
 
 
-def build_batch_questions_user_prompt(*, question_count: int, include_note_tagging: bool) -> str:
+def _batch_part_hint(*, part_index: int | None, part_total: int | None) -> str:
+    if part_index is None or part_total is None or part_total < 2:
+        return ""
+    return (
+        f"\n\nThis request is part {part_index} of {part_total} parallel batches. "
+        "Return questions only for this slice; do not duplicate topics covered in other parts."
+    )
+
+
+def build_batch_questions_user_prompt(
+    *,
+    question_count: int,
+    include_note_tagging: bool,
+    part_index: int | None = None,
+    part_total: int | None = None,
+) -> str:
     item: dict[str, object] = {
         "question": "string",
         "difficulty": "easy | medium | hard",
-        "bucket": "from_resume | gap | system_design",
+        "bucket": "from_resume | gap | system_design | industry_standard",
         "source_bullet": "resume substring or null",
     }
     note_rules = ""
@@ -268,7 +303,10 @@ Rules:
 - len(questions) MUST be {question_count}.
 - Each question is specific to this resume; from_resume items must be impossible to answer without that resume.
 - source_bullet: exact substring from the resume when bucket is from_resume, otherwise null.
-- Vary difficulty and bucket across all questions.{note_rules}"""
+- source_bullet MUST be null for industry_standard questions.
+- At least 2 items must have bucket "industry_standard"; name the competency pillar in the question text
+  (e.g. "On system design: ...", "On algorithms: ...", "On paid acquisition: ...").
+- Vary difficulty and bucket across all questions.{note_rules}{_batch_part_hint(part_index=part_index, part_total=part_total)}"""
 
 
 def build_jd_question_bank_system_prompt(
@@ -281,6 +319,7 @@ def build_jd_question_bank_system_prompt(
     question_count: int,
     study_notes: list[dict[str, str]] | None = None,
 ) -> str:
+    resume_text, _ = truncate_resume_for_llm(resume_text)
     extra = ""
     if hard_mode:
         extra = "\nHARD MODE: bias questions toward senior, unforgiving depth.\n"
@@ -298,6 +337,15 @@ You may tie questions to these sections when relevant. Tag with source_note_sect
     return f"""You are an expert technical interviewer conducting a real job interview.
 
 The client will show all {question_count} questions at once; the candidate answers offline; an LLM scores later.
+
+STEP 1 — ROLE COMPETENCY PILLARS:
+Silently identify the 3 core competency pillars every interviewer for "{role}" will test,
+independent of what the candidate wrote. Then check: does the JD emphasise any of these
+pillars explicitly? Weight those even heavier.
+
+STEP 2 — RESUME + JD GAP vs PILLAR:
+If a pillar is neither addressed in the resume nor mentioned in the JD, still include at
+least 1 industry_standard question for it — interviewers test fundamentals the JD did not advertise.
 
 Candidate profile:
 - Target role: {role}
@@ -319,7 +367,8 @@ Rules:
 - Calibrate difficulty strictly to the experience level above (fresher: fundamentals and projects only, no system design; senior: deep system design and scope).
 - Extract core requirements and keywords from the JOB DESCRIPTION. Weight questions toward what the JD explicitly asks for. If the JD mentions Redis, ask about Redis. If it mentions scale, ask about scale.
 - Reference the candidate's actual resume — specific projects, specific technologies they listed. Never ask generic questions any candidate could get.
-- Mix types: Technical, Behavioural, System Design (only if experience level allows), Resume-specific.
+- Mix types: Technical, Behavioural, System Design (only if experience level allows), Resume-specific, Industry-standard.
+- Include at least 1 industry_standard question for any core role pillar not covered by the resume or JD.
 - For each question include a "why" — one line explaining why this question is coming up for this role and candidate.
 - No two questions asking the same thing. No filler.
 
@@ -328,7 +377,11 @@ OUTPUT: JSON only, no markdown fences."""
 
 
 def build_jd_batch_questions_user_prompt(
-    *, question_count: int, include_note_tagging: bool
+    *,
+    question_count: int,
+    include_note_tagging: bool,
+    part_index: int | None = None,
+    part_total: int | None = None,
 ) -> str:
     item: dict[str, object] = {
         "question": "string",
@@ -356,7 +409,7 @@ Rules:
 - difficulty: easy, medium, or hard (lowercase).
 - type: exactly one of Technical, Behavioural, System Design, Resume-specific.
 - why: required, one concise line.
-- source_bullet: exact resume substring when the question anchors to a bullet, else null.{note_rules}"""
+- source_bullet: exact resume substring when the question anchors to a bullet, else null.{note_rules}{_batch_part_hint(part_index=part_index, part_total=part_total)}"""
 
 
 def build_batch_score_system_prompt(
@@ -366,6 +419,7 @@ def build_batch_score_system_prompt(
     question_count: int,
     job_description: str | None = None,
 ) -> str:
+    resume_text, _ = truncate_resume_for_llm(resume_text)
     example_shape = {
         "final_score": 67,
         "one_liner": "short overall roast",
@@ -404,14 +458,28 @@ Output ONE JSON object only, no markdown. Key names (include all three top-level
 RULES FOR per_answer:
 - Must have EXACTLY {question_count} objects, n=1 through n={upper} only, same order as Questions 1-{upper} in the user message.
 - signal per entry MUST be exactly one of: green, yellow, red.
-  - green = strong, concrete, aligned with resume, clear technical or product thinking.
-  - yellow = mixed, thin in places, misses a key point, vague, incomplete.
-  - red = evasive, hand-wavy, contradicts resume, or clearly weak.
-- numeric_score: integer 1-10 per answer (holistic quality for that answer). Calibrate with signal (green tends 7-10, yellow 4-7, red 1-4) but use judgment.
+  Signal is anchored to TECHNICAL CORRECTNESS OF KNOWLEDGE ONLY.
+  Do NOT factor in communication style, phrasing quality, or answer structure.
+  - green  = the core technical knowledge is correct. Candidate understands the concept.
+             A rambling but correct answer is green.
+  - yellow = partially correct. Got the general idea but missed a key mechanism,
+             tradeoff, edge case, or number that matters for this role.
+  - red    = factually incorrect, or candidate clearly does not understand the concept.
+             A polished but wrong answer is red.
+- numeric_score: integer 1-10. Score knowledge depth, not communication polish.
+  Calibrate: green = 7-10, yellow = 4-7, red = 1-4.
 - highlight_quote: verbatim substring from THAT answer's text (25-220 chars ideal), or "" if none.
-- analysis: 3-6 sentences tying the question to their answer and the resume.
+- analysis: follow this order strictly:
+  1. Open with the correctness verdict — exactly one of: "Correct.", "Partially correct.", "Incorrect."
+  2. Point to the specific part of their answer that was right or wrong (quote or paraphrase it).
+  3. If yellow or red: write "The correct answer is: ..." or "The key concept here is: ..."
+     followed by 1-2 sentences of the right approach. The candidate must be able to read
+     this feedback and learn the topic — not just know they failed.
+  4. Optional: one sentence on communication ONLY if it severely blocked understanding.
+     Skip entirely when the underlying knowledge was correct.
+  Total length: 3-6 sentences. Correctness first, teach-back second, communication last.
 
-overall final_score: integer 0-100 holistic score (not a simple average of row colors).
+overall final_score: integer 0-100. Base it on knowledge correctness across all answers.
 Calibration: roughly 0-35 Cooked, 36-54 Hard, 55-74 Medium, 75+ Raw.
 """
 

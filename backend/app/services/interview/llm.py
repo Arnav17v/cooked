@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Awaitable, Callable
+
+from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.services.llm.errors import RecoverableLLMError
@@ -10,11 +14,14 @@ from app.services.llm.router import LLMRouter
 
 log = logging.getLogger(__name__)
 
+QuestionBatchCall = Callable[[int, int | None, int | None], Awaitable[tuple[dict[str, object], bool]]]
+
 
 async def generate_interview_json(
     *,
     full_system_prompt: str,
     user_prompt: str,
+    response_schema: type[BaseModel] | None = None,
     max_output_tokens: int | None = None,
 ) -> tuple[dict[str, object], bool]:
     """Return ``(parsed_json, degraded)`` — same ``LLMRouter`` chain as resume roast (``task="analyze"``)."""
@@ -27,6 +34,7 @@ async def generate_interview_json(
         task="analyze",
         system_prompt=full_system_prompt,
         user_prompt=user_prompt,
+        response_schema=response_schema,
         max_output_tokens=cap,
     )
 
@@ -41,3 +49,29 @@ async def generate_interview_json(
         raise RecoverableLLMError("Interview AI returned a non-object JSON response. Try again.")
 
     return result.content, result.degraded
+
+
+async def generate_parallel_question_batches(
+    *,
+    batch_n: int,
+    call_one: QuestionBatchCall,
+) -> tuple[dict[str, object], bool]:
+    """Run one or two ``analyze`` calls in parallel when ``batch_n >= 2``."""
+
+    if batch_n < 2:
+        return await call_one(batch_n, None, None)
+
+    n1 = (batch_n + 1) // 2
+    n2 = batch_n - n1
+    (data1, deg1), (data2, deg2) = await asyncio.gather(
+        call_one(n1, 1, 2),
+        call_one(n2, 2, 2),
+    )
+    q1 = data1.get("questions")
+    q2 = data2.get("questions")
+    merged: list[object] = []
+    if isinstance(q1, list):
+        merged.extend(q1)
+    if isinstance(q2, list):
+        merged.extend(q2)
+    return {"questions": merged}, deg1 or deg2

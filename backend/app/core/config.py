@@ -34,13 +34,14 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     groq_api_key: str | None = None
 
-    #: Primary model id on Google Generative Language API (`google.generativeai`).
-    #: Gemma ids use `models/` prefix internally (see `services/llm/gemini.py`).
-    gemini_model: str = "gemma-4-31b-it"
-    #: Second model tried after primary retries 429/quota — before Groq. Empty env = disabled.
-    gemini_fallback_model: str | None = Field(default="gemini-2.0-flash")
-    #: Retries **per Gemini model** on 429 / documented quota backoff.
+    #: Override head of Google chain; unset = use ``services/llm/models.py`` ``GOOGLE_MODEL_CHAIN``.
+    gemini_model: str | None = None
+    #: Appended after chain if not already listed; unset = no extra model.
+    gemini_fallback_model: str | None = None
+    #: Retries **per Google model** on 429 / documented quota backoff.
     gemini_429_max_retries: int = Field(default=4, ge=1, le=12)
+    #: Override ``models.py`` ``GROQ_MODEL`` when set.
+    groq_model: str | None = None
 
     r2_access_key_id: str | None = None
     r2_secret_access_key: str | None = None
@@ -80,9 +81,21 @@ class Settings(BaseSettings):
     @field_validator("gemini_model", mode="before")
     @classmethod
     def gemini_model_strip(cls, v: object) -> object:
+        if v is None:
+            return None
         if isinstance(v, str):
             s = v.strip()
-            return s if s else "gemma-4-31b-it"
+            return s if s else None
+        return v
+
+    @field_validator("groq_model", mode="before")
+    @classmethod
+    def groq_model_strip(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
         return v
 
     @field_validator("dev", mode="before")
@@ -117,6 +130,10 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 1500
     llm_interview_max_output_tokens: int = Field(default=5000, ge=512, le=8192)
     llm_resume_text_token_soft_limit: int = 1500
+    #: When true, the daily APScheduler job scrubs ``raw_text`` + R2 PDFs older than
+    #: ``raw_text_retention_hours``. Default **false** — text stays until user re-uploads
+    #: or you opt in (see D-017).
+    raw_text_retention_enabled: bool = False
     raw_text_retention_hours: int = 24
 
     #: Static batch quiz: how many resume-grounded questions to generate and score together.

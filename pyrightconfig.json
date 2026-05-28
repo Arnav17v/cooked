@@ -1,0 +1,8 @@
+{
+  "pythonVersion": "3.11",
+  "venvPath": "backend",
+  "venv": ".venv",
+  "stubPath": "backend/typings",
+  "include": ["backend/app", "backend/scripts"],
+  "exclude": ["**/__pycache__", "backend/.venv", "frontend", "node_modules"]
+}

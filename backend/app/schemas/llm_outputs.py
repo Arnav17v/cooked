@@ -86,3 +86,59 @@ class QuestionLLMItem(BaseModel):
 
 class QuestionsLLMOutput(BaseModel):
     questions: list[QuestionLLMItem] = Field(default_factory=list)
+
+
+class QuizBatchPerAnswerItem(BaseModel):
+    n: int = Field(..., ge=1)
+    signal: str
+    numeric_score: int = Field(..., ge=1, le=10)
+    highlight_quote: str = ""
+    analysis: str = ""
+
+    @field_validator("signal")
+    @classmethod
+    def signal_ok(cls, v: str) -> str:
+        s = v.strip().lower()
+        if s in ("green", "yellow", "red"):
+            return s
+        if s in ("g", "strong", "good"):
+            return "green"
+        if s in ("r", "bad", "weak"):
+            return "red"
+        return "yellow"
+
+
+class QuizBatchScoreLLMOutput(BaseModel):
+    """Batch quiz scoring JSON from ``POST /interview/score``."""
+
+    final_score: int = Field(..., ge=0, le=100)
+    one_liner: str = ""
+    per_answer: list[QuizBatchPerAnswerItem] = Field(default_factory=list)
+
+
+class NotesSectionLLMItem(BaseModel):
+    title: str
+    content: str
+    display_order: int
+    tier: str = "domain"
+
+    @field_validator("tier")
+    @classmethod
+    def tier_ok(cls, v: str) -> str:
+        t = v.strip().lower()
+        if t in ("project", "domain", "weak_area", "research"):
+            return t
+        return "domain"
+
+
+class NotesGenerateLLMOutput(BaseModel):
+    sections: list[NotesSectionLLMItem] = Field(default_factory=list)
+
+
+class NotesUpdatedSectionLLMItem(BaseModel):
+    section_id: str
+    content: str
+
+
+class NotesUpdateLLMOutput(BaseModel):
+    updated_sections: list[NotesUpdatedSectionLLMItem] = Field(default_factory=list)

@@ -1,29 +1,26 @@
 """LLM router — task-based routing with cross-vendor failover (D-009).
 
-Routing:
-    analyze   → Google API (`GEMINI_MODEL`, default Gemma 4 31B IT; then Gemma 2 27B IT if primary is Gemma; then `GEMINI_FALLBACK_MODEL`)
-    questions → Google API (same chain as analyze)
-    evaluate  → Groq Llama 3.3 70B
-    feedback  → Groq Llama 3.3 70B
-
-On 429 / 5xx / timeout the router falls over to the other vendor before giving
-up. If both fail, callers get a `degraded=True` result and the API surfaces an
-honest hint to the user.
+Edit ``services/llm/models.py`` to swap model ids and task→vendor priority.
+On 429 / 5xx / timeout the router fails over to the other vendor.
 """
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Literal
+
+from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.services.llm import gemini, groq
+from app.services.llm.dev_trace import emit_llm_dev_event
 from app.services.llm.errors import RecoverableLLMError
+from app.services.llm.models import Task, primary_provider_for_task
 
 log = logging.getLogger(__name__)
 
-Task = Literal["analyze", "questions", "evaluate", "feedback"]
+# Re-export for callers that imported Task from router.
+__all__ = ["LLMResult", "LLMRouter", "Task"]
 
 
 @dataclass(slots=True)
@@ -42,14 +39,6 @@ class LLMResult:
     failure_debug: dict[str, object] | None = None
 
 
-_TASK_TO_PRIMARY: dict[Task, str] = {
-    "analyze": "gemini",
-    "questions": "gemini",
-    "evaluate": "groq",
-    "feedback": "groq",
-}
-
-
 class LLMRouter:
     """The single LLM entry point.
 
@@ -63,23 +52,31 @@ class LLMRouter:
         task: Task,
         system_prompt: str,
         user_prompt: str,
-        response_schema: dict | None = None,
+        response_schema: type[BaseModel] | None = None,
         max_output_tokens: int | None = None,
     ) -> LLMResult:
-        _ = response_schema  # reserved for structured-output tightening
-        primary = _TASK_TO_PRIMARY[task]
+        primary = primary_provider_for_task(task)
         secondary = "groq" if primary == "gemini" else "gemini"
 
         primary_exc: RecoverableLLMError | None = None
         try:
             return await self._dispatch(
                 provider=primary,
+                task=task,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
+                response_schema=response_schema,
                 max_output_tokens=max_output_tokens,
             )
         except RecoverableLLMError as e:
             primary_exc = e
+            emit_llm_dev_event(
+                kind="vendor_failover",
+                task=task,
+                from_provider=primary,
+                to_provider=secondary,
+                reason=str(e)[:240],
+            )
             log.warning(
                 "llm primary %s failed for task=%s: %s — failing over",
                 primary,
@@ -91,11 +88,19 @@ class LLMRouter:
         try:
             result = await self._dispatch(
                 provider=secondary,
+                task=task,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
+                response_schema=response_schema,
                 max_output_tokens=max_output_tokens,
             )
             result.degraded = True
+            emit_llm_dev_event(
+                kind="vendor_ok",
+                task=task,
+                provider=secondary,
+                degraded=True,
+            )
             return result
         except RecoverableLLMError as e:
             secondary_exc = e
@@ -130,8 +135,10 @@ class LLMRouter:
         self,
         *,
         provider: str,
+        task: Task,
         system_prompt: str,
         user_prompt: str,
+        response_schema: type[BaseModel] | None = None,
         max_output_tokens: int | None = None,
     ) -> LLMResult:
         settings = get_settings()
@@ -141,12 +148,16 @@ class LLMRouter:
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 max_output_tokens=max_output_tokens,
+                task=task,
+                response_schema=response_schema,
             )
         elif provider == "groq":
             data = await groq.generate_json(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 max_output_tokens=max_output_tokens,
+                task=task,
+                response_schema=response_schema,
             )
         else:
             raise RecoverableLLMError(f"unknown provider {provider!r}")

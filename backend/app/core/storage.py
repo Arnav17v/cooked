@@ -1,8 +1,8 @@
 """S3-compatible object storage (Cloudflare R2, Backblaze B2, MinIO, …).
 
 PDF blob storage only. Frontend never uploads here directly — FastAPI proxies
-everything (D-011). Objects older than 24h are deleted by the retention
-sweep (D-015).
+everything (D-011). When ``RAW_TEXT_RETENTION_ENABLED`` is true, objects older than
+the retention window are deleted by the APScheduler sweep (D-015 / D-017).
 
 Settings use env prefix `R2_*` for historical reasons; any S3-compat endpoint works.
 

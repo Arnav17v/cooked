@@ -15,6 +15,7 @@ from app.models.question import Question
 from app.models.resume import Resume
 from app.models.user import User
 from app.schemas.llm_outputs import SectionVerdictsObj
+from app.services.llm.dev_trace_ctx import llm_dev_trace
 from app.services.resume.analyzer import roast_resume_with_llm
 
 log = logging.getLogger(__name__)
@@ -65,12 +66,13 @@ async def run_analysis_pipeline(analysis_id: uuid.UUID) -> None:
         text = resume.raw_text or ""
 
         try:
-            out, llm_res, err = await roast_resume_with_llm(
-                text,
-                resume.target_role,
-                resume.experience_level,
-                max_output_tokens=settings.llm_max_output_tokens,
-            )
+            with llm_dev_trace(str(analysis_id), retain_buffer=True):
+                out, llm_res, err = await roast_resume_with_llm(
+                    text,
+                    resume.target_role,
+                    resume.experience_level,
+                    max_output_tokens=settings.llm_max_output_tokens,
+                )
 
             if err or out is None:
                 analysis.status = "failed"

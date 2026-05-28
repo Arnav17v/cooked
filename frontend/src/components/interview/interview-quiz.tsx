@@ -23,6 +23,7 @@ import {
   type InterviewScoreResponse,
   type NotesGetResponse,
 } from "@/lib/api";
+import { showLlmDevTrace } from "@/lib/llm-dev-toast";
 
 const SEED_PREFIX = "cooked_interview_seed_v1_";
 const META_PREFIX = "cooked_interview_meta_v1_";
@@ -245,6 +246,7 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
       }
 
       const out = await scoreInterviewQuiz(sessionId, trimmed, auth);
+      showLlmDevTrace(out.dev_llm_trace);
       setResult(out);
 
       if (postQuizResumeId && hadNotes) {

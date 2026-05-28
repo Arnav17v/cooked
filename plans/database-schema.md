@@ -24,8 +24,8 @@ Rate-limit state lives directly on the row: when an analysis is requested, the b
 resumes
   id                    uuid PK
   user_id               uuid FK → users.id
-  raw_text              text nullable           -- 4000 word cap; NULLed by retention sweeper after 24h
-  file_url              varchar nullable        -- R2 object URL; nullable for paste; also cleared by sweeper
+  raw_text              text nullable           -- 4000 word cap; may be NULLed if retention sweep enabled (D-017)
+  file_url              varchar nullable        -- R2 object key; nullable for paste; cleared when scrubbed
   target_role           varchar
   created_at            timestamp default now()
   raw_text_deleted_at   timestamp nullable      -- set by the daily APScheduler job — see D-015
@@ -33,14 +33,11 @@ resumes
 
 The 4000-word cap is enforced **in `services/resume/parser.py`**, before storage. No truncation surprises happen inside the LLM layer.
 
-**Retention** (locked by [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup)):
+**Retention** ([D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup), [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep)):
 
-- After 24h, an APScheduler job in FastAPI:
-  1. Nulls `raw_text` for any `resumes` row where `created_at < now() - 24h` and `raw_text_deleted_at IS NULL`.
-  2. Deletes the matching PDF object from R2 (if `file_url` is set).
-  3. Stamps `raw_text_deleted_at = now()`.
-- `analyses`, `questions`, and `practice_sessions` rows are **kept forever** — they hold the value the user comes back to read and share.
-- Privacy copy users see: *"We delete your resume text within 24 hours. We keep only the analysis."*
+- When `RAW_TEXT_RETENTION_ENABLED=true`, the daily APScheduler job in FastAPI may null `raw_text`, delete the R2 PDF, clear `file_url`, and stamp `raw_text_deleted_at` for rows older than `RAW_TEXT_RETENTION_HOURS` (default 24). **Default in code is off** — text persists until re-upload unless you opt in.
+- `analyses`, `questions`, and `practice_sessions` rows are **kept** as the durable roast output.
+- Privacy copy must match the deployment: do **not** promise 24h deletion unless the flag is enabled.
 
 ### `analyses`
 

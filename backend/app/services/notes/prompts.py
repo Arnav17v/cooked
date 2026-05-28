@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from app.services.resume.experience_level import experience_level_prompt_block
+from app.services.resume.llm_input import truncate_resume_for_llm
 
 NOTES_GENERATION_SYSTEM = """You are the candidate. You are writing notes to yourself the night before your interview.
 You have read your own resume and the roast analysis of it.
@@ -27,10 +28,10 @@ What does NOT belong:
 
 RICH TEXT (each section opens in a TipTap editor: headings, paragraphs, bold, italic, underline, highlight, lists, links):
 - Put the section body in **plain text inside the JSON string** (no raw HTML tags like `<p>` or `<div>` — avoids escaping mistakes).
-- **Headings (required for scan):** start a line with `## ` for a major subsection title (renders as a large heading), and `### ` for a smaller sub-head. Use **2–6** `##` headings per project-sized section to break up walls of text; domain/weak/research sections use fewer as appropriate.
+- **Headings (required for scan):** start a line with `## ` for a major subsection title (renders as a large heading), and `### ` for a smaller sub-head. Use **2-6** `##` headings per project-sized section to break up walls of text; domain/weak/research sections use fewer as appropriate.
 - **Paragraphs:** one thought per line; use a **blank line** between topic clusters (each cluster becomes its own paragraph block in the UI).
-- **Bold:** wrap critical tools, metrics, or panic anchors in `**double asterisks**` (sparingly: about **3–8** spans per section, not every token).
-- **Highlight (soft background on key terms):** wrap vocabulary you must not misread under pressure — acronyms, product names, numbers with units, APIs — in **double equals**: `==pgvector==`, `==~30% recall==`. Aim **4–12** highlights per section; overlap with bold is OK when a term is both emphasized and “must spot”.
+- **Bold:** wrap critical tools, metrics, or panic anchors in `**double asterisks**` (sparingly: about **3-8** spans per section, not every token).
+- **Highlight (soft background on key terms):** wrap vocabulary you must not misread under pressure — acronyms, product names, numbers with units, APIs — in **double equals**: `==pgvector==`, `==~30% recall==`. Aim **4-12** highlights per section; overlap with bold is OK when a term is both emphasized and “must spot”.
 - Do **not** use markdown `#` single-hash headings (they look broken in-app). Do **not** use raw HTML.
 - The four closing footer headers (`LEAD WITH`, `IF PUSHED`, `NUMBERS`, `DON'T`) stay **plain ALL CAPS lines on their own** — **no** `##` prefix and **no** `==` or `**` on those header lines.
 
@@ -169,6 +170,7 @@ def build_notes_generate_user_prompt(
     section_verdicts: dict[str, Any] | None,
     one_liner: str | None,
 ) -> str:
+    resume_text, _ = truncate_resume_for_llm(resume_text)
     flags_payload = {"flags": _flags_structured(flags)}
     flags_json = json.dumps(flags_payload, indent=2, ensure_ascii=False)
 
@@ -243,6 +245,7 @@ def build_notes_update_user_prompt(
     sections_payload: list[dict[str, Any]],
     quiz_results: list[dict[str, Any]],
 ) -> str:
+    resume_text, _ = truncate_resume_for_llm(resume_text)
     return f"""RESUME:
 ---
 {resume_text}

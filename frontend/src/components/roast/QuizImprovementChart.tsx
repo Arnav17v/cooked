@@ -57,7 +57,7 @@ export function QuizImprovementChart({ scores }: Props) {
         )}
       </div>
       <p className="mt-1 text-[12px] text-lc-muted">
-        Saved on this resume in your account. Each point is one finished mock quiz.
+        Saved on this resume (last 5 finished mock quizzes).
         {truncated ? ` Chart shows the most recent ${maxPlot} attempts.` : ""}
       </p>
 

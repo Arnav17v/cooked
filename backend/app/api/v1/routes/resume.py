@@ -34,9 +34,11 @@ from app.schemas.interview_quiz_scores import (
     MAX_QUIZ_SCORE_HISTORY,
     normalize_interview_quiz_scores,
 )
+from app.services.llm.dev_trace import clear_llm_dev_trace, drain_llm_dev_events
 from app.services.resume.experience_level import normalize_experience_level
 from app.services.resume.parser import ParsedResume, parse_pdf, parse_text, validate_min_words
 from app.services.resume.pipeline import run_analysis_pipeline
+from app.services.resume.retention import prune_analyses_for_user
 from app.services.share.slug import allocate_share_slug
 from app.services.users.access import assert_resume_owned_if_authenticated
 from app.services.users.bootstrap import resolve_upload_user
@@ -266,6 +268,7 @@ async def enqueue_analysis_for_resume(
         status="pending",
     )
     session.add(analysis)
+    await prune_analyses_for_user(session, user.id)
     await session.commit()
     await session.refresh(analysis)
 
@@ -311,13 +314,22 @@ def _truncate_sse_debug(d: dict[str, object], *, max_str: int = 24_000) -> dict[
 
 @router.get("/{resume_id}/analysis/{analysis_id}/events")
 async def analysis_events(resume_id: uuid.UUID, analysis_id: uuid.UUID) -> StreamingResponse:
+    settings = get_settings()
+    aid = str(analysis_id)
+
     async def gen():
+        last_llm_idx = 0
         while True:
             async with SessionFactory() as session:
                 analysis = await session.get(Analysis, analysis_id)
                 if analysis is None or analysis.resume_id != resume_id:
                     yield f"data: {json.dumps({'step': 'error', 'reason': 'not_found'})}\n\n"
                     break
+
+                if settings.dev:
+                    new_events, last_llm_idx = drain_llm_dev_events(aid, last_llm_idx)
+                    for ev in new_events:
+                        yield f"data: {json.dumps({'step': 'llm_dev', **ev})}\n\n"
 
                 step_payload: dict[str, object]
                 if analysis.status == "pending":
@@ -341,7 +353,6 @@ async def analysis_events(resume_id: uuid.UUID, analysis_id: uuid.UUID) -> Strea
                         "step": "error",
                         "reason": _failure_reason_sse(analysis.failure_reason),
                     }
-                    settings = get_settings()
                     if settings.sse_includes_llm_failure_debug:
                         bd = analysis.score_breakdown
                         if isinstance(bd, dict):
@@ -356,6 +367,8 @@ async def analysis_events(resume_id: uuid.UUID, analysis_id: uuid.UUID) -> Strea
                 yield f"data: {json.dumps(step_payload)}\n\n"
 
                 if analysis.status in ("done", "failed"):
+                    if settings.dev:
+                        clear_llm_dev_trace(aid)
                     break
             await asyncio.sleep(0.35)
 

@@ -6,6 +6,37 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-05-22
+
+- **backend — interview prompts:** added `industry_standard` question bucket; LLM now derives 3 core competency pillars for the target role and generates pillar questions for anything the resume does not cover (works for any role — SWE, marketing, PM, etc.).
+- **backend — interview scoring:** rewrote `build_batch_score_system_prompt` signal rubric to anchor on technical correctness only (not communication style); `analysis` field now mandates a "The correct answer is..." teach-back whenever signal is yellow or red.
+
+---
+
+## 2026-05-21
+
+- **backend — LLM upgrades**: migrated to modern `google-genai` SDK, implemented client connection pooling (reusing singletons), native async calls, strict response schemas, `json-repair` recovery, and `<resume_text>` XML tags for prompt injection protection.
+
+## 2026-05-20
+
+- **frontend — quiz:** questions tab lists last 5 completed quizzes; click opens `/quiz/results/[session_id]` with full analysis.
+
+- **backend — quiz:** persist questions + answers in `final_summary`; `GET /interview/history` + `/interview/results/{id}`; score history capped at 5 with `session_id`.
+
+- **backend — retention:** raw_text never timer-deleted (orphan 30d + PDF 24h sweep only); analyses capped at 10/user (no share_slug first); quiz sessions LRU 5 + 48h unviewed TTL; drop `cache_handle`, add `results_viewed_at`.
+
+- **backend — quiz/notes LLM:** parallel question batches (`asyncio.gather`), 1500-word prompt cap, Pydantic `QuizBatchScoreLLMOutput` / `NotesGenerateLLMOutput` / `NotesUpdateLLMOutput`.
+
+- **backend — LLM:** central registry at `app/services/llm/models.py` for Google chain order, Groq model id, and task→vendor priority; env overrides optional.
+
+- **backend + frontend — dev:** with `DEV=1`, model-chain + vendor failover events surface as top-right toasts (roast SSE, quiz start/score API).
+
+- **backend — retention:** raw-text + R2 PDF sweep is **opt-in** (`RAW_TEXT_RETENTION_ENABLED`, default off); see D-017. Fixes quiz `410` after the old 24h delete.
+
+- **frontend — privacy:** roast upload footnote matches default (raw text kept for quizzes until re-upload).
+
+- **frontend — quiz start:** parse `/interview/start` errors with `formatApiError`; map **410 / expired resume text** to clear copy instead of the generic `session_error.log` message.
+
 ## 2026-05-14
 
 - **backend — interview LLM:** quiz + notes generation use **`LLMRouter` `task="analyze"`** (identical Gemini→Groq path as resume roast).

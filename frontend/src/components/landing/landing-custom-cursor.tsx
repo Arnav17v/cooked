@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const TRAIL_COUNT = 10;
@@ -12,10 +12,15 @@ const TEXT_SELECTOR =
   "p, li, h1, h2, h3, .landing-score-roast, .landing-hero-sub, .landing-feat-desc, .landing-stat-desc, .landing-step-desc, .landing-score-right p, .landing-meta-right, .landing-footer-cta-sub";
 
 export function LandingCustomCursor() {
+  const [mounted, setMounted] = useState(false);
   const curWrapRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const vimRef = useRef<HTMLDivElement>(null);
   const trailRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const mouseRef = useRef({ x: 0, y: 0 });
   const ringPosRef = useRef({ x: 0, y: 0 });
@@ -150,10 +155,10 @@ export function LandingCustomCursor() {
     };
   }, []);
 
-  if (typeof document === "undefined") return null;
+  if (!mounted) return null;
 
   return createPortal(
-  <>
+    <>
       <div ref={curWrapRef} className="landing-cur" aria-hidden>
         <div className="landing-cur-dot" />
       </div>

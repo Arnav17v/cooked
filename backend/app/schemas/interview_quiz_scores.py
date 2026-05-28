@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-# Cap list length on `resumes.interview_quiz_scores` (append-only quiz history).
-MAX_QUIZ_SCORE_HISTORY = 100
+# Cap list length on `resumes.interview_quiz_scores` (mirrors completed-session LRU).
+MAX_QUIZ_SCORE_HISTORY = 5
 
 
 def normalize_interview_quiz_scores(raw: object | None) -> list[dict[str, Any]]:
@@ -22,5 +22,9 @@ def normalize_interview_quiz_scores(raw: object | None) -> list[dict[str, Any]]:
         at = str(item.get("at") or "").strip()
         if not at:
             continue
-        out.append({"final_score": max(0, min(100, fs)), "at": at})
+        entry: dict[str, Any] = {"final_score": max(0, min(100, fs)), "at": at}
+        sid = str(item.get("session_id") or "").strip()
+        if sid:
+            entry["session_id"] = sid
+        out.append(entry)
     return sorted(out, key=lambda x: x["at"])

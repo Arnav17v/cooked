@@ -148,8 +148,14 @@ export function formatRoastFailure(raw: string): string {
   ) {
     return "We couldn't read that PDF. Try another file, or use Paste text and paste your resume instead.";
   }
+  if (/resume text is no longer|no longer available; upload again/.test(hay)) {
+    return "We no longer have your resume text on file (privacy retention). Upload your resume again, then start the quiz.";
+  }
   if (/provide resume_text|resume text is empty|expired or not uploaded/.test(hay)) {
     return ROAST_FAILURE_EXACT.no_resume_text;
+  }
+  if (/\b410\b|(?:^|\s)gone(?:\s|$)/.test(hay)) {
+    return "We no longer have your resume text on file (privacy retention). Upload your resume again, then start the quiz.";
   }
   if (/sse connection|connection dropped|failed to fetch|network error|load failed/.test(hay)) {
     return ROAST_FAILURE_EXACT.sse_connection_dropped;

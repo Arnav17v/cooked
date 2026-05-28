@@ -37,7 +37,7 @@ Cross-cutting:
 | Analytics | PostHog | Free 1M events | Wired in **last**. |
 | PDF parsing | `pymupdf` | OSS | Server-side in FastAPI. |
 | Async work | FastAPI `BackgroundTasks` + SSE | — | **No Redis, no Celery** until real traffic proves it. |
-| Scheduled jobs | `APScheduler` (in-process) | OSS | Daily resume-text retention sweep — see [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup). |
+| Scheduled jobs | `APScheduler` (in-process) | OSS | Optional resume-text + R2 cleanup — [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup) / [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep). |
 | DB migrations | Alembic | OSS | Every schema change is a migration. See [database-schema.md](./database-schema.md). |
 
 ## Banned (anti-stack)
@@ -117,7 +117,7 @@ cooked/
         │   │   ├── parser.py        # pymupdf
         │   │   ├── analyzer.py
         │   │   ├── scorer.py
-        │   │   └── retention.py     # 24h sweep — see D-015
+        │   │   └── retention.py     # optional sweep — D-015 / D-017
         │   └── questions/
         │       ├── generator.py
         │       └── evaluator.py
@@ -197,12 +197,12 @@ The cold-start loading state in the frontend (Step 7 of the build order) is ther
 
 ## Data retention
 
-Locked by [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup).
+Locked by [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup) / [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep).
 
-- **`resumes.raw_text` and the corresponding R2 PDF object are deleted 24h after upload.**
-- The `analyses`, `questions`, and `practice_sessions` rows are kept forever — that's the value the user comes back for.
-- Implementation: an `APScheduler` job inside the FastAPI process runs daily, sweeps `resumes` rows with `created_at < now() - 24h AND raw_text_deleted_at IS NULL`, nulls the text, deletes the R2 object, stamps `raw_text_deleted_at`.
-- Privacy copy to ship: *"We delete your resume text within 24 hours. We keep only the analysis."*
+- **`resumes.raw_text` and the corresponding R2 PDF object** persist until the user replaces their roast, **unless** `RAW_TEXT_RETENTION_ENABLED=true` — then the daily job scrubs rows older than `RAW_TEXT_RETENTION_HOURS` (default 24).
+- The `analyses`, `questions`, and `practice_sessions` rows are kept — that's the value the user comes back for.
+- Implementation: an `APScheduler` job inside the FastAPI process runs daily; when retention is enabled it sweeps eligible `resumes` rows, nulls the text, deletes the R2 object, stamps `raw_text_deleted_at`.
+- Privacy copy must match the deployment (default: no automatic 24h deletion).
 
 ## Observability (minimal in v1)
 

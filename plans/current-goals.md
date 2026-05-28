@@ -118,7 +118,7 @@ See [`roadmap.md`](./roadmap.md) for the full phased view including later bets.
 > - Infra — FastAPI on Render + Railway Postgres + R2 + Clerk + PostHog. See [D-011](./decisions.md#d-011-backend--infra-stack-fastapi--postgres--r2--clerk--posthog) + [infra.md](./infra.md).
 > - **Monorepo with `frontend/` + `backend/` subfolders.** See [D-013](./decisions.md#d-013-monorepo-with-frontend--backend-subfolders).
 > - **Render cron-pinger** — skip in v1. See [D-014](./decisions.md#d-014-skip-the-render-cron-pinger-in-v1).
-> - **Resume text retention** — 24h, then APScheduler sweep. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup).
+> - **Resume text retention** — optional 24h-style sweep when `RAW_TEXT_RETENTION_ENABLED=true`; default keep text. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup) + [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep).
 > - PDF parsing in v1 — **yes**, via `pymupdf` on the backend. ([D-002](./decisions.md#d-002-paste-before-pdf-superseded-by-d-011-backend--infra-stack-fastapi--postgres--r2--clerk--posthog) superseded.)
 > - OG / share card in v1 — **yes, required**. See [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
 > - Flashcards in v1 — **no**, cut. See [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).

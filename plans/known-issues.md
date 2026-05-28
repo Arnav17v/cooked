@@ -51,7 +51,7 @@ Living list. Add new entries as discovered. Mark resolved items with `[resolved 
 > - Hosting — Vercel (`frontend/`) + Render (`backend/`) + Railway (DB) + R2 (blobs). See [infra.md](./infra.md).
 > - **Monorepo with `frontend/` + `backend/` subfolders.** See [D-013](./decisions.md#d-013-monorepo-with-frontend--backend-subfolders).
 > - **Render cron-pinger** — skip in v1; cold-start hint copy on the frontend is the mitigation. See [D-014](./decisions.md#d-014-skip-the-render-cron-pinger-in-v1).
-> - **Resume text retention** — 24h, APScheduler sweep, analysis kept forever. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup).
+> - **Resume text retention** — optional sweep when `RAW_TEXT_RETENTION_ENABLED=true`; default keep text. See [D-015](./decisions.md#d-015-24-hour-raw-resume-text-retention--apscheduler-cleanup) + [D-017](./decisions.md#d-017-raw-resume-text-retention-is-opt-in-default-keep).
 
 ## Anti-features (do not ship in v1)
 

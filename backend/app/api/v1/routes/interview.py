@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps_auth import optional_clerk_subject
-from app.core.config import get_settings
 from app.db.session import get_session
 from app.services.interview import service as interview_service
 from app.services.llm.errors import RecoverableLLMError
@@ -127,6 +126,36 @@ async def interview_score(
         ) from e
 
 
+@router.get("/history")
+async def interview_history(
+    resume_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    clerk_subject: str | None = Depends(optional_clerk_subject),
+) -> dict[str, object]:
+    out = await interview_service.list_quiz_history(
+        session,
+        resume_id=resume_id,
+        clerk_subject=clerk_subject,
+    )
+    await session.commit()
+    return out
+
+
+@router.get("/results/{session_id}")
+async def interview_results(
+    session_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    clerk_subject: str | None = Depends(optional_clerk_subject),
+) -> dict[str, object]:
+    out = await interview_service.get_quiz_results(
+        session,
+        session_id=session_id,
+        clerk_subject=clerk_subject,
+    )
+    await session.commit()
+    return out
+
+
 @router.get("/summary/{session_id}")
 async def interview_summary(
     session_id: str,
@@ -141,8 +170,10 @@ async def interview_summary(
             detail="invalid session_id",
         ) from e
 
-    return await interview_service.get_summary(
+    out = await interview_service.get_summary(
         session,
         session_id=sid,
         clerk_subject=clerk_subject,
     )
+    await session.commit()
+    return out

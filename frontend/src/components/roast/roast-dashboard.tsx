@@ -18,12 +18,15 @@ import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
 import { ScoreShareActions } from "@/components/score/ScoreShareActions";
 import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
 import { QuizImprovementChart } from "@/components/roast/QuizImprovementChart";
+import { QuizHistoryList } from "@/components/roast/quiz-history-list";
 import { quizCountForLength, type QuizLengthId } from "@/lib/quiz-length";
 import {
   type FlagsResponse,
   type MyRoastItem,
+  type QuizHistorySessionItem,
   type ScoreResponse,
   fetchMyRoasts,
+  fetchQuizHistory,
   getFlags,
   getScore,
 } from "@/lib/api";
@@ -85,6 +88,8 @@ export function RoastDashboard() {
   const [quizLength, setQuizLength] = useState<QuizLengthId>("medium");
   const [quizErr, setQuizErr] = useState<string | null>(null);
   const [quizScores, setQuizScores] = useState<StoredQuizScore[]>([]);
+  const [quizHistory, setQuizHistory] = useState<QuizHistorySessionItem[]>([]);
+  const [quizHistoryLoading, setQuizHistoryLoading] = useState(false);
   const [notesRemountKey, setNotesRemountKey] = useState(0);
 
   const [countScore, setCountScore] = useState(0);
@@ -110,15 +115,23 @@ export function RoastDashboard() {
     if (resultTab !== "questions" || !resolvedResumeId || resolving || hydrating) return;
     let cancelled = false;
     (async () => {
+      setQuizHistoryLoading(true);
       try {
         const token = await bearer();
-        const s = await getScore(resolvedResumeId, token ? { token } : undefined);
+        const auth = token ? { token } : undefined;
+        const [s, history] = await Promise.all([
+          getScore(resolvedResumeId, auth),
+          fetchQuizHistory(resolvedResumeId, auth),
+        ]);
         if (!cancelled) {
           setLiveScore(s);
           setQuizScores(parseInterviewQuizScores(s.interview_quiz_scores));
+          setQuizHistory(history.sessions ?? []);
         }
       } catch {
         /* keep existing */
+      } finally {
+        if (!cancelled) setQuizHistoryLoading(false);
       }
     })();
     return () => {
@@ -346,7 +359,10 @@ export function RoastDashboard() {
 
   function navCount(id: ResultTabId): number | null {
     if (id === "flags") return flags.length > 0 ? flags.length : null;
-    if (id === "questions") return null;
+    if (id === "questions") {
+      const n = quizHistory.length || quizScores.length;
+      return n > 0 ? n : null;
+    }
     return null;
   }
 
@@ -694,6 +710,8 @@ export function RoastDashboard() {
 
               {resultTab === "questions" ? (
                 <div className="space-y-8">
+                  <QuizHistoryList sessions={quizHistory} loading={quizHistoryLoading} />
+
                   {quizScores.length > 0 ? (
                     <div>
                       <QuizImprovementChart scores={quizScores} />

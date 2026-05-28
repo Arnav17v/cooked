@@ -8,30 +8,40 @@ before the router fails over to Groq.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
+from typing import TYPE_CHECKING
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from app.core.config import get_settings
+from app.services.llm.dev_trace import emit_llm_dev_event
 from app.services.llm.errors import RecoverableLLMError
+from app.services.llm.json_util import parse_and_repair_json
+from app.services.llm.models import build_google_model_chain
 from app.services.llm.raw_output_log import log_verbatim_llm_completion
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
 _RETRY_IN_RE = re.compile(r"retry\s+in\s+([\d.]+)\s*s", re.I)
 _RAW_DEBUG_CAP = 50_000
 
-# Smaller Gemma tried after primary Gemma fails (5xx / parse) before Gemini Flash.
-_GEMMA_2_27B_FALLBACK = "gemma-2-27b-it"
+_client: genai.Client | None = None
 
 
-def _configure() -> None:
-    settings = get_settings()
-    if not settings.gemini_api_key:
-        raise RecoverableLLMError("GEMINI_API_KEY is not set")
-    genai.configure(api_key=settings.gemini_api_key)
+def get_gemini_client() -> genai.Client:
+    """Get or create the global Gemini client instance (pooled)."""
+    global _client
+    if _client is None:
+        settings = get_settings()
+        if not settings.gemini_api_key:
+            raise RecoverableLLMError("GEMINI_API_KEY is not set")
+        _client = genai.Client(api_key=settings.gemini_api_key)
+    return _client
 
 
 def _gemini_retry_delay_seconds(api_message: str, attempt_idx: int) -> float:
@@ -119,10 +129,10 @@ def _collect_parseable_objects(s: str) -> list[dict[str, object]]:
             i = j + 1
             continue
         try:
-            obj = json.loads(blob)
+            obj = parse_and_repair_json(blob)
             if isinstance(obj, dict):
                 found.append(obj)
-        except json.JSONDecodeError:
+        except Exception:
             pass
         i = j + 1
     return found
@@ -130,7 +140,6 @@ def _collect_parseable_objects(s: str) -> list[dict[str, object]]:
 
 def _pick_best_roast_candidate(candidates: list[dict[str, object]]) -> dict[str, object] | None:
     """Prefer root roast-shaped dict (numeric score) over nested fragments (e.g. one question object)."""
-
     if not candidates:
         return None
 
@@ -139,8 +148,9 @@ def _pick_best_roast_candidate(candidates: list[dict[str, object]]) -> dict[str,
         numeric = isinstance(sc, (int, float)) and not isinstance(sc, bool)
         tier = 2 if numeric else (1 if "score" in d else 0)
         try:
+            import json
             bulk = len(json.dumps(d, sort_keys=True))
-        except TypeError:
+        except Exception:
             bulk = len(str(d))
         return (tier, bulk)
 
@@ -161,10 +171,10 @@ def _parse_json_object_from_text(text: str) -> dict[str, object] | None:
 
     for chunk in scan_targets:
         try:
-            out = json.loads(chunk)
+            out = parse_and_repair_json(chunk)
             if isinstance(out, dict):
                 return out
-        except json.JSONDecodeError:
+        except ValueError:
             pass
         candidates = _collect_parseable_objects(chunk)
         best = _pick_best_roast_candidate(candidates)
@@ -174,39 +184,50 @@ def _parse_json_object_from_text(text: str) -> dict[str, object] | None:
     return None
 
 
-def generate_json_single_model_sync(
+async def generate_json_single_model_async(
     *,
     model_name: str,
     system_prompt: str,
     user_prompt: str,
     max_output_tokens: int | None = None,
+    response_schema: type[BaseModel] | None = None,
 ) -> dict[str, object]:
-    _configure()
+    """Call Google GenAI SDK asynchronously for a single model, returning a parsed JSON dict."""
+    client = get_gemini_client()
     mid = _canonical_google_model_name(model_name)
-    model = genai.GenerativeModel(mid, system_instruction=system_prompt)
     settings = get_settings()
     cap = (
         max_output_tokens if max_output_tokens is not None else settings.llm_max_output_tokens
     )
-    gen_kw: dict[str, object] = {
-        "temperature": 0.35,
-    }
-    if not _is_gemma_model(mid):
-        gen_kw["response_mime_type"] = "application/json"
+
+    config = types.GenerateContentConfig(
+        temperature=0.35,
+        system_instruction=system_prompt,
+    )
     if cap and cap > 0:
-        gen_kw["max_output_tokens"] = int(cap)
+        config.max_output_tokens = int(cap)
+
+    if not _is_gemma_model(mid):
+        config.response_mime_type = "application/json"
+        if response_schema:
+            config.response_schema = response_schema
+
     try:
-        resp = model.generate_content(
-            user_prompt,
-            generation_config=gen_kw,
+        resp = await client.aio.models.generate_content(
+            model=mid,
+            contents=user_prompt,
+            config=config,
         )
     except Exception as e:
         raise RecoverableLLMError(str(e)) from e
+
     text = (getattr(resp, "text", None) or "").strip()
     if not text:
         raise RecoverableLLMError("empty Gemini response")
+
     log_verbatim_llm_completion(provider="google", model=mid, text=text)
     raw_snip = text[:_RAW_DEBUG_CAP]
+
     if _is_gemma_model(mid):
         out = _parse_json_object_from_text(text)
         if out is None:
@@ -221,8 +242,8 @@ def generate_json_single_model_sync(
             )
     else:
         try:
-            out = json.loads(text)
-        except json.JSONDecodeError as e:
+            out = parse_and_repair_json(text)
+        except ValueError as e:
             log.warning(
                 "Gemini JSON parse fail (first %s chars):\n%s",
                 min(len(text), _RAW_DEBUG_CAP),
@@ -237,6 +258,7 @@ def generate_json_single_model_sync(
                 "Gemini JSON root must be an object",
                 raw_response=raw_snip,
             )
+
     return out
 
 
@@ -245,23 +267,14 @@ async def generate_json(
     system_prompt: str,
     user_prompt: str,
     max_output_tokens: int | None = None,
+    task: str | None = None,
+    response_schema: type[BaseModel] | None = None,
 ) -> dict[str, object]:
+    """Route Google Generative AI request with retries across models in chain."""
     settings = get_settings()
-    seq: list[str] = []
-    pm = settings.gemini_model.strip()
-    if pm:
-        seq.append(pm)
-    pm_lower = pm.lower()
-    if pm_lower.startswith("gemma-"):
-        g27 = _GEMMA_2_27B_FALLBACK.strip()
-        if g27 and g27.lower() != pm_lower and g27 not in seq:
-            seq.append(g27)
-    if settings.gemini_fallback_model:
-        fb = settings.gemini_fallback_model.strip()
-        if fb and fb not in seq:
-            seq.append(fb)
+    seq = build_google_model_chain(settings)
     if not seq:
-        raise RecoverableLLMError("GEMINI_MODEL is empty")
+        raise RecoverableLLMError("Google model chain is empty — edit services/llm/models.py")
 
     last_err: RecoverableLLMError | None = None
     for mi, model_name in enumerate(seq):
@@ -271,13 +284,22 @@ async def generate_json(
 
         for attempt in range(tries):
             try:
-                return await asyncio.to_thread(
-                    generate_json_single_model_sync,
+                out = await generate_json_single_model_async(
                     model_name=model_name,
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     max_output_tokens=max_output_tokens,
+                    response_schema=response_schema,
                 )
+                if mi > 0:
+                    emit_llm_dev_event(
+                        kind="model_ok",
+                        task=task,
+                        model=model_name,
+                        provider="gemini",
+                        chain_index=mi + 1,
+                    )
+                return out
             except RecoverableLLMError as e:
                 last_err = e
                 if _looks_like_quota_retry(e) and attempt + 1 < tries:
@@ -305,6 +327,15 @@ async def generate_json(
                     await asyncio.sleep(delay)
                     continue
                 if mi + 1 < len(seq):
+                    next_model = seq[mi + 1]
+                    emit_llm_dev_event(
+                        kind="model_switch",
+                        task=task,
+                        from_model=model_name,
+                        to_model=next_model,
+                        provider="gemini",
+                        reason=str(e)[:240],
+                    )
                     log.warning(
                         "Google API model %s not usable (%s…); trying next Google API model",
                         model_name,
@@ -315,3 +346,4 @@ async def generate_json(
     if last_err is None:
         raise RecoverableLLMError("Google API LLM: no attempts completed")
     raise last_err
+

@@ -26,8 +26,11 @@ class InterviewSession(Base):
     role: Mapped[str] = mapped_column(Text, nullable=False)
     #: Optional JD for this quiz only — not stored on the resume.
     job_description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    cache_handle: Mapped[str | None] = mapped_column(Text, nullable=True)
     history_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    results_viewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     questions_asked: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     current_difficulty: Mapped[str] = mapped_column(Text, default="medium", nullable=False)
     running_score_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

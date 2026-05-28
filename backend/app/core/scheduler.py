@@ -1,7 +1,7 @@
-"""In-process scheduler — APScheduler only. No Redis, no Celery (D-011, D-015).
+"""In-process scheduler — APScheduler only. No Redis, no Celery (D-011, D-015, D-017).
 
-Currently hosts the daily resume-text retention sweep (D-015). Wire actual
-jobs at Step 1 of the build order by registering them in `register_jobs`.
+Registers the daily ``sweep_old_resume_text`` hook (no-ops unless
+``RAW_TEXT_RETENTION_ENABLED``). Wire jobs at startup via ``register_jobs``.
 """
 
 from __future__ import annotations

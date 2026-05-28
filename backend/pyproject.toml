@@ -24,7 +24,9 @@ dependencies = [
 
     # LLM clients
     "google-generativeai>=0.8.3",
+    "google-genai>=0.1.1",
     "groq>=0.13.0",
+    "json-repair>=0.30.0",
 
     # Object storage (R2 is S3-compatible)
     "boto3>=1.35.0",
@@ -64,3 +66,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "SIM", "RUF"]
 ignore = ["E501"]  # line length handled by formatter
+
+[tool.pyright]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+stubPath = "typings"
+include = ["app", "scripts"]
+exclude = ["**/__pycache__", ".venv", "app/db/migrations/versions"]
