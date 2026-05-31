@@ -15,7 +15,6 @@ import {
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
 import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
-import { ScoreShareActions } from "@/components/score/ScoreShareActions";
 import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
 import { QuizImprovementChart } from "@/components/roast/QuizImprovementChart";
 import { QuizHistoryList } from "@/components/roast/quiz-history-list";
@@ -51,18 +50,6 @@ function formatResumeDate(iso: string | undefined): string {
   } catch {
     return "—";
   }
-}
-
-function heatMeaningLine(heatLabel: string): string {
-  const h = normalizeHeatLabel(heatLabel);
-  const map: Record<string, string> = {
-    Raw: "very early signal — interviewers may dismiss before digging. tighten framing and proof points.",
-    Medium:
-      "you'll get past the resume screen but expect interviewers to push hard on specifics. the work is real, the framing isn't.",
-    Hard: "signals are shaky — expect skepticism and probing. bring receipts: metrics, scope, and decision ownership.",
-    Cooked: "this reads as a risk hire on paper. you need a clean narrative rewrite before you burn meetings.",
-  };
-  return map[h] ?? map.Medium;
 }
 
 export function RoastDashboard() {
@@ -449,8 +436,6 @@ export function RoastDashboard() {
   const resumeLine1 = `resume · ${formatResumeDate(currentRoast?.resume_created_at)}`;
   const resumeLine2 = currentRoast?.target_role?.trim() || liveScore?.role?.trim() || "—";
 
-  const previewFlags = flags.slice(0, 2);
-
   return (
     <div className="landing-dash-root flex min-h-[calc(100vh-4rem)] flex-col lg:flex-row">
       {/* Mobile top */}
@@ -600,86 +585,16 @@ export function RoastDashboard() {
               role="tabpanel"
             >
               {resultTab === "score" ? (
-                <div className="space-y-10">
-                  <section>
-                    <p className="landing-dash-eyebrow">{"// what this means"}</p>
-                    <p className="landing-dash-body mt-3 max-w-xl">
-                      <span className="font-medium" style={{ color: heatColor }}>
-                        {heatNorm}
-                      </span>
-                      {" — "}
-                      {heatMeaningLine(liveScore.heat_label ?? "")}
-                    </p>
-                    {liveScore.degraded ? (
-                      <p className="landing-dash-muted mt-3 text-[12px]">
-                        Providers were flaky for this run — take the verdict with extra salt.
-                      </p>
-                    ) : null}
-                  </section>
-
-                  <section>
-                    <p className="landing-dash-eyebrow mb-4">{"// share your score"}</p>
-                    <p className="landing-dash-muted mb-4 max-w-md text-[13px]">
-                      Screenshot the card or use the buttons below — your score, heat, and roast line are on the
-                      share link.
-                    </p>
-                    <div className="max-w-md">
-                      <ScoreCard
-                        cookedScore={displayScore ?? 0}
-                        heatLabel={normalizeHeatLabel(liveScore.heat_label)}
-                        headline={headline}
-                        showFooter
-                        showTargetRole={false}
-                        degraded={liveScore.degraded}
-                      />
-                      {liveScore.share_slug ? (
-                        <ScoreShareActions
-                          className="mt-4"
-                          tone="landing"
-                          score={displayScore ?? 0}
-                          shareSlug={liveScore.share_slug}
-                          heatLabel={liveScore.heat_label}
-                          headline={headline}
-                        />
-                      ) : null}
-                    </div>
-                  </section>
-
-                  <section>
-                    <p className="landing-dash-eyebrow mb-4">
-                      {"// "}
-                      {flags.length} things to fix
-                    </p>
-                    {flags.length > 0 ? (
-                      <ul className="space-y-4">
-                        {previewFlags.map((flag, idx) => (
-                          <li
-                            key={`${flag.issue}-${idx}`}
-                            className="animate-flag-card-in rounded-lg border border-white/[0.03] bg-[#1d1d1d] p-4 text-[14px] leading-relaxed text-lc-text"
-                            style={{ animationDelay: `${idx * 40}ms` }}
-                          >
-                            {flag.source_bullet ? (
-                              <p className="mb-2 font-mono text-[12px] text-lc-dim">&ldquo;{flag.source_bullet}&rdquo;</p>
-                            ) : null}
-                            <p className="text-lc-muted">{flag.issue}</p>
-                            <p className="mt-3 text-[12px] font-medium text-lc-orange">rewrite →</p>
-                            <p className="mt-1 text-[13px] text-lc-text/90">&ldquo;{flag.suggested_rewrite}&rdquo;</p>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-[14px] text-lc-muted">No flagged bullets for this run.</p>
-                    )}
-                    {flags.length > 2 ? (
-                      <button
-                        type="button"
-                        onClick={() => setResultTab("flags")}
-                        className="mt-4 text-[13px] font-medium text-lc-orange transition-transform duration-100 ease-out hover:-translate-y-px hover:underline"
-                      >
-                        see all flags →
-                      </button>
-                    ) : null}
-                  </section>
+                <div className="mx-auto w-full max-w-[820px]">
+                  <ScoreCard
+                    cookedScore={displayScore ?? 0}
+                    heatLabel={normalizeHeatLabel(liveScore.heat_label)}
+                    headline={headline}
+                    showFooter
+                    showTargetRole={false}
+                    degraded={liveScore.degraded}
+                    size="hero"
+                  />
                 </div>
               ) : null}
 

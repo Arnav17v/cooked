@@ -33,16 +33,22 @@ export function DashboardSkeleton() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col px-4 py-6 lg:px-8">
-          <Shimmer className="h-3 w-28" />
-          <Shimmer className="mt-6 h-5 w-full max-w-md" />
-          <Shimmer className="mt-3 h-5 w-full max-w-sm" />
-          <Shimmer className="mt-10 h-3 w-36" />
-          <Shimmer className="mt-4 h-64 w-full max-w-md rounded-lg" />
-          <Shimmer className="mt-6 h-10 w-full max-w-md" />
-          <Shimmer className="mt-10 h-3 w-40" />
-          <div className="mt-4 space-y-3">
-            <Shimmer className="h-28 w-full rounded-lg" />
-            <Shimmer className="h-28 w-full rounded-lg" />
+          <div className="mx-auto w-full max-w-[820px] rounded-xl border border-[var(--lv-rule)] bg-[var(--lv-elev)] p-6 sm:p-7">
+            <div className="space-y-5 lg:grid lg:grid-cols-[1.2fr_1fr] lg:items-center lg:gap-8 lg:space-y-0">
+              <section className="min-w-0">
+                <Shimmer className="h-3 w-24" />
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <Shimmer className="h-16 w-28 sm:h-20 sm:w-36" />
+                  <Shimmer className="h-5 w-28" />
+                </div>
+                <Shimmer className="mt-5 h-8 w-full max-w-xl" />
+                <Shimmer className="mt-3 h-8 w-full max-w-lg" />
+              </section>
+              <section className="rounded-lg border border-[var(--lv-rule)] bg-black/30 p-3">
+                <Shimmer className="h-56 w-full rounded-md sm:h-72" />
+              </section>
+            </div>
+            <Shimmer className="mt-6 h-3 w-36" />
           </div>
         </div>
       </div>

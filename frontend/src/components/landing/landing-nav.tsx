@@ -69,18 +69,7 @@ export function LandingNav() {
       </Link>
       {isLoaded && isSignedIn ? (
         <>
-          <Link
-            href="/dashboard"
-            className={linkClass(pathname === "/dashboard")}
-            onClick={closeMenu}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/roast"
-            className={linkClass(pathname === "/roast")}
-            onClick={closeMenu}
-          >
+          <Link href="/roast" className={linkClass(pathname === "/roast")} onClick={closeMenu}>
             Upload
           </Link>
         </>
@@ -89,6 +78,17 @@ export function LandingNav() {
           Log in
         </Link>
       )}
+      <Link
+        href="/seminar"
+        className={
+          pathname === "/seminar" || pathname.startsWith("/seminar/")
+            ? "landing-nav-seminar landing-nav-seminar--active"
+            : "landing-nav-seminar"
+        }
+        onClick={closeMenu}
+      >
+        Seminar
+      </Link>
       <Link href={roastHref} className="landing-nav-cta" onClick={closeMenu}>
         {roastLabel}
       </Link>

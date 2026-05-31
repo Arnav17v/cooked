@@ -604,3 +604,120 @@ export function kickoffNotesPostQuizUpdate(
     /* ignore */
   });
 }
+
+// --- Seminar ---
+
+export type SeminarStatus = "draft" | "live" | "full" | "completed";
+
+export type SeminarSessionDto = {
+  id: string;
+  title: string;
+  description: string;
+  host_name: string;
+  host_role: string;
+  host_company: string;
+  host_linkedin: string;
+  host_image_url: string | null;
+  date_time: string;
+  duration_minutes: number;
+  venue: string;
+  spots_total: number;
+  spots_remaining: number;
+  price_inr: number;
+  razorpay_link: string;
+  banner_image_url: string | null;
+  tags: string[];
+  status: SeminarStatus;
+  created_at: string;
+};
+
+export type CreateSeminarPayload = {
+  title: string;
+  description: string;
+  host_name: string;
+  host_role: string;
+  host_company: string;
+  host_linkedin: string;
+  host_image_url?: string | null;
+  date_time: string;
+  duration_minutes: number;
+  venue: string;
+  spots_total: number;
+  spots_remaining: number;
+  price_inr: number;
+  razorpay_link: string;
+  banner_image_url?: string | null;
+  tags: string[];
+  status: SeminarStatus;
+};
+
+export async function getPublicSeminarSessions(): Promise<SeminarSessionDto[]> {
+  const res = await fetch(`${getApiBase()}/api/v1/seminar/public`, { cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  const data = (await res.json()) as { sessions: SeminarSessionDto[] };
+  return data.sessions;
+}
+
+export async function getSeminarSessionById(id: string): Promise<SeminarSessionDto | null> {
+  const res = await fetch(`${getApiBase()}/api/v1/seminar/${id}`, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  const data = (await res.json()) as { seminar: SeminarSessionDto };
+  return data.seminar;
+}
+
+export async function getLiveSeminarSession(): Promise<SeminarSessionDto | null> {
+  const res = await fetch(`${getApiBase()}/api/v1/seminar/live`, { cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  const data = (await res.json()) as { seminar: SeminarSessionDto | null };
+  return data.seminar;
+}
+
+export async function getAllSeminarSessions(): Promise<{ sessions: SeminarSessionDto[] }> {
+  const res = await fetch(`${getApiBase()}/api/v1/seminar/all`, { cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as { sessions: SeminarSessionDto[] };
+}
+
+export async function createSeminarSession(
+  payload: CreateSeminarPayload,
+): Promise<{ seminar: SeminarSessionDto }> {
+  const res = await fetch(`${getApiBase()}/api/v1/seminar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as { seminar: SeminarSessionDto };
+}
+
+export async function updateSeminarSession(
+  id: string,
+  payload: Partial<CreateSeminarPayload>,
+): Promise<{ seminar: SeminarSessionDto }> {
+  const res = await fetch(`${getApiBase()}/api/v1/seminar/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as { seminar: SeminarSessionDto };
+}

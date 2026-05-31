@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/share(.*)",
+  "/seminar(.*)",
+  "/admin/seminar(.*)",
 ]);
 
 const clerk = clerkMiddleware(async (auth, req) => {

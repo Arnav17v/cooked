@@ -20,6 +20,7 @@ from app.api.v1.routes import (
     questions,
     resume,
     roast,
+    seminar,
     share,
 )
 
@@ -34,4 +35,5 @@ api_router.include_router(analysis.router)
 api_router.include_router(questions.router)
 api_router.include_router(practice.router)
 api_router.include_router(interview.router)
+api_router.include_router(seminar.router)
 api_router.include_router(share.router)
