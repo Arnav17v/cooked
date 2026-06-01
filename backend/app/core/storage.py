@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
+from io import BytesIO
 from contextlib import suppress
 from functools import lru_cache
 from typing import Any
@@ -256,12 +257,14 @@ def upload_resume_pdf(*, resume_id: uuid.UUID, data: bytes, content_type: str) -
         "ContentType": content_type or "application/pdf",
     }
 
-    attempts: list[tuple[str, dict[str, Any]]] = []
+    attempts: list[tuple[str, dict[str, Any] | None]] = []
     if is_b2 and settings.r2_b2_put_sse_aes256:
         d1 = dict(base_put)
         d1["ServerSideEncryption"] = "AES256"
         attempts.append(("b2_put_sse_aes256", d1))
     attempts.append(("put_no_sse_header", dict(base_put)))
+    if is_b2:
+        attempts.append(("b2_upload_fileobj", None))
 
     last_exc: ClientError | None = None
     for i, (label, put_kw) in enumerate(attempts):
@@ -281,10 +284,19 @@ def upload_resume_pdf(*, resume_id: uuid.UUID, data: bytes, content_type: str) -
             label,
             content_type or "application/pdf",
             type(body).__name__,
-            sorted(k for k in put_kw if k not in ("Bucket", "Key", "Body", "ContentType")),
+            sorted(k for k in put_kw if k is not None and k not in ("Bucket", "Key", "Body", "ContentType")),
         )
         try:
-            client.put_object(**put_kw)
+            if put_kw is None:
+                extra: dict[str, Any] = {"ContentType": content_type or "application/pdf"}
+                client.upload_fileobj(
+                    BytesIO(body),
+                    settings.r2_bucket,
+                    key,
+                    ExtraArgs=extra,
+                )
+            else:
+                client.put_object(**put_kw)
         except ClientError as e:
             err = e.response.get("Error", {}) if hasattr(e, "response") else {}
             code = err.get("Code")

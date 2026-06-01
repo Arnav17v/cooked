@@ -81,6 +81,8 @@ export const LAST_RESUME_LS = "cooked_last_resume_v1";
 const ROAST_FAILURE_EXACT: Record<string, string> = {
   models_unavailable:
     "We're getting a lot of traffic right now. Please wait about 5 minutes and try again.",
+  invalid_llm_payload:
+    "The roast didn't come back in a usable shape. Please try again — if it keeps failing, use Paste text instead of PDF.",
   too_short:
     "Your resume looks too short to roast. Add more detail, or use Paste text and paste your full resume.",
   no_resume_text:

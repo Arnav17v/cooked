@@ -127,7 +127,8 @@ class Settings(BaseSettings):
     daily_quiz_cap: int = 2
     resume_word_cap: int = 4000
     min_roast_words: int = 30
-    llm_max_output_tokens: int = 1500
+    #: Single-call roast JSON (score + flags + questions) needs headroom; 1500 truncates mid-JSON.
+    llm_max_output_tokens: int = 4096
     llm_interview_max_output_tokens: int = Field(default=5000, ge=512, le=8192)
     llm_resume_text_token_soft_limit: int = 1500
     #: When true, the daily APScheduler job scrubs ``raw_text`` + R2 PDFs older than

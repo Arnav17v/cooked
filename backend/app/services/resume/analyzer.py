@@ -122,6 +122,85 @@ def _coerce_root(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _coerce_score(raw: object) -> int | None:
+    if raw is None:
+        return None
+    try:
+        return max(0, min(100, int(float(raw))))
+    except (TypeError, ValueError):
+        return None
+
+
+def _salvage_flags(raw: object) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        sb = str(item.get("source_bullet") or "").strip()
+        issue = str(item.get("issue") or "").strip()
+        rewrite = str(item.get("suggested_rewrite") or "").strip()
+        if not sb or not issue or not rewrite:
+            continue
+        out.append(
+            {
+                "source_bullet": sb,
+                "issue": issue,
+                "suggested_rewrite": rewrite,
+            }
+        )
+        if len(out) >= 5:
+            break
+    return out
+
+
+def _salvage_questions(raw: object) -> list[dict[str, str | None]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str | None]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        q = str(item.get("question") or "").strip()
+        if not q:
+            continue
+        bucket_raw = str(item.get("bucket") or "from_resume").strip().lower()
+        bucket = "gap" if bucket_raw == "gap" else "from_resume"
+        sb = str(item.get("source_bullet") or "").strip() or None
+        out.append(
+            {
+                "question": q,
+                "bucket": bucket,
+                "source_bullet": sb if bucket == "from_resume" else None,
+            }
+        )
+        if len(out) >= 10:
+            break
+    return out
+
+
+def _salvage_roast_raw(raw: dict[str, Any]) -> dict[str, Any]:
+    """Drop malformed LLM fields so a partial roast can still complete."""
+    out = dict(raw)
+    score = _coerce_score(out.get("score"))
+    if score is not None:
+        out["score"] = score
+    one = str(out.get("one_liner") or "").strip()
+    if one:
+        out["one_liner"] = one
+    sv_raw = out.get("section_verdicts")
+    if isinstance(sv_raw, list):
+        out["section_verdicts"] = _normalize_section_verdicts({})
+    elif isinstance(sv_raw, dict):
+        out["section_verdicts"] = _normalize_section_verdicts(sv_raw)
+    else:
+        out["section_verdicts"] = _normalize_section_verdicts({})
+    out["flags"] = _salvage_flags(out.get("flags"))
+    out["questions"] = _salvage_questions(out.get("questions"))
+    return out
+
+
 def _json_preview(obj: object, *, cap: int = 24_000) -> str:
     """Human-readable JSON snippet for logs / SSE failure_debug."""
     try:
@@ -238,26 +317,34 @@ async def roast_resume_with_llm(
         }
         return None, result, "invalid_llm_payload"
 
-    try:
-        # section_verdicts: object or list legacy
-        sv_raw = raw.get("section_verdicts")
-        if isinstance(sv_raw, list):
-            raw["section_verdicts"] = _normalize_section_verdicts({})
-        elif isinstance(sv_raw, dict):
-            raw["section_verdicts"] = _normalize_section_verdicts(sv_raw)
-        else:
-            raw["section_verdicts"] = _normalize_section_verdicts({})
+    # section_verdicts: object or list legacy
+    sv_raw = raw.get("section_verdicts")
+    if isinstance(sv_raw, list):
+        raw["section_verdicts"] = _normalize_section_verdicts({})
+    elif isinstance(sv_raw, dict):
+        raw["section_verdicts"] = _normalize_section_verdicts(sv_raw)
+    else:
+        raw["section_verdicts"] = _normalize_section_verdicts({})
 
-        out = RoastLLMOutput.model_validate(raw)
-    except ValidationError as e:
-        log.warning("roast JSON failed validation: %s", e)
+    out: RoastLLMOutput | None = None
+    validation_error: str | None = None
+    for attempt_raw in (raw, _salvage_roast_raw(raw)):
+        try:
+            out = RoastLLMOutput.model_validate(attempt_raw)
+            validation_error = None
+            break
+        except ValidationError as e:
+            validation_error = str(e)
+
+    if out is None:
+        log.warning("roast JSON failed validation: %s", validation_error)
 
         payload = result.content if isinstance(result.content, dict) else {"non_object": result.content}
         preview = _json_preview(payload)
         result.failure_debug = {
             **(result.failure_debug or {}),
             "kind": "pydantic_validation",
-            "validation_error": str(e)[:6000],
+            "validation_error": (validation_error or "")[:6000],
             "parsed_payload_json": preview,
         }
         log.warning("roast payload that failed validation:\n%s", preview)

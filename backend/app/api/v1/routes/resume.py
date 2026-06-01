@@ -295,7 +295,7 @@ def _failure_reason_sse(reason: str | None) -> str:
     m = {
         "too_short": "too_short",
         "models_unavailable": "models_unavailable",
-        "invalid_llm_payload": "models_unavailable",
+        "invalid_llm_payload": "invalid_llm_payload",
         "no_resume_text": "models_unavailable",
         "pipeline_error": "models_unavailable",
     }
