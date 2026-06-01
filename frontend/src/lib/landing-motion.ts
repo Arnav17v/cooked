@@ -10,7 +10,9 @@ export const LANDING_DURATION = {
 
 export const LANDING_EASE = EASE_DEFAULT;
 
-export const landingTransition = (duration = LANDING_DURATION.normal): Transition => ({
+export const landingTransition = (
+  duration: number = LANDING_DURATION.normal,
+): Transition => ({
   duration,
   ease: LANDING_EASE,
 });

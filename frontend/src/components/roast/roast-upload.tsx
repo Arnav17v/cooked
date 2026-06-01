@@ -55,7 +55,7 @@ function RoastPrimaryButton({
     >
       <span
         aria-hidden
-        className="absolute inset-0 -translate-x-full bg-lv-rust transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:translate-x-0"
+        className="absolute inset-0 -translate-x-full bg-lv-rust transition-transform duration-300 ease-lv group-hover:translate-x-0"
       />
       <span className="relative z-10 transition-colors group-hover:text-lv-cream">{children}</span>
     </button>
