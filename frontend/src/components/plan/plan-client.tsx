@@ -115,9 +115,11 @@ export function PlanClient() {
 
     (async () => {
       const q = resumeQuery?.trim();
+      const needsRoasts = newQuery === "1";
+
       if (q) {
         if (!cancelled) setResumeId(q);
-      } else {
+      } else if (needsRoasts) {
         const token = await bearer();
         if (token) {
           try {
@@ -149,7 +151,7 @@ export function PlanClient() {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, resumeQuery, bearer, resolveView, router]);
+  }, [isLoaded, isSignedIn, resumeQuery, newQuery, bearer, resolveView, router]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -175,11 +177,8 @@ export function PlanClient() {
   }
 
   function openPlan(planId: string) {
+    setPhase("loading");
     router.push(`/plan?plan=${planId}`);
-    void loadPlan(planId).catch((e) => {
-      setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not load plan."));
-      setPhase("error");
-    });
   }
 
   async function onGenerate() {

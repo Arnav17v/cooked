@@ -127,27 +127,6 @@ export function RoastDashboard() {
   }, [resultTab, resolvedResumeId, resolving, hydrating, bearer]);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!isSignedIn) {
-        setMyRoasts([]);
-        return;
-      }
-      const tok = await getToken();
-      if (!tok || !alive) return;
-      try {
-        const items = await fetchMyRoasts(tok);
-        if (alive) setMyRoasts(items);
-      } catch {
-        if (alive) setMyRoasts([]);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [getToken, isSignedIn]);
-
-  useEffect(() => {
     let cancelled = false;
     (async () => {
       // Before Clerk finishes loading, `isSignedIn` is false — do not treat that as
@@ -159,6 +138,29 @@ export function RoastDashboard() {
       setResolving(true);
       setHydrateError(null);
 
+      if (!isSignedIn) {
+        if (!cancelled) {
+          setMyRoasts([]);
+          setResolvedResumeId(null);
+          setResolving(false);
+        }
+        return;
+      }
+
+      const tok = await getToken();
+      if (!tok || cancelled) {
+        if (!cancelled) setResolving(false);
+        return;
+      }
+
+      let items: MyRoastItem[] = [];
+      try {
+        items = await fetchMyRoasts(tok);
+        if (!cancelled) setMyRoasts(items);
+      } catch {
+        if (!cancelled) setMyRoasts([]);
+      }
+
       const q = resumeQuery?.trim();
       if (q && isUuidShape(q)) {
         if (!cancelled) {
@@ -168,24 +170,14 @@ export function RoastDashboard() {
         return;
       }
 
-      if (isSignedIn) {
-        const tok = await getToken();
-        if (tok && !cancelled) {
-          try {
-            const items = await fetchMyRoasts(tok);
-            const pick = items.find((i) => i.analysis_status === "done") ?? items[0];
-            if (pick) {
-              router.replace(`/dashboard?resume=${pick.resume_id}`);
-              if (!cancelled) {
-                setResolvedResumeId(pick.resume_id);
-                setResolving(false);
-              }
-              return;
-            }
-          } catch {
-            /* fall through */
-          }
+      const pick = items.find((i) => i.analysis_status === "done") ?? items[0];
+      if (pick) {
+        router.replace(`/dashboard?resume=${pick.resume_id}`);
+        if (!cancelled) {
+          setResolvedResumeId(pick.resume_id);
+          setResolving(false);
         }
+        return;
       }
 
       try {
@@ -670,21 +662,16 @@ export function RoastDashboard() {
             </div>
             ) : null}
 
-            {resolvedResumeId ? (
+            {resultTab === "notes" && resolvedResumeId ? (
               <div
-                className={
-                  resultTab === "notes"
-                    ? "animate-dashboard-panel-in mx-auto block w-full max-w-[820px]"
-                    : "hidden"
-                }
-                role={resultTab === "notes" ? "tabpanel" : undefined}
-                aria-hidden={resultTab !== "notes"}
+                className="animate-dashboard-panel-in mx-auto block w-full max-w-[820px]"
+                role="tabpanel"
               >
                 <NotesStudyPage
                   key={`${resolvedResumeId}-${notesRemountKey}`}
                   resumeId={resolvedResumeId}
                   embedded
-                  notesTabActive={resultTab === "notes"}
+                  notesTabActive
                   onNotesCreated={() => {
                     setNotesRemountKey((k) => k + 1);
                   }}

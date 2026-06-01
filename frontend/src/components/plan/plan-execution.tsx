@@ -91,15 +91,6 @@ export function PlanExecution({
   }, [selectedDay, selectedModuleId]);
 
   useEffect(() => {
-    if (!selectedDay) return;
-    const busy = generatingDayId === selectedDay.id || selectedDay.modules_status === "generating";
-    if (busy) return;
-    if (selectedDay.modules_status === "pending" || selectedDay.modules_status === "failed") {
-      onGenerateDay(selectedDay.id);
-    }
-  }, [selectedDay, generatingDayId, onGenerateDay]);
-
-  useEffect(() => {
     const mq = window.matchMedia("(min-width: 769px)");
     const onChange = () => setCurriculumOpen(false);
     mq.addEventListener("change", onChange);

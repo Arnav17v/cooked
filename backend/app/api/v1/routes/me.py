@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
@@ -32,6 +33,15 @@ class MyRoastsResponse(BaseModel):
     items: list[MyRoastItem]
 
 
+def _latest_analysis_by_resume(analyses: list[Analysis]) -> dict[uuid.UUID, Analysis]:
+    latest: dict[uuid.UUID, Analysis] = {}
+    for a in analyses:
+        prev = latest.get(a.resume_id)
+        if prev is None or a.created_at > prev.created_at:
+            latest[a.resume_id] = a
+    return latest
+
+
 @router.get("/roasts", response_model=MyRoastsResponse)
 async def list_my_roasts(
     clerk_subject: str = Depends(require_clerk_subject),
@@ -49,16 +59,17 @@ async def list_my_roasts(
         .limit(40)
     )
     resumes = (await session.scalars(r_stmt)).all()
+    if not resumes:
+        return MyRoastsResponse(items=[])
+
+    resume_ids = [r.id for r in resumes]
+    a_stmt = select(Analysis).where(Analysis.resume_id.in_(resume_ids))
+    analyses = (await session.scalars(a_stmt)).all()
+    latest_by_resume = _latest_analysis_by_resume(list(analyses))
 
     items: list[MyRoastItem] = []
     for r in resumes:
-        a_stmt = (
-            select(Analysis)
-            .where(Analysis.resume_id == r.id)
-            .order_by(Analysis.created_at.desc())
-            .limit(1)
-        )
-        a = await session.scalar(a_stmt)
+        a = latest_by_resume.get(r.id)
         items.append(
             MyRoastItem(
                 resume_id=str(r.id),

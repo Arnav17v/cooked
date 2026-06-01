@@ -92,9 +92,15 @@ export function PlanModuleViewer({
               <p className="plan-day-modules-status">
                 {generating || day.modules_status === "generating"
                   ? `Building notes and tasks for Day ${day.day_number}…`
-                  : `Day ${day.day_number} modules will generate when you open this day.`}
+                  : `Generate notes and tasks for Day ${day.day_number} when you're ready.`}
               </p>
-              <div className="plan-day-modules-skeleton" aria-hidden />
+              {generating || day.modules_status === "generating" ? (
+                <div className="plan-day-modules-skeleton" aria-hidden />
+              ) : (
+                <button type="button" className="plan-primary-btn" onClick={onRetryGenerate}>
+                  Generate day modules
+                </button>
+              )}
             </>
           )}
         </div>
