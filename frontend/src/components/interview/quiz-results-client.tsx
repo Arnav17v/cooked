@@ -11,6 +11,7 @@ import {
   type InterviewFirstQuestion,
   type InterviewPerAnswerFeedback,
 } from "@/lib/api";
+import { readQuizSessionMeta } from "@/lib/quiz-session-meta";
 
 function normalizeReportSignal(raw: string | undefined): InterviewPerAnswerFeedback["signal"] {
   const s = (raw ?? "").toLowerCase();
@@ -96,6 +97,10 @@ export function QuizResultsClient({ sessionId }: Props) {
     payload.one_liner?.trim() ||
     "Technically solid in places, but gaps show when you go deeper on fundamentals.";
 
+  const meta = readQuizSessionMeta(sessionId);
+  const planReturn =
+    meta?.origin === "plan" && meta.return_to?.trim() ? meta.return_to.trim() : null;
+
   return (
     <QuizAnalysisResults
       sessionId={payload.session_id}
@@ -105,6 +110,8 @@ export function QuizResultsClient({ sessionId }: Props) {
       questions={questions}
       answers={answers}
       onBackToDashboard={() => router.push("/dashboard")}
+      onBackToPlan={planReturn ? () => router.push(planReturn) : undefined}
+      backToPlanLabel="Back to plan"
     />
   );
 }

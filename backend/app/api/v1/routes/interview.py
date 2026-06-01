@@ -37,6 +37,8 @@ class InterviewScoreBody(BaseModel):
         ...,
         description="One trimmed non-empty answer per question, same order as POST /interview/start",
     )
+    #: Prep plan module — marks module done after score if session link is missing.
+    plan_module_id: uuid.UUID | None = None
 
 
 @router.post("/start")
@@ -108,6 +110,7 @@ async def interview_score(
             session_id=body.session_id,
             answers=body.answers,
             clerk_subject=clerk_subject,
+            plan_module_id=body.plan_module_id,
         )
         await session.commit()
         return out

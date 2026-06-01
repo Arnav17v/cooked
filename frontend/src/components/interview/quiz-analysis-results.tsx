@@ -78,6 +78,8 @@ export type QuizAnalysisResultsProps = {
   answers: string[];
   submitError?: string | null;
   onBackToDashboard: () => void;
+  onBackToPlan?: () => void;
+  backToPlanLabel?: string;
 };
 
 export function QuizAnalysisResults({
@@ -89,6 +91,8 @@ export function QuizAnalysisResults({
   answers,
   submitError,
   onBackToDashboard,
+  onBackToPlan,
+  backToPlanLabel = "Back to plan",
 }: QuizAnalysisResultsProps) {
   const score = Math.min(100, Math.max(0, Math.round(finalScore)));
   const hero = performanceHeadline(score);
@@ -264,9 +268,20 @@ export function QuizAnalysisResults({
         </p>
       ) : null}
 
-      <QuizPrimaryButton onClick={onBackToDashboard} className="min-w-[220px]">
-        Back to dashboard
-      </QuizPrimaryButton>
+      <div className="flex flex-wrap items-center gap-4">
+        <QuizPrimaryButton onClick={onBackToDashboard} className="min-w-[220px]">
+          Back to dashboard
+        </QuizPrimaryButton>
+        {onBackToPlan ? (
+          <button
+            type="button"
+            className="plan-link-btn border-none bg-transparent p-0 text-[13px]"
+            onClick={onBackToPlan}
+          >
+            {backToPlanLabel}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

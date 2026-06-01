@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core import scheduler
 from app.core.config import get_settings
+from app.services.plan.push import send_plan_morning_notifications
 from app.services.resume.retention import sweep_old_resume_text
 
 logging.basicConfig(level=get_settings().log_level)
@@ -39,7 +40,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "Bearer JWTs cannot be verified; GET /api/v1/me/roasts will return 401. "
             "Set CLERK_JWT_ISSUER to your Clerk Frontend API / JWT issuer (no trailing slash)."
         )
-    scheduler.register_jobs(retention_job=sweep_old_resume_text)
+    scheduler.register_jobs(
+        retention_job=sweep_old_resume_text,
+        plan_notify_job=send_plan_morning_notifications,
+    )
     scheduler.start()
     log.info("startup complete — env=%s", settings.env)
     try:

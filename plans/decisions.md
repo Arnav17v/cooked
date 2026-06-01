@@ -11,6 +11,17 @@ Format:
 
 ---
 
+### D-018: Interview prep planner (`/plan`)
+
+**Date**: 2026-05-29
+**Status**: Accepted
+
+- **Context**: User-requested feature outside locked v1 guardrails; needs day-by-day plans from JD + roast, NL edits, quiz linkage, optional push reminders.
+- **Decision**: Postgres tables `prep_plans`, `plan_days`, `push_subscriptions`; one active plan per user (partial unique index); LLM via existing `analyze` router task; public UUID only behind Clerk auth; morning push via APScheduler + `pywebpush` when VAPID env is set; quiz starts through existing `/quiz/start` handoff + `POST /interview/start`.
+- **Consequences**: Extra LLM cost surface — daily generate/modify caps; push is no-op without VAPID keys; scope explicitly overrides v1 skip list for this feature only.
+
+---
+
 ### D-001: Use Next.js 15 App Router + Tailwind + shadcn
 
 **Date**: 2026-05 (project bootstrap)

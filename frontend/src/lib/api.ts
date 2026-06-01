@@ -409,11 +409,16 @@ export async function scoreInterviewQuiz(
   sessionId: string,
   answers: string[],
   auth?: ApiAuth,
+  planModuleId?: string,
 ): Promise<InterviewScoreResponse> {
   const res = await fetch(`${getApiBase()}/api/v1/interview/score`, {
     method: "POST",
     headers: jsonPostHeaders(auth?.token),
-    body: JSON.stringify({ session_id: sessionId, answers }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      answers,
+      ...(planModuleId?.trim() ? { plan_module_id: planModuleId.trim() } : {}),
+    }),
   });
   if (!res.ok) {
     const body = await res.text();
@@ -720,4 +725,298 @@ export async function updateSeminarSession(
     throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
   }
   return (await res.json()) as { seminar: SeminarSessionDto };
+}
+
+// --- Prep plan ---
+
+export type PrepPlanStatus = "active" | "completed" | "abandoned";
+export type PrepPlanPhase = "overview" | "execution";
+export type PlanModuleKind = "notes" | "task" | "quiz";
+
+export type PlanDayModulesStatus = "pending" | "generating" | "ready" | "failed";
+
+export type PlanModuleDto = {
+  id: string;
+  display_order: number;
+  kind: PlanModuleKind;
+  title: string;
+  content: string | null;
+  link_url: string | null;
+  quiz_topics: string[];
+  quiz_session_id: string | null;
+  quiz_score: number | null;
+  quiz_heat_label: string | null;
+  quiz_one_liner: string | null;
+  completed: boolean;
+  completed_at: string | null;
+  is_backlog: boolean;
+};
+
+export type PrepPlanDayDto = {
+  id: string;
+  day_number: number;
+  date: string;
+  focus_area: string;
+  morning_task: string;
+  evening_task: string;
+  completed: boolean;
+  quiz_session_id: string | null;
+  quiz_topics: string[];
+  intensity: string;
+  is_today: boolean;
+  is_backlog: boolean;
+  progress_pct: number;
+  modules_status: PlanDayModulesStatus;
+  modules_error: string | null;
+  modules: PlanModuleDto[];
+};
+
+export type PrepPlanDto = {
+  id: string;
+  resume_id: string;
+  company_name: string;
+  role: string;
+  interview_date: string;
+  status: PrepPlanStatus;
+  phase: PrepPlanPhase;
+  plan_title: string | null;
+  summary: string | null;
+  prompt_version: string;
+  created_at: string;
+  updated_at: string;
+  degraded_summary?: boolean;
+  backlog_count: number;
+};
+
+export type PrepPlanSummaryDto = {
+  id: string;
+  resume_id: string;
+  company_name: string;
+  role: string;
+  interview_date: string;
+  status: PrepPlanStatus;
+  phase: PrepPlanPhase;
+  plan_title: string | null;
+  summary: string | null;
+  created_at: string;
+  updated_at: string;
+  days_count: number;
+  progress_pct: number;
+};
+
+export type PrepPlanListResponse = {
+  plans: PrepPlanSummaryDto[];
+};
+
+export type ActivePlanResponse = {
+  plan: PrepPlanDto;
+  days: PrepPlanDayDto[];
+};
+
+export type GeneratePlanPayload = {
+  resume_id: string;
+  company_name: string;
+  role: string;
+  interview_date: string;
+  jd_text: string;
+  experience_level?: string;
+};
+
+export async function listPrepPlans(token: string): Promise<PrepPlanListResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/list`, {
+    headers: headersWithAuth(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as PrepPlanListResponse;
+}
+
+export async function getPrepPlan(planId: string, token: string): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/${planId}`, {
+    headers: headersWithAuth(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function getActivePrepPlan(token: string): Promise<ActivePlanResponse | null> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/active`, {
+    headers: headersWithAuth(token),
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function generatePrepPlan(
+  payload: GeneratePlanPayload,
+  token: string,
+): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/generate`, {
+    method: "POST",
+    headers: jsonPostHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function modifyPrepPlan(
+  planId: string,
+  natural_language_instruction: string,
+  token: string,
+): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/${planId}/modify`, {
+    method: "PATCH",
+    headers: jsonPostHeaders(token),
+    body: JSON.stringify({ natural_language_instruction }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function initiatePrepPlan(planId: string, token: string): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/${planId}/initiate`, {
+    method: "POST",
+    headers: jsonPostHeaders(token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function generatePrepPlanDayModules(
+  dayId: string,
+  token: string,
+): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/day/${dayId}/generate-modules`, {
+    method: "POST",
+    headers: jsonPostHeaders(token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function completePrepPlanModule(
+  moduleId: string,
+  token: string,
+): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/module/${moduleId}/complete`, {
+    method: "PATCH",
+    headers: jsonPostHeaders(token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function linkPrepPlanModuleQuiz(
+  moduleId: string,
+  sessionId: string,
+  token: string,
+): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/module/${moduleId}/link-quiz`, {
+    method: "POST",
+    headers: jsonPostHeaders(token),
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function completePrepPlanDay(dayId: string, token: string): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/day/${dayId}/complete`, {
+    method: "PATCH",
+    headers: jsonPostHeaders(token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function linkPrepPlanDayQuiz(
+  dayId: string,
+  sessionId: string,
+  token: string,
+): Promise<ActivePlanResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/day/${dayId}/link-quiz`, {
+    method: "POST",
+    headers: jsonPostHeaders(token),
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as ActivePlanResponse;
+}
+
+export async function abandonPrepPlan(planId: string, token: string): Promise<void> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/${planId}`, {
+    method: "DELETE",
+    headers: headersWithAuth(token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+}
+
+export async function getPlanVapidPublicKey(token: string): Promise<{
+  public_key: string | null;
+  enabled: boolean;
+}> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/vapid-public-key`, {
+    headers: headersWithAuth(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as { public_key: string | null; enabled: boolean };
+}
+
+export async function subscribePlanPush(
+  subscription: Record<string, unknown>,
+  token: string,
+): Promise<void> {
+  const res = await fetch(`${getApiBase()}/api/v1/plan/notifications/subscribe`, {
+    method: "POST",
+    headers: jsonPostHeaders(token),
+    body: JSON.stringify({ subscription }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
 }

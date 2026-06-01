@@ -142,3 +142,51 @@ class NotesUpdatedSectionLLMItem(BaseModel):
 
 class NotesUpdateLLMOutput(BaseModel):
     updated_sections: list[NotesUpdatedSectionLLMItem] = Field(default_factory=list)
+
+
+class PrepPlanDayLLMItem(BaseModel):
+    day_number: int = Field(..., ge=1, le=30)
+    focus_area: str
+    morning_task: str
+    evening_task: str
+    quiz_topics: list[str] = Field(default_factory=list)
+    intensity: str = "medium"
+
+    @field_validator("intensity")
+    @classmethod
+    def intensity_ok(cls, v: str) -> str:
+        low = v.strip().lower()
+        if low in ("light", "medium", "heavy"):
+            return low
+        return "medium"
+
+
+class PrepPlanLLMOutput(BaseModel):
+    plan_title: str
+    summary: str
+    days: list[PrepPlanDayLLMItem] = Field(default_factory=list)
+
+
+class PrepPlanModuleLLMItem(BaseModel):
+    kind: str
+    title: str
+    content: str | None = None
+    link_url: str | None = None
+    quiz_topics: list[str] = Field(default_factory=list)
+
+    @field_validator("kind")
+    @classmethod
+    def kind_ok(cls, v: str) -> str:
+        low = v.strip().lower()
+        if low in ("notes", "task", "quiz"):
+            return low
+        return "notes"
+
+
+class PrepPlanDayModulesLLMItem(BaseModel):
+    day_number: int = Field(..., ge=1, le=30)
+    modules: list[PrepPlanModuleLLMItem] = Field(default_factory=list)
+
+
+class PrepPlanInitiateLLMOutput(BaseModel):
+    days: list[PrepPlanDayModulesLLMItem] = Field(default_factory=list)

@@ -40,6 +40,7 @@ from app.services.notes.service import (
     set_prep_note_weak_flags_for_resume,
     weak_section_ids_from_session_quiz_tags,
 )
+from app.services.plan.service import sync_plan_module_after_quiz_score
 from app.services.users.access import require_resume_readable
 from app.services.users.limits import assert_can_start_quiz
 
@@ -661,6 +662,7 @@ async def score_quiz(
     session_id: uuid.UUID,
     answers: list[str],
     clerk_subject: str | None,
+    plan_module_id: uuid.UUID | None = None,
 ) -> dict[str, object]:
     cleaned = [a.strip() for a in answers]
     if any(not a for a in cleaned):
@@ -821,6 +823,10 @@ async def score_quiz(
     row.completed_at = datetime.now(UTC)
     row.questions_asked = batch_n
     await session.flush()
+
+    await sync_plan_module_after_quiz_score(
+        session, row.id, plan_module_id=plan_module_id
+    )
 
     result: dict[str, object] = {
         "session_id": str(row.id),

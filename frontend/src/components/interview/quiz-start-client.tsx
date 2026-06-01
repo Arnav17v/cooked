@@ -15,7 +15,7 @@ import {
   QuizMetaRow,
   QuizPrimaryButton,
 } from "@/components/interview/quiz-ui";
-import { startInterviewQuiz } from "@/lib/api";
+import { linkPrepPlanDayQuiz, linkPrepPlanModuleQuiz, startInterviewQuiz } from "@/lib/api";
 import { showLlmDevTrace } from "@/lib/llm-dev-toast";
 import { quizCountForLength } from "@/lib/quiz-length";
 import {
@@ -23,7 +23,8 @@ import {
   type QuizStartHandoff,
 } from "@/lib/interview-quiz-start-handoff";
 
-const META_PREFIX = "cooked_interview_meta_v1_";
+import { QUIZ_SESSION_META_PREFIX } from "@/lib/quiz-session-meta";
+
 const SEED_PREFIX = "cooked_interview_seed_v1_";
 
 type Phase = "setup" | "starting" | "error";
@@ -70,6 +71,9 @@ export function QuizStartClient() {
         return;
       }
       setHandoff(parsed);
+      const jd =
+        typeof parsed.job_description === "string" ? parsed.job_description.trim() : "";
+      if (jd) setJobDescription(jd);
     } catch {
       setPhase("error");
       setErrorMsg("Invalid quiz handoff — try again from the dashboard.");
@@ -110,6 +114,23 @@ export function QuizStartClient() {
         jd,
       );
       showLlmDevTrace(out.dev_llm_trace);
+
+      const planDayId =
+        typeof handoff.plan_day_id === "string" ? handoff.plan_day_id.trim() : "";
+      const planModuleId =
+        typeof handoff.plan_module_id === "string" ? handoff.plan_module_id.trim() : "";
+      if (token) {
+        try {
+          if (planModuleId) {
+            await linkPrepPlanModuleQuiz(planModuleId, out.session_id, token);
+          } else if (planDayId) {
+            await linkPrepPlanDayQuiz(planDayId, out.session_id, token);
+          }
+        } catch {
+          /* plan link is best-effort */
+        }
+      }
+
       setProgressPct(100);
 
       try {
@@ -118,9 +139,25 @@ export function QuizStartClient() {
           SEED_PREFIX + out.session_id,
           JSON.stringify({ questions: out.questions }),
         );
+        const planId = typeof handoff.plan_id === "string" ? handoff.plan_id.trim() : "";
+        const returnTo =
+          typeof handoff.return_to === "string" && handoff.return_to.trim()
+            ? handoff.return_to.trim()
+            : planId
+              ? `/plan?plan=${planId}`
+              : undefined;
+        const origin = handoff.origin;
         window.localStorage.setItem(
-          META_PREFIX + out.session_id,
-          JSON.stringify({ resumeId, role, jobTargeted: Boolean(out.job_targeted) }),
+          QUIZ_SESSION_META_PREFIX + out.session_id,
+          JSON.stringify({
+            resumeId,
+            role,
+            jobTargeted: Boolean(out.job_targeted),
+            ...(planModuleId ? { plan_module_id: planModuleId } : {}),
+            ...(planId ? { plan_id: planId } : {}),
+            ...(returnTo ? { return_to: returnTo } : {}),
+            ...(origin ? { origin } : {}),
+          }),
         );
       } catch {
         /* storage blocked */

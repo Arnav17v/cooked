@@ -35,9 +35,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Am I Cooked? | AI Resume Roast",
+  title: "Am I Cooked? | AI Interview Prep",
   description:
-    "AI resume roast and interview prep: Cooked Score, bullet-level red flags with rewrites, and personalized interview questions from your actual bullets.",
+    "Day-by-day interview prep plans from your resume — study modules, in-plan quizzes, and a blunt Cooked Score roast to personalize every day until your interview.",
 };
 
 export default function RootLayout({

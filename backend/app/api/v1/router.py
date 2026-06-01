@@ -16,6 +16,7 @@ from app.api.v1.routes import (
     interview,
     me,
     notes,
+    plan,
     practice,
     questions,
     resume,
@@ -31,6 +32,7 @@ api_router.include_router(me.router)
 api_router.include_router(resume.router)
 api_router.include_router(roast.router)
 api_router.include_router(notes.router)
+api_router.include_router(plan.router)
 api_router.include_router(analysis.router)
 api_router.include_router(questions.router)
 api_router.include_router(practice.router)

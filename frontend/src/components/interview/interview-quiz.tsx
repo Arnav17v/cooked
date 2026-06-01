@@ -13,6 +13,7 @@ import {
   QuizStepRail,
 } from "@/components/interview/quiz-ui";
 import { QuizAnalysisResults } from "@/components/interview/quiz-analysis-results";
+import { QuizPlanResults } from "@/components/interview/quiz-plan-results";
 import { QuestionDifficultyPill } from "@/components/roast/roast-shared";
 import {
   getNotes,
@@ -24,9 +25,9 @@ import {
   type NotesGetResponse,
 } from "@/lib/api";
 import { showLlmDevTrace } from "@/lib/llm-dev-toast";
+import { QUIZ_SESSION_META_PREFIX, readQuizSessionMeta } from "@/lib/quiz-session-meta";
 
 const SEED_PREFIX = "cooked_interview_seed_v1_";
-const META_PREFIX = "cooked_interview_meta_v1_";
 const ANSWERS_PREFIX = "cooked_quiz_answers_v1_";
 const NOTES_QUIZ_HIGHLIGHT_LS = "cooked_notes_quiz_highlight_v1";
 
@@ -138,7 +139,8 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
 
     try {
       const mraw =
-        localStorage.getItem(META_PREFIX + sessionId) ?? sessionStorage.getItem(META_PREFIX + sessionId);
+        localStorage.getItem(QUIZ_SESSION_META_PREFIX + sessionId) ??
+        sessionStorage.getItem(QUIZ_SESSION_META_PREFIX + sessionId);
       if (mraw) {
         const m = JSON.parse(mraw) as { resumeId?: string };
         if (typeof m.resumeId === "string" && m.resumeId.trim()) setMetaResumeId(m.resumeId.trim());
@@ -217,35 +219,36 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
       const token = await bearer();
       const auth = token ? { token } : undefined;
 
+      const planMeta = readQuizSessionMeta(sessionId);
+      const planModuleId =
+        typeof planMeta?.plan_module_id === "string" ? planMeta.plan_module_id.trim() : "";
+
       let postQuizBaseline: string | null = null;
       let postQuizResumeId: string | null = null;
       let hadNotes = false;
       let preQuizNotes: NotesGetResponse | null = null;
-      try {
-        const mraw =
-          localStorage.getItem(META_PREFIX + sessionId) ?? sessionStorage.getItem(META_PREFIX + sessionId);
-        if (mraw) {
-          const meta = JSON.parse(mraw) as { resumeId?: string };
-          const rid = typeof meta.resumeId === "string" ? meta.resumeId.trim() : "";
-          if (rid) {
-            postQuizResumeId = rid;
-            try {
-              const notesPayload = await getNotes(rid, auth);
-              if (notesPayload) {
-                hadNotes = true;
-                preQuizNotes = notesPayload;
-                postQuizBaseline = notesPayload.updated_at ?? null;
-              }
-            } catch {
-              /* no notes */
-            }
+      const metaResumeId =
+        typeof planMeta?.resumeId === "string" ? planMeta.resumeId.trim() : "";
+      if (metaResumeId) {
+        postQuizResumeId = metaResumeId;
+        try {
+          const notesPayload = await getNotes(metaResumeId, auth);
+          if (notesPayload) {
+            hadNotes = true;
+            preQuizNotes = notesPayload;
+            postQuizBaseline = notesPayload.updated_at ?? null;
           }
+        } catch {
+          /* no notes */
         }
-      } catch {
-        /* */
       }
 
-      const out = await scoreInterviewQuiz(sessionId, trimmed, auth);
+      const out = await scoreInterviewQuiz(
+        sessionId,
+        trimmed,
+        auth,
+        planModuleId || undefined,
+      );
       showLlmDevTrace(out.dev_llm_trace);
       setResult(out);
 
@@ -303,6 +306,24 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
         highlight_quote: typeof row?.highlight_quote === "string" ? row.highlight_quote : "",
         analysis: typeof row?.analysis === "string" ? row.analysis : "",
       })) ?? buildFallbackReport(questions, trimmedAnswers, nReport);
+
+    const meta = readQuizSessionMeta(sessionId);
+    const planReturn =
+      meta?.origin === "plan" && meta.return_to?.trim() ? meta.return_to.trim() : null;
+
+    if (planReturn) {
+      return (
+        <QuizPlanResults
+          sessionId={sessionId}
+          finalScore={result.final_score}
+          heatLabel={result.heat_label ?? "Medium"}
+          headline={headline}
+          returnTo={planReturn}
+          onBackToPlan={() => router.push(planReturn)}
+          submitError={submitError}
+        />
+      );
+    }
 
     return (
       <QuizAnalysisResults

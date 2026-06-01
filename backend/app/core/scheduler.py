@@ -28,6 +28,7 @@ def get_scheduler() -> AsyncIOScheduler:
 def register_jobs(
     *,
     retention_job: Callable[[], Awaitable[None]] | None = None,
+    plan_notify_job: Callable[[], Awaitable[None]] | None = None,
 ) -> None:
     """Attach jobs. Called once from `main.py` on startup.
 
@@ -47,6 +48,17 @@ def register_jobs(
             misfire_grace_time=3600,
         )
         log.info("scheduler: registered resume_retention_sweep daily at 03:17 UTC")
+
+    if plan_notify_job is not None:
+        scheduler.add_job(
+            plan_notify_job,
+            trigger=CronTrigger(hour=8, minute=0),
+            id="plan_morning_push",
+            replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=3600,
+        )
+        log.info("scheduler: registered plan_morning_push daily at 08:00 UTC")
 
 
 def start() -> None:

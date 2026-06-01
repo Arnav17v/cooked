@@ -139,6 +139,15 @@ class Settings(BaseSettings):
     #: Static batch quiz: how many resume-grounded questions to generate and score together.
     interview_batch_question_count: int = Field(default=3, ge=1, le=20)
 
+    plan_prompt_version: str = "plan-v2"
+    daily_plan_generate_cap: int = Field(default=2, ge=1, le=20)
+    daily_plan_modify_cap: int = Field(default=10, ge=1, le=100)
+    daily_plan_day_module_cap: int = Field(default=20, ge=1, le=100)
+    vapid_public_key: str | None = None
+    vapid_private_key: str | None = None
+    vapid_email: str | None = None
+    plan_push_enabled: bool = False
+
     #: When True, SSE error events may include LLM failure debug (raw model text). Off in prod by default.
     expose_llm_debug: bool = False
     #: Log **verbatim** model response (full string from API before JSON parsing). Dangerous in prod (PII).

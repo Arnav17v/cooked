@@ -6,6 +6,16 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-05-29
+
+- **product — interview prep planner:** `/plan` with `prep_plans`, `plan_days`, LLM generate/modify, quiz handoff, optional Web Push reminders (08:00 UTC).
+- **product — plan two-phase execution:** overview → Initiate plan → per-day modules (notes/tasks/quiz) with progress bars and backlog highlighting.
+- **product — plan lazy day modules:** per-day LLM generation with `note_guidelines.md`, today+2 on initiate, on-open for remaining days; `modules_status` on `plan_days`.
+- **product — multi prep plans:** users can create, list, open, and delete multiple plans; dropped one-active-per-user DB constraint.
+- **product — Coursera-style plan player:** curriculum sidebar with day accordions + single-module lesson panel with Prev/Next.
+
+---
+
 ## 2026-05-22
 
 - **backend — interview prompts:** added `industry_standard` question bucket; LLM now derives 3 core competency pillars for the target role and generates pillar questions for anything the resume does not cover (works for any role — SWE, marketing, PM, etc.).

@@ -37,6 +37,9 @@ dependencies = [
     # Scheduled jobs (D-015)
     "apscheduler>=3.10.4",
 
+    # Web Push (prep plan reminders)
+    "pywebpush>=2.0.0",
+
     # Auth verification (added at build-order step 6)
     "pyjwt[crypto]>=2.10.0",
 
