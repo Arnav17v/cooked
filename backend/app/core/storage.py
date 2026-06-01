@@ -268,6 +268,11 @@ def upload_resume_pdf(*, resume_id: uuid.UUID, data: bytes, content_type: str) -
 
     last_exc: ClientError | None = None
     for i, (label, put_kw) in enumerate(attempts):
+        put_extra_keys = (
+            []
+            if put_kw is None
+            else sorted(k for k in put_kw if k not in ("Bucket", "Key", "Body", "ContentType"))
+        )
         log.info(
             "storage.upload_smoke resume_id=%s endpoint_host=%s region=%s bucket=%s key=%s "
             "bytes=%s pdf_magic_ok=%s sha256_16=%s backblaze=%s attempt=%s content_type=%s "
@@ -284,7 +289,7 @@ def upload_resume_pdf(*, resume_id: uuid.UUID, data: bytes, content_type: str) -
             label,
             content_type or "application/pdf",
             type(body).__name__,
-            sorted(k for k in put_kw if k is not None and k not in ("Bucket", "Key", "Body", "ContentType")),
+            put_extra_keys,
         )
         try:
             if put_kw is None:
