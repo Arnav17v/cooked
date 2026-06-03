@@ -151,7 +151,7 @@ export function PlanExecution({
             {" "}
             ·{" "}
           </span>
-          <span className="plan-execution-title-date">Interview {plan.interview_date}</span>
+          <span className="plan-execution-title-date">{days.length}-day prep plan</span>
         </h1>
         {backlogCount > 0 ? (
           <span

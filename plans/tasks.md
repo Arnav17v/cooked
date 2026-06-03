@@ -10,6 +10,8 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` cancelled 
 
 > The 8-step path to a v1 that meets [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share). Each step is a vertical slice — finish it end-to-end before moving on.
 >
+> **D-019 positioning override (2026-06-03):** visible UI copy should say **Resume Score**, **AI Insights**, and **AI In-Depth Review**, not "resume roast," "Cooked Score," or "red flags." The main product focus is interview prep; score/share surfaces should be professional diagnostic reports without cooked/meme images. See [`ui-overhaul-plan.md`](./ui-overhaul-plan.md).
+>
 > **Constraints baked in:**
 > - Zero ongoing API cost — [D-008](./decisions.md#d-008-v1-ships-on-a-completely-free-llm-v2-upgrades-after-user-feedback)
 > - LLM routing: Gemini (analyze + questions), Groq (evaluate + feedback), cross-vendor failover — [D-009](./decisions.md#d-009-llm-routing--gemini-for-analyzequestions-groq-for-evaluatefeedback-cross-vendor-failover)

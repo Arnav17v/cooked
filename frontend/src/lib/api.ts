@@ -1,6 +1,7 @@
 /** Typed FastAPI client. Never import an LLM SDK here — only backend HTTP. */
 
 import { getOrCreateAnonymousClientId } from "./anonymous-client";
+import type { ScoreDimensionsPayload } from "@/lib/score-dimensions";
 
 export type ApiAuth = {
   /** Clerk session JWT (`getToken()`); when set, resume rows are owner-scoped server-side. */
@@ -108,8 +109,12 @@ export type ScoreResponse = {
   one_liner?: string | null;
   role?: string | null;
   score_breakdown: Record<string, unknown>;
+  score_dimensions?: ScoreDimensionsPayload;
+  ai_in_depth_review?: string | null;
   share_slug: string;
   degraded: boolean;
+  resume_has_pdf?: boolean;
+  resume_text_preview?: string | null;
   /** Mock quiz scores for this resume (DB). */
   interview_quiz_scores?: QuizScoreHistoryEntry[];
 };
@@ -123,6 +128,7 @@ export type RedFlagStructured = {
 export type FlagsResponse = {
   red_flags?: unknown[];
   flags?: unknown[];
+  ai_insights?: unknown[];
   rewritten_bullets: string[];
   share_slug: string;
 };
@@ -152,6 +158,11 @@ export type MyRoastItem = {
   cooked_score: number | null;
 };
 
+export type ShareInsightPreview = {
+  issue: string;
+  suggested_rewrite: string;
+};
+
 export type SharePayload = {
   share_slug: string;
   target_role: string;
@@ -161,6 +172,8 @@ export type SharePayload = {
   heat_label?: string | null;
   headline?: string | null;
   one_liner?: string | null;
+  score_dimensions?: ScoreDimensionsPayload;
+  ai_insights_preview?: ShareInsightPreview[];
   degraded: boolean;
 };
 
@@ -254,6 +267,20 @@ export async function getScore(resumeId: string, auth?: ApiAuth): Promise<ScoreR
     throw new Error(body || `${res.status}`);
   }
   return (await res.json()) as ScoreResponse;
+}
+
+export async function fetchResumePdfBlob(
+  resumeId: string,
+  auth?: ApiAuth,
+): Promise<Blob> {
+  const res = await fetch(`${getApiBase()}/api/v1/resume/${resumeId}/pdf`, {
+    headers: headersWithAuth(auth?.token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(body || `${res.status}`);
+  }
+  return res.blob();
 }
 
 export async function getFlags(resumeId: string, auth?: ApiAuth): Promise<FlagsResponse> {
@@ -828,7 +855,7 @@ export type GeneratePlanPayload = {
   resume_id: string;
   company_name: string;
   role: string;
-  interview_date: string;
+  days_count: number;
   jd_text: string;
   experience_level?: string;
 };

@@ -1,54 +1,48 @@
+import { ScoreBreakdown } from "@/components/score/ScoreBreakdown";
 import { siteHostLabel } from "@/lib/site-url";
-import { clampCookedScore, getScoreMemeSrc } from "@/lib/score-meme";
+import {
+  resolveScoreDimensions,
+  type ScoreDimensionsPayload,
+} from "@/lib/score-dimensions";
+import { formatHeatLabel } from "@/lib/score-utils";
+
+export { scoreHeatColor } from "@/lib/score-utils";
 
 export type ScoreCardProps = {
-  cookedScore: number;
+  /** Legacy single score — used when dimensions omitted */
+  cookedScore?: number;
+  scoreDimensions?: ScoreDimensionsPayload;
+  scoreBreakdown?: Record<string, unknown>;
   heatLabel: string;
   headline?: string | null;
-  /** When omitted or empty, role line is hidden (tighter verdict panel). */
   targetRole?: string | null;
   degraded?: boolean;
-  /** When false, omit branding/footer for compact panels */
   showFooter?: boolean;
-  /** When false, hide the target role line under the headline */
   showTargetRole?: boolean;
-  /** When false, hide the small "Cooked Score" caption above the number */
-  showScoreLabel?: boolean;
-  /** When false, hide the tier meme image */
-  showMeme?: boolean;
-  /** Optional larger typography for prominent dashboard placements */
+  showTotal?: boolean;
   size?: "default" | "hero";
 };
 
-export function scoreHeatColor(heat: string): string {
-  const h = heat.toLowerCase();
-  if (h === "raw" || h === "easy") return "#00b8a3";
-  if (h === "medium") return "#ffc01e";
-  if (h === "hard") return "#ff8c42";
-  if (h === "cooked") return "#ef4743";
-  return "#ffc01e";
-}
-
 export function ScoreCard({
   cookedScore,
+  scoreDimensions,
+  scoreBreakdown,
   heatLabel,
   headline,
   targetRole,
   degraded,
   showFooter = true,
   showTargetRole = true,
-  showScoreLabel = true,
-  showMeme = true,
+  showTotal = true,
   size = "default",
 }: ScoreCardProps) {
-  const score = clampCookedScore(cookedScore);
-  const color = scoreHeatColor(heatLabel);
-  const displayHeat =
-    heatLabel.trim().charAt(0).toUpperCase() + heatLabel.trim().slice(1).toLowerCase();
-  const memeSrc = getScoreMemeSrc(score);
+  const dims = resolveScoreDimensions(
+    scoreDimensions,
+    scoreBreakdown,
+    cookedScore ?? null,
+  );
+  const displayHeat = formatHeatLabel(heatLabel);
   const isHero = size === "hero";
-  const scoreShellClass =
-    showScoreLabel ? "mt-1 flex flex-wrap items-end gap-2" : "flex flex-wrap items-end gap-2";
 
   return (
     <div
@@ -73,123 +67,22 @@ export function ScoreCard({
         </div>
       ) : null}
 
-      {isHero && showMeme ? (
-        <div className="space-y-5 lg:grid lg:grid-cols-[1.2fr_1fr] lg:gap-8 lg:space-y-0 lg:items-center">
-          <section className="min-w-0">
-            {showScoreLabel ? (
-              <p className="text-[11px] font-medium uppercase tracking-wider text-lc-dim">Cooked Score</p>
-            ) : null}
-            <div className={scoreShellClass}>
-              <p className="font-mono text-6xl font-semibold tabular-nums leading-none sm:text-7xl" style={{ color }}>
-                {score}
-              </p>
-              <p className="pb-1 font-mono text-[15px] text-lc-muted">
-                / 100 ·{" "}
-                <span className="font-semibold" style={{ color }}>
-                  {displayHeat}
-                </span>
-              </p>
-            </div>
+      <ScoreBreakdown
+        dimensions={dims}
+        showTotal={showTotal}
+        heatLabel={displayHeat}
+        compact={!isHero}
+      />
 
-            {headline ? (
-              <p className="mt-5 text-[20px] italic leading-snug text-lc-text lg:text-[24px]">
-                &ldquo;{headline}&rdquo;
-              </p>
-            ) : null}
-          </section>
-
-          <section className="relative overflow-hidden rounded-lg border border-lc-border/80 bg-black/40">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local gifs; next/image skips animation */}
-            <img
-              src={memeSrc}
-              alt=""
-              className="mx-auto max-h-[min(56vw,360px)] w-full object-contain"
-              loading="lazy"
-              decoding="async"
-            />
-            <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pb-3 pt-10"
-              aria-hidden
-            >
-              <p className="font-mono text-4xl font-semibold tabular-nums leading-none sm:text-5xl" style={{ color }}>
-                {score}
-                <span className="text-[18px] font-medium text-white/80"> / 100</span>
-              </p>
-              <p className="mt-1 text-[14px] font-semibold uppercase tracking-wide" style={{ color }}>
-                {displayHeat}
-              </p>
-            </div>
-          </section>
-        </div>
-      ) : showMeme ? (
-        <>
-          <div className="relative mb-4 overflow-hidden rounded-lg border border-lc-border/80 bg-black/40">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local gifs; next/image skips animation */}
-            <img
-              src={memeSrc}
-              alt=""
-              className={`mx-auto w-full object-contain ${
-                isHero ? "max-h-[min(56vw,360px)]" : "max-h-[min(52vw,280px)]"
-              }`}
-              loading="lazy"
-              decoding="async"
-            />
-            <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pb-3 pt-10"
-              aria-hidden
-            >
-              <p
-                className={`font-mono font-semibold tabular-nums leading-none ${
-                  isHero ? "text-4xl sm:text-5xl" : "text-3xl"
-                }`}
-                style={{ color }}
-              >
-                {score}
-                <span className={isHero ? "text-[18px] font-medium text-white/80" : "text-[14px] font-medium text-white/80"}>
-                  {" "}
-                  / 100
-                </span>
-              </p>
-              <p
-                className={`mt-1 font-semibold uppercase tracking-wide ${isHero ? "text-[14px]" : "text-[12px]"}`}
-                style={{ color }}
-              >
-                {displayHeat}
-              </p>
-            </div>
-          </div>
-          {headline ? (
-            <p className={`mt-4 italic leading-snug text-lc-text ${isHero ? "text-[16px]" : "text-[14px]"}`}>
-              &ldquo;{headline}&rdquo;
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <>
-          {showScoreLabel ? (
-            <p className="text-[11px] font-medium uppercase tracking-wider text-lc-dim">Cooked Score</p>
-          ) : null}
-          <div className={scoreShellClass}>
-            <p
-              className={`font-mono font-semibold tabular-nums leading-none ${isHero ? "text-6xl sm:text-7xl" : "text-5xl sm:text-6xl"}`}
-              style={{ color }}
-            >
-              {score}
-            </p>
-            <p className={`pb-1 font-mono text-lc-muted ${isHero ? "text-[15px]" : "text-[12px]"}`}>
-              / 100 ·{" "}
-              <span className="font-semibold" style={{ color }}>
-                {displayHeat}
-              </span>
-            </p>
-          </div>
-          {headline ? (
-            <p className={`mt-4 italic leading-snug text-lc-text ${isHero ? "text-[16px]" : "text-[14px]"}`}>
-              &ldquo;{headline}&rdquo;
-            </p>
-          ) : null}
-        </>
-      )}
+      {headline ? (
+        <p
+          className={`mt-4 italic leading-snug text-lc-text ${
+            isHero ? "text-[16px] sm:text-[18px]" : "text-[14px]"
+          }`}
+        >
+          &ldquo;{headline}&rdquo;
+        </p>
+      ) : null}
 
       {showTargetRole && targetRole?.trim() ? (
         <p className="mt-3 text-[12px] font-medium text-lc-muted">{targetRole.trim()}</p>

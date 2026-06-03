@@ -9,8 +9,12 @@ from fastapi import HTTPException, status
 
 from app.core.config import get_settings
 
-_MAX_DAYS = 30
+PLAN_MAX_DAYS = 8
 _MAX_MODIFY_CHARS = 500
+
+
+def utc_today() -> date:
+    return datetime.now(UTC).date()
 
 
 def count_words(text: str) -> int:
@@ -48,25 +52,26 @@ def validate_modify_instruction(text: str) -> str:
     return cleaned
 
 
-def validate_interview_date(interview_date: date) -> date:
-    today = datetime.now(UTC).date()
-    if interview_date < today:
+def validate_days_count(days_count: int) -> int:
+    try:
+        n = int(days_count)
+    except (TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Interview date must be today or in the future.",
-        )
-    if interview_date > today + timedelta(days=90):
+            detail=f"days_count must be an integer from 1 to {PLAN_MAX_DAYS}.",
+        ) from exc
+    if n < 1 or n > PLAN_MAX_DAYS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Interview date must be within 90 days.",
+            detail=f"Plan length must be between 1 and {PLAN_MAX_DAYS} days.",
         )
-    return interview_date
+    return n
 
 
-def compute_days_count(interview_date: date) -> int:
-    today = datetime.now(UTC).date()
-    n = (interview_date - today).days + 1
-    return max(1, min(_MAX_DAYS, n))
+def interview_date_for_days_count(days_count: int) -> date:
+    """Day 1 = today; last day = today + (days_count - 1). Stored on prep_plans.interview_date."""
+    n = validate_days_count(days_count)
+    return utc_today() + timedelta(days=n - 1)
 
 
 def calendar_date_for_day(interview_date: date, day_number: int, days_count: int) -> date:

@@ -7,10 +7,22 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 
+class ScoreDimensionsLLM(BaseModel):
+    ats: int = Field(default=0, ge=0, le=20)
+    content: int = Field(default=0, ge=0, le=40)
+    writing: int = Field(default=0, ge=0, le=10)
+    job_match: int = Field(default=0, ge=0, le=25)
+
+
 class FlagItem(BaseModel):
     source_bullet: str = Field(..., description="Verbatim line from the resume")
     issue: str
     suggested_rewrite: str
+
+
+# Alias for D-019 prompt/response naming
+class AiInsightItem(FlagItem):
+    pass
 
 
 class QuestionItem(BaseModel):
@@ -37,13 +49,16 @@ class SectionVerdictsObj(BaseModel):
 
 
 class RoastLLMOutput(BaseModel):
-    """Unified JSON from one Gemini/Groq call (score + flags + questions)."""
+    """Unified JSON from one Gemini/Groq call (score + insights + questions)."""
 
     score: int = Field(..., ge=0, le=100)
+    score_dimensions: ScoreDimensionsLLM | None = None
     heat_label: str = ""
-    one_liner: str = Field(..., description="One brutal sentence — no bullet points")
+    one_liner: str = Field(..., description="One punchy sentence — no bullet points")
+    ai_in_depth_review: str = ""
     section_verdicts: SectionVerdictsObj | dict[str, Any] = Field(default_factory=dict)
     flags: list[FlagItem] = Field(default_factory=list)
+    ai_insights: list[FlagItem] = Field(default_factory=list)
     questions: list[QuestionItem] = Field(default_factory=list)
 
     @field_validator("heat_label", mode="before")

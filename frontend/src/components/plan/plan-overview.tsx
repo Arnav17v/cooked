@@ -42,7 +42,7 @@ export function PlanOverview({
         <h1 className="plan-page-title">{plan.plan_title || `${plan.company_name} prep`}</h1>
         {plan.summary ? <p className="plan-page-desc">{plan.summary}</p> : null}
         <p className="plan-meta-line">
-          {plan.company_name} · {plan.role} · Interview {plan.interview_date}
+          {plan.company_name} · {plan.role} · {days.length}-day prep plan
         </p>
         {plan.degraded_summary ? (
           <p className="plan-banner plan-banner--warn">

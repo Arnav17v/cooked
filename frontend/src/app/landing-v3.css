@@ -187,6 +187,27 @@ html.landing-cursor-vim .landing-cur-ring {
   flex-wrap: wrap;
 }
 
+.landing-v3 .landing-nav-desktop--signed-in {
+  gap: 14px 18px;
+  justify-content: flex-end;
+  max-width: min(100%, 920px);
+}
+
+.landing-v3 .landing-nav-desktop--loading {
+  min-width: 120px;
+  min-height: 20px;
+}
+
+.landing-v3 .landing-nav-upload {
+  border: 1px solid var(--lv-rule);
+  padding: 8px 14px;
+  border-radius: 4px;
+}
+
+.landing-v3 .landing-nav-upload:hover {
+  border-color: rgba(212, 77, 31, 0.45);
+}
+
 .landing-v3 .landing-nav-menu-btn,
 .landing-nav-portal .landing-nav-scrim,
 .landing-nav-portal .landing-nav-panel {
@@ -956,7 +977,7 @@ html.landing-cursor-vim .landing-cur-ring {
 }
 
 .landing-v3 .landing-footer-cta::before {
-  content: "COOKED";
+  content: "PREP";
   font-family: var(--font-playfair), "Playfair Display", serif;
   font-size: clamp(80px, 18vw, 240px);
   font-weight: 900;
@@ -1128,6 +1149,15 @@ html.landing-cursor-vim .landing-cur-ring {
     margin-top: 16px;
     padding: 14px 20px;
     text-align: center;
+  }
+
+  .landing-nav-portal .landing-nav-panel-inner .landing-nav-upload {
+    display: block;
+    margin-top: 8px;
+    padding: 14px 16px;
+    text-align: center;
+    border: 1px solid var(--lv-rule);
+    border-radius: 6px;
   }
 
   .landing-nav-portal .landing-nav-panel-inner .landing-nav-cta {
@@ -1926,6 +1956,37 @@ html.landing-cursor-vim .landing-cur-ring {
   color: var(--lv-cream);
 }
 
+.landing-dash-plan-btn {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--lv-cream);
+  background: var(--lv-rust);
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+.landing-dash-plan-btn:hover {
+  background: #e85a28;
+  box-shadow: 0 0 20px var(--lv-rust-glow);
+  transform: translateY(-1px);
+}
+
+.landing-dash-app .landing-dash-plan-btn {
+  color: var(--lv-cream);
+}
+
 /* Notes section drawer (portaled to body) */
 .landing-notes-drawer-root {
   pointer-events: none;
@@ -1964,7 +2025,19 @@ html.landing-cursor-vim .landing-cur-ring {
 
 @media (min-width: 768px) {
   .landing-notes-drawer-sheet {
-    width: min(640px, 92vw);
+    width: min(840px, 94vw);
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-notes-drawer-sheet {
+    width: min(960px, 90vw);
+  }
+}
+
+@media (min-width: 1280px) {
+  .landing-notes-drawer-sheet {
+    width: min(1100px, 86vw);
   }
 }
 
@@ -3280,6 +3353,58 @@ html.landing-cursor-vim .landing-cur-ring {
   margin-inline: auto;
 }
 
+.landing-v3.landing-dash-app .landing-dash-page:has(.notes-page--player) {
+  max-width: none;
+  width: 100%;
+  padding-left: clamp(16px, 2vw, 32px);
+  padding-right: clamp(16px, 2vw, 32px);
+}
+
+@media (min-width: 769px) {
+  .landing-v3.landing-dash-app .landing-dash-page:has(.notes-page--player) {
+    padding-left: clamp(28px, 4vw, 64px);
+    padding-right: clamp(28px, 4vw, 64px);
+  }
+}
+
+.landing-v3 .notes-page--player {
+  max-width: min(100%, 1680px);
+  width: 100%;
+  margin-inline: auto;
+}
+
+.landing-v3 .plan-curriculum-icon--notes {
+  color: #c9a87c;
+}
+
+.landing-v3 .plan-curriculum-weak-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e8a87a;
+}
+
+.landing-v3 .notes-lesson-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.landing-v3 .notes-lesson-header-row .plan-lesson-title {
+  margin-top: 8px;
+}
+
+.landing-v3 .notes-lesson-edit-hint {
+  margin-top: 12px;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 11px;
+  color: var(--lv-cream-dim);
+}
+
 .landing-v3 .plan-execution-header {
   display: flex;
   flex-wrap: wrap;
@@ -3939,6 +4064,9 @@ html.landing-cursor-vim .landing-cur-ring {
 }
 
 .landing-v3 .plan-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 24px;
   font-family: var(--font-jetbrains), "DM Mono", monospace;
   font-size: 12px;
@@ -3950,6 +4078,11 @@ html.landing-cursor-vim .landing-cur-ring {
   border-radius: 999px;
   padding: 14px 28px;
   cursor: pointer;
+}
+
+.landing-v3 .plan-primary-btn .plan-list-building-spinner {
+  border-color: rgba(240, 232, 216, 0.35);
+  border-top-color: var(--lv-cream);
 }
 
 .landing-v3 .plan-primary-btn:disabled {
@@ -4920,10 +5053,42 @@ html.landing-cursor-vim .landing-cur-ring {
 
 .landing-v3.landing-home--prep .landing-hero--prep {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 32px 48px;
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 440px);
+  gap: 28px 36px;
+  align-items: center;
+  padding: 72px 0 64px;
   animation: none;
+}
+
+.landing-v3.landing-home--prep .landing-hero-headline {
+  font-size: clamp(28px, 3.8vw, 44px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+
+.landing-v3.landing-home--prep .landing-hero-headline .line1,
+.landing-v3.landing-home--prep .landing-hero-headline .line2 {
+  display: block;
+  color: var(--lv-cream);
+  -webkit-text-stroke: 0;
+}
+
+.landing-v3.landing-home--prep .landing-hero-headline .line2 {
+  color: var(--lv-rust);
+}
+
+.landing-v3.landing-home--prep .landing-hero-sub {
+  max-width: 520px;
+  font-size: 15px;
+  line-height: 1.65;
+  margin-bottom: 32px;
+}
+
+.landing-v3.landing-home--prep .landing-hero-bg-num {
+  font-size: clamp(120px, 18vw, 200px);
+  opacity: 0.04;
 }
 
 .landing-v3.landing-home--prep .landing-hero-grain {
@@ -4938,11 +5103,218 @@ html.landing-cursor-vim .landing-cur-ring {
 .landing-v3.landing-home--prep .landing-hero-inner {
   position: relative;
   z-index: 1;
-  max-width: 720px;
+  max-width: 560px;
+}
+
+.landing-v3 .landing-hero-diagnostic {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--lv-rule);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(212, 77, 31, 0.14), transparent 34%),
+    linear-gradient(150deg, rgba(22, 20, 16, 0.98), rgba(8, 7, 5, 0.98));
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(240, 232, 216, 0.06);
+  padding: clamp(18px, 2.4vw, 28px);
+  overflow: hidden;
+}
+
+.landing-v3 .landing-hero-diagnostic::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -22% 36%;
+  height: 220px;
+  background: radial-gradient(circle, rgba(255, 161, 22, 0.12), transparent 60%);
+  pointer-events: none;
+}
+
+.landing-v3 .landing-hero-report-top,
+.landing-v3 .landing-report-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.landing-v3 .landing-hero-report-kicker {
+  margin: 0 0 4px;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--lv-rust);
+}
+
+.landing-v3 .landing-hero-report-title {
+  margin: 0;
+  font-family: var(--font-playfair), "Playfair Display", serif;
+  font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.1;
+}
+
+.landing-v3 .landing-hero-report-pill,
+.landing-v3 .landing-report-panel-head span {
+  border: 1px solid rgba(0, 184, 163, 0.38);
+  border-radius: 999px;
+  background: rgba(0, 184, 163, 0.08);
+  color: #8ff5df;
+  padding: 6px 10px;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.landing-v3 .landing-hero-report-grid {
+  display: grid;
+  grid-template-columns: minmax(128px, 0.72fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.landing-v3 .landing-hero-resume-mini,
+.landing-v3 .landing-report-resume-paper {
+  border: 1px solid rgba(240, 232, 216, 0.14);
+  border-radius: 12px;
+  background: #f3eee5;
+  color: #1b1713;
+  overflow: hidden;
+}
+
+.landing-v3 .landing-hero-resume-mini {
+  min-height: 240px;
+  padding: 14px;
+}
+
+.landing-v3 .landing-hero-resume-header,
+.landing-v3 .landing-report-resume-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.landing-v3 .landing-hero-resume-header span,
+.landing-v3 .landing-report-resume-toolbar span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(27, 23, 19, 0.28);
+}
+
+.landing-v3 .landing-hero-resume-name,
+.landing-v3 .landing-hero-resume-role,
+.landing-v3 .landing-hero-resume-section i,
+.landing-v3 .landing-hero-resume-section b,
+.landing-v3 .landing-report-resume-title,
+.landing-v3 .landing-report-resume-subtitle,
+.landing-v3 .landing-report-resume-block i,
+.landing-v3 .landing-report-resume-block b {
+  display: block;
+  border-radius: 999px;
+  background: rgba(27, 23, 19, 0.2);
+}
+
+.landing-v3 .landing-hero-resume-name {
+  width: 68%;
+  height: 13px;
+  margin-top: 18px;
+}
+
+.landing-v3 .landing-hero-resume-role {
+  width: 46%;
+  height: 8px;
+  margin-top: 8px;
+  background: rgba(212, 77, 31, 0.42);
+}
+
+.landing-v3 .landing-hero-resume-section {
+  margin-top: 24px;
+}
+
+.landing-v3 .landing-hero-resume-section i {
+  width: 36%;
+  height: 8px;
+  margin-bottom: 10px;
+  background: rgba(27, 23, 19, 0.38);
+}
+
+.landing-v3 .landing-hero-resume-section b {
+  width: 100%;
+  height: 7px;
+  margin-top: 7px;
+}
+
+.landing-v3 .landing-hero-resume-section--short b:nth-child(3) {
+  width: 72%;
+}
+
+.landing-v3 .landing-hero-score-mini {
+  min-width: 0;
+  border: 1px solid rgba(240, 232, 216, 0.11);
+  border-radius: 12px;
+  background: rgba(8, 7, 5, 0.36);
+  padding: 16px;
+}
+
+.landing-v3 .landing-hero-insights {
+  position: relative;
+  z-index: 1;
+  margin-top: 16px;
+  border-top: 1px solid var(--lv-rule);
+  padding-top: 15px;
+}
+
+.landing-v3 .landing-hero-insights ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.landing-v3 .landing-hero-insights li {
+  border: 1px solid rgba(240, 232, 216, 0.1);
+  border-radius: 10px;
+  background: rgba(240, 232, 216, 0.035);
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--lv-cream-dim);
+}
+
+.landing-v3 .landing-hero-plan-strip {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  background: var(--lv-rust);
+  color: var(--lv-cream);
+  padding: 12px 14px;
+}
+
+.landing-v3 .landing-hero-plan-strip span {
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.landing-v3 .landing-hero-plan-strip strong {
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 .landing-v3.landing-home--prep .landing-hero-rail {
-  position: relative;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -4990,8 +5362,10 @@ html.landing-cursor-vim .landing-cur-ring {
 }
 
 .landing-v3 .landing-proof-band {
-  padding: 48px 0 64px;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
+  padding: 64px 0 72px;
+  background:
+    linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35)),
+    radial-gradient(circle at 80% 20%, rgba(212, 77, 31, 0.08), transparent 35%);
 }
 
 .landing-v3 .landing-proof-title {
@@ -5000,6 +5374,495 @@ html.landing-cursor-vim .landing-cur-ring {
 
 .landing-v3 .landing-prep-stage-wrap {
   margin-bottom: 40px;
+}
+
+.landing-v3 .landing-report-stage {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.78fr) minmax(320px, 1fr);
+  grid-template-areas:
+    "resume score"
+    "review score";
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.landing-v3 .landing-report-stage--plan {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "plan"
+    "prep";
+  gap: 20px;
+}
+
+.landing-v3 .landing-report-plan-mock {
+  grid-area: plan;
+  min-width: 0;
+  width: 100%;
+}
+
+.landing-v3 .landing-report-plan-mock .landing-prep-stage {
+  transform: none;
+}
+
+.landing-v3 .landing-report-plan-mock .landing-plan-mock-shell.plan-coursera-split {
+  --plan-player-offset: 0px;
+  min-height: 440px;
+  max-height: none;
+  height: auto;
+  grid-template-columns: minmax(248px, 32%) minmax(0, 1fr);
+}
+
+.landing-v3 .landing-report-plan-mock .landing-plan-mock-curriculum.plan-curriculum {
+  position: relative;
+  top: auto;
+  align-self: stretch;
+  max-height: none;
+  min-height: 0;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--lv-rule);
+}
+
+.landing-v3 .landing-report-plan-mock .landing-plan-mock-lesson.plan-lesson-main {
+  max-height: none;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
+.landing-v3 .landing-report-plan-mock .plan-lesson-panel {
+  max-height: min(520px, 62vh);
+  min-height: 400px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 18px 22px 24px;
+}
+
+.landing-v3 .landing-report-plan-mock .plan-lesson-title {
+  font-size: clamp(18px, 2vw, 24px);
+}
+
+.landing-v3 .landing-report-plan-mock .plan-curriculum-item-title {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  white-space: normal;
+}
+
+.landing-v3 .landing-report-plan-mock .plan-curriculum-title {
+  -webkit-line-clamp: 3;
+}
+
+.landing-v3 .landing-report-plan-mock .plan-curriculum-day-header,
+.landing-v3 .landing-report-plan-mock .plan-curriculum-item {
+  cursor: default;
+}
+
+.landing-v3 .landing-report-stage--plan .landing-report-prep {
+  grid-area: prep;
+  min-height: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (min-width: 960px) {
+  .landing-v3 .landing-report-stage--plan {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    grid-template-areas: "plan prep";
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 1024px) {
+  .landing-v3 .landing-report-plan-mock .landing-plan-mock-shell.plan-coursera-split {
+    grid-template-columns: minmax(220px, 34%) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .landing-v3 .landing-report-plan-mock .landing-plan-mock-shell.plan-coursera-split {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .landing-v3 .landing-report-plan-mock .landing-plan-mock-curriculum.plan-curriculum {
+    max-height: 240px;
+    border-right: none;
+    border-bottom: 1px solid var(--lv-rule);
+  }
+
+  .landing-v3 .landing-report-plan-mock .plan-lesson-panel {
+    min-height: 320px;
+    max-height: none;
+  }
+}
+
+.landing-v3 .landing-plan-notes-wrap {
+  padding-top: 28px;
+  border-top: 1px solid var(--lv-rule);
+}
+
+.landing-v3 .landing-plan-notes-intro {
+  margin-bottom: 20px;
+}
+
+.landing-v3 .landing-plan-notes-intro .landing-score-compact-desc {
+  max-width: 52ch;
+}
+
+.landing-v3 .landing-plan-notes-showcase {
+  display: grid;
+  grid-template-columns: minmax(240px, 32%) minmax(0, 1fr);
+  border: 1px solid var(--lv-rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--lv-surface);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(212, 77, 31, 0.06);
+}
+
+.landing-v3 .landing-plan-notes-list {
+  padding: 16px 12px;
+  border-right: 1px solid var(--lv-rule);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.landing-v3 .landing-plan-notes-list .plan-field-label {
+  padding: 0 8px 12px;
+}
+
+.landing-v3 .landing-plan-notes-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.landing-v3 .landing-plan-notes-item {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.landing-v3 .landing-plan-notes-item:hover {
+  background: rgba(240, 232, 216, 0.04);
+}
+
+.landing-v3 .landing-plan-notes-item--active {
+  background: rgba(212, 77, 31, 0.12);
+}
+
+.landing-v3 .landing-plan-notes-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.landing-v3 .landing-plan-notes-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--lv-cream);
+}
+
+.landing-v3 .landing-plan-notes-item-bullet {
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--lv-cream-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.landing-v3 .landing-plan-notes-panel.plan-lesson-panel {
+  max-height: min(520px, 62vh);
+  overflow-y: auto;
+  padding: 20px 22px 24px;
+}
+
+.landing-v3 .landing-plan-notes-panel .plan-lesson-title {
+  font-size: clamp(18px, 2vw, 24px);
+}
+
+.landing-v3 .landing-plan-timeline-progress {
+  position: relative;
+}
+
+.landing-v3 .landing-plan-timeline-rail {
+  position: absolute;
+  left: 6px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.landing-v3 .landing-plan-timeline-rail-bg,
+.landing-v3 .landing-plan-timeline-rail-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 1px;
+}
+
+.landing-v3 .landing-plan-timeline-rail-bg {
+  background: var(--lv-rule);
+}
+
+.landing-v3 .landing-plan-timeline-rail-fill {
+  background: var(--lv-rust);
+  transform-origin: top center;
+  box-shadow: 0 0 10px var(--lv-rust-glow);
+  will-change: transform;
+}
+
+.landing-v3 .landing-plan-timeline-progress .landing-plan-timeline-sample.plan-timeline {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.landing-v3 .landing-plan-timeline-progress .plan-day-card-rail--sample {
+  opacity: 0;
+  width: 2px;
+  margin-left: 6px;
+}
+
+@media (min-width: 900px) {
+  .landing-v3 .landing-plan-notes-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
+    gap: 32px 40px;
+    align-items: start;
+  }
+
+  .landing-v3 .landing-plan-notes-intro {
+    margin-bottom: 0;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .landing-v3 .landing-plan-notes-showcase {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .landing-v3 .landing-plan-notes-showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-v3 .landing-plan-notes-list {
+    border-right: none;
+    border-bottom: 1px solid var(--lv-rule);
+    max-height: 220px;
+    overflow-y: auto;
+  }
+}
+
+.landing-v3 .landing-report-resume {
+  grid-area: resume;
+  border: 1px solid var(--lv-rule);
+  border-radius: 16px;
+  background: rgba(8, 7, 5, 0.35);
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+}
+
+.landing-v3 .landing-report-resume-toolbar {
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--lv-rule);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.landing-v3 .landing-report-resume-toolbar p {
+  margin: 0 0 0 8px;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 10px;
+  color: var(--lv-cream-dim);
+}
+
+.landing-v3 .landing-report-resume-paper {
+  margin: 16px;
+  min-height: 370px;
+  padding: 24px 22px;
+}
+
+.landing-v3 .landing-report-resume-title {
+  width: 66%;
+  height: 15px;
+}
+
+.landing-v3 .landing-report-resume-subtitle {
+  width: 44%;
+  height: 9px;
+  margin-top: 10px;
+  background: rgba(212, 77, 31, 0.35);
+}
+
+.landing-v3 .landing-report-resume-block {
+  margin-top: 28px;
+}
+
+.landing-v3 .landing-report-resume-block i {
+  width: 32%;
+  height: 8px;
+  margin-bottom: 12px;
+  background: rgba(27, 23, 19, 0.38);
+}
+
+.landing-v3 .landing-report-resume-block b {
+  height: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.landing-v3 .landing-report-resume-block b.short {
+  width: 70%;
+}
+
+.landing-v3 .landing-report-resume-block--muted {
+  opacity: 0.62;
+}
+
+.landing-v3 .landing-report-panel {
+  grid-area: score;
+  border: 1px solid var(--lv-rule);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(28, 25, 22, 0.98), rgba(12, 10, 8, 0.98));
+  padding: clamp(20px, 2.8vw, 30px);
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.38);
+}
+
+.landing-v3 .landing-report-insights {
+  margin-top: 24px;
+  border-top: 1px solid var(--lv-rule);
+  padding-top: 18px;
+}
+
+.landing-v3 .landing-report-insights ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.landing-v3 .landing-report-insights li {
+  border: 1px solid rgba(240, 232, 216, 0.1);
+  border-radius: 12px;
+  background: rgba(240, 232, 216, 0.035);
+  padding: 12px 13px;
+}
+
+.landing-v3 .landing-report-insights strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--lv-cream);
+  font-size: 13px;
+}
+
+.landing-v3 .landing-report-insights span {
+  display: block;
+  color: var(--lv-cream-dim);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.landing-v3 .landing-report-prep {
+  grid-area: review;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  min-height: 220px;
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid var(--lv-rule);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(8, 7, 5, 0.55), rgba(0, 0, 0, 0.72)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 23px,
+      rgba(240, 232, 216, 0.04) 23px,
+      rgba(240, 232, 216, 0.04) 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(240, 232, 216, 0.04) 23px,
+      rgba(240, 232, 216, 0.04) 24px
+    );
+  box-shadow: inset 0 0 0 1px rgba(240, 232, 216, 0.04);
+}
+
+.landing-v3 .landing-report-prep-icon {
+  font-size: 22px;
+  line-height: 1;
+  filter: grayscale(0.15);
+}
+
+.landing-v3 .landing-report-prep-headline {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-syne), "Syne", sans-serif;
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--lv-cream);
+}
+
+.landing-v3 .landing-report-prep-headline span {
+  display: block;
+}
+
+.landing-v3 .landing-report-prep-accent {
+  color: #f5d547;
+}
+
+.landing-v3 .landing-report-prep-steps {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #f5d547;
+}
+
+.landing-v3 .landing-report-prep-steps li::before {
+  content: "→ ";
+  color: var(--lv-rust);
 }
 
 .landing-v3 .landing-prep-stage {
@@ -5193,7 +6056,24 @@ html.landing-cursor-vim .landing-cur-ring {
 }
 
 .landing-v3 .landing-score-card-big--compact {
+  border-color: var(--lv-rule);
+  background: rgba(8, 7, 5, 0.36);
+  color: var(--lv-cream);
   padding: 20px 22px;
+}
+
+.landing-v3 .landing-score-card-big--compact::before {
+  content: "sample score";
+  color: var(--lv-cream-dim);
+}
+
+.landing-v3 .landing-score-card-big--compact .landing-score-roast,
+.landing-v3 .landing-score-roast.mt-3 {
+  color: var(--lv-cream-dim);
+  border-left: 0;
+  padding-left: 0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-style: normal;
 }
 
 .landing-v3 .landing-features-section--prep {
@@ -5291,43 +6171,91 @@ html.landing-cursor-vim .landing-cur-ring {
 }
 
 .landing-v3 .landing-how-section--prep .landing-timeline {
+  margin-top: 48px;
+  position: relative;
+}
+
+.landing-v3 .landing-timeline--progress {
+  isolation: isolate;
+}
+
+.landing-v3 .landing-timeline--progress .landing-timeline-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
-  margin-top: 48px;
   position: relative;
+  z-index: 2;
+}
+
+.landing-v3 .landing-timeline-rail {
+  position: absolute;
+  top: calc(clamp(48px, 8vw, 80px) * 0.45);
+  left: clamp(72px, 11vw, 96px);
+  right: 24px;
+  height: 2px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.landing-v3 .landing-timeline-rail-bg,
+.landing-v3 .landing-timeline-rail-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 1px;
+}
+
+.landing-v3 .landing-timeline-rail-bg {
+  background: var(--lv-rule);
+}
+
+.landing-v3 .landing-timeline-rail-fill {
+  background: var(--lv-rust);
+  transform-origin: left center;
+  box-shadow: 0 0 12px var(--lv-rust-glow);
+  will-change: transform;
 }
 
 .landing-v3 .landing-timeline-step {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   padding-right: 24px;
 }
 
 .landing-v3 .landing-timeline-node {
   position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 12px;
+  isolation: isolate;
 }
 
 .landing-v3 .landing-timeline-node .landing-step-n {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
   margin: 0;
+  padding: 0 0.12em 0 0;
 }
 
-.landing-v3 .landing-timeline-line {
+/* Mask the progress line behind hollow step numerals */
+.landing-v3 .landing-timeline-node .landing-step-n::before {
+  content: "";
   position: absolute;
-  left: 48px;
-  right: -24px;
-  top: 50%;
-  height: 1px;
-  background: var(--lv-rule);
-  transform: translateY(-50%);
+  z-index: -1;
+  inset: 8% 0 10% -0.04em;
+  background: var(--lv-black);
+  border-radius: 2px;
 }
 
-.landing-v3 .landing-timeline-content .landing-step-title {
-  margin-bottom: 10px;
+.landing-v3 .landing-step-title--timeline {
+  margin: 0;
+  font-family: var(--font-syne), "Syne", sans-serif;
+  font-size: clamp(22px, 2.8vw, 34px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--lv-cream);
 }
 
 .landing-v3 .landing-meta-band--prep .landing-meta-right {
@@ -5341,6 +6269,33 @@ html.landing-cursor-vim .landing-cur-ring {
 
   .landing-v3.landing-home--prep .landing-hero-rail {
     display: none;
+  }
+
+  .landing-v3 .landing-hero-diagnostic {
+    max-width: 620px;
+    width: 100%;
+  }
+
+  .landing-v3 .landing-hero-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-v3 .landing-hero-resume-mini {
+    min-height: 170px;
+  }
+
+  .landing-v3 .landing-report-stage {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "score"
+      "resume"
+      "review";
+  }
+
+  .landing-v3 .landing-report-stage--plan {
+    grid-template-areas:
+      "plan"
+      "prep";
   }
 
   .landing-v3 .landing-prep-mock {
@@ -5366,12 +6321,12 @@ html.landing-cursor-vim .landing-cur-ring {
     white-space: normal;
   }
 
-  .landing-v3 .landing-how-section--prep .landing-timeline {
+  .landing-v3 .landing-timeline--progress .landing-timeline-steps {
     grid-template-columns: 1fr;
     gap: 32px;
   }
 
-  .landing-v3 .landing-timeline-line {
+  .landing-v3 .landing-timeline-rail {
     display: none;
   }
 
@@ -5387,5 +6342,13 @@ html.landing-cursor-vim .landing-cur-ring {
 
   .landing-v3 .landing-prep-stage {
     transform: none;
+  }
+
+  .landing-v3 .landing-timeline-rail-fill {
+    transform: scaleX(1) !important;
+  }
+
+  .landing-v3 .landing-plan-timeline-rail-fill {
+    transform: scaleY(1) !important;
   }
 }

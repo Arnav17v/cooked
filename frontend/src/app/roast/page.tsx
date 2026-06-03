@@ -18,11 +18,11 @@ export default function RoastPage() {
             {"// upload"}
           </p>
           <h1 className="mt-4 font-playfair text-[1.75rem] font-normal leading-tight tracking-tight text-lv-cream sm:text-[clamp(2rem,5vw,2.75rem)]">
-            Upload resume
+            Score my resume
           </h1>
           <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-lv-cream-dim sm:text-sm sm:leading-7">
-            Paste or upload a PDF, pick your role, run the pipeline. When the roast finishes you&apos;ll
-            land on your dashboard with tabs for score (including improvements), questions, and notes.
+            Paste or upload a PDF, pick your role, and get a multi-dimensional Resume Score with AI
+            Insights and an in-depth review. Then continue into practice questions, notes, and your prep plan.
           </p>
         </section>
       </div>

@@ -86,7 +86,7 @@ export function PlanList({
                     </span>
                   </div>
                   <p className="plan-list-card-meta">
-                    {plan.company_name} · {plan.role} · Interview {plan.interview_date}
+                    {plan.company_name} · {plan.role} · {plan.days_count}-day plan
                   </p>
                   {plan.summary ? <p className="plan-list-card-summary">{plan.summary}</p> : null}
                   {building ? (

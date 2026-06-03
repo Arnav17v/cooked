@@ -14,8 +14,8 @@ If a question isn't answered in `plans/`, surface it in chat — do not guess si
 
 ## The single most important rule
 
-**v1 success = does someone screenshot their Cooked Score and share it?**
-After the core API works, **build the score-card UI before anything else.** Do not default to building auth or dashboards first. See [D-010](./plans/decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
+**v1 success = does someone start useful interview prep from their resume?**
+As of [D-019](./plans/decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report), the main product focus is interview prep. The Resume Score is the diagnostic entry point, AI Insights replace "flags," and AI In-Depth Review is part of the score/report surface. Do not use "resume roast" as visible product copy.
 
 ## Stack at a glance
 
@@ -45,7 +45,7 @@ These auto-apply via `.cursor/rules/*.mdc`:
 ## Top-of-mind hard rules
 
 - **Free tier only** for LLM. No paid models in v1.
-- **Score card lives at `/share/[slug]`** with a `@vercel/og`-generated OG image. Mobile-first at 375px.
+- **Score/share preview lives at `/share/[slug]`** with a `@vercel/og`-generated OG image. Mobile-first at 375px. Public share pages must not expose private resume previews.
 - **3 analyses per user per day**, enforced at the DB layer **before** the LLM call.
 - **4000-word input cap** enforced in `parser.py`.
 - **`share_slug` only in public URLs.** Never expose internal UUIDs.

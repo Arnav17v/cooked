@@ -18,7 +18,7 @@ export default function Home() {
           Am I Cooked? © {new Date().getFullYear()} ·{" "}
           <Link href="/">{siteHostLabel()}</Link>
         </span>
-        <span>Free prep planner · roast included · account required</span>
+        <span>Interview prep · Resume Score included · account required</span>
         <span className="landing-bottom-accent">{"// built in public"}</span>
       </footer>
     </div>

@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 const TRAIL_COUNT = 10;
 
 const HOVER_SELECTOR =
-  "a, button, .landing-feat, .landing-stat, .landing-step, .landing-score-card-big, .landing-flag-list li, .roast-dropzone, .roast-field-input, .roast-field-select, .roast-textarea, .roast-input-mode-tab, .roast-file-remove, .landing-dash-share-btn, .score-card-root, .landing-notes-drawer-scrim, .landing-notes-drawer-sheet, .landing-notes-drawer-icon-btn, .landing-notes-drawer-edit, .landing-notes-drawer-done, .landing-nav-menu-btn, .landing-dash-mobile-tab";
+  "a, button, .landing-feat, .landing-stat, .landing-step, .landing-score-card-big, .landing-flag-list li, .roast-dropzone, .roast-field-input, .roast-field-select, .roast-textarea, .roast-input-mode-tab, .roast-file-remove, .landing-dash-share-btn, .landing-dash-plan-btn, .score-card-root, .landing-notes-drawer-scrim, .landing-notes-drawer-sheet, .landing-notes-drawer-icon-btn, .landing-notes-drawer-edit, .landing-notes-drawer-done, .landing-nav-menu-btn, .landing-dash-mobile-tab";
 
 const TEXT_SELECTOR =
   "p, li, h1, h2, h3, .landing-score-roast, .landing-hero-sub, .landing-feat-desc, .landing-stat-desc, .landing-step-desc, .landing-score-right p, .landing-meta-right, .landing-footer-cta-sub";

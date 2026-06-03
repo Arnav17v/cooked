@@ -35,19 +35,21 @@ export default async function SharePage({ params }: PageProps) {
   const headline = data.one_liner ?? data.headline;
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-10">
+    <main className="mx-auto w-full max-w-lg px-4 py-10">
       <ShareScorePanel
         score={score}
+        scoreDimensions={data.score_dimensions}
         heatLabel={heat}
         headline={headline}
         targetRole={data.target_role ?? data.role}
         shareSlug={slug}
         degraded={data.degraded}
+        insightsPreview={data.ai_insights_preview}
       />
 
       <p className="mt-10 text-center font-mono text-[11px] text-lc-dim">
-        <Link href="/" className="text-lc-orange hover:underline">
-          Roast yours → {siteHostLabel()}
+        <Link href="/roast" className="text-lc-orange hover:underline">
+          Score your resume → {siteHostLabel()}
         </Link>
       </p>
     </main>

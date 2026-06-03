@@ -10,11 +10,17 @@ import {
   isUuidShape,
   LAST_RESUME_LS,
   normalizeHeatLabel,
-  type ResultTabId,
 } from "@/components/roast/roast-shared";
+import {
+  buildDashboardHref,
+  dashboardTabFromSearch,
+} from "@/lib/dashboard-nav";
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
 import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
+import { ScoreShareActions } from "@/components/score/ScoreShareActions";
+import { ResumePreviewPanel } from "@/components/score/ResumePreviewPanel";
+import { resolveScoreDimensions } from "@/lib/score-dimensions";
 import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
 import { QuizImprovementChart } from "@/components/roast/QuizImprovementChart";
 import { QuizHistoryList } from "@/components/roast/quiz-history-list";
@@ -36,13 +42,6 @@ import {
   type StoredQuizScore,
 } from "@/lib/interview-quiz-scores";
 
-const NAV: { id: ResultTabId; label: string }[] = [
-  { id: "score", label: "score" },
-  { id: "flags", label: "flags" },
-  { id: "questions", label: "questions" },
-  { id: "notes", label: "notes" },
-];
-
 function formatResumeDate(iso: string | undefined): string {
   if (!iso) return "—";
   try {
@@ -56,6 +55,7 @@ export function RoastDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeQuery = searchParams.get("resume");
+  const tabFromUrl = dashboardTabFromSearch(searchParams.get("tab"));
   const openNotesTabFromUrl = searchParams.get("tab") === "notes";
 
   const { isSignedIn, isLoaded, getToken } = useAuth();
@@ -69,7 +69,7 @@ export function RoastDashboard() {
   const [liveScore, setLiveScore] = useState<ScoreResponse | null>(null);
   const [liveFlags, setLiveFlags] = useState<FlagsResponse | null>(null);
 
-  const [resultTab, setResultTab] = useState<ResultTabId>("score");
+  const [resultTab, setResultTab] = useState(tabFromUrl);
   const [myRoasts, setMyRoasts] = useState<MyRoastItem[]>([]);
   const [quizStarting, setQuizStarting] = useState(false);
   const [quizLength, setQuizLength] = useState<QuizLengthId>("medium");
@@ -77,7 +77,12 @@ export function RoastDashboard() {
   const [quizScores, setQuizScores] = useState<StoredQuizScore[]>([]);
   const [quizHistory, setQuizHistory] = useState<QuizHistorySessionItem[]>([]);
   const [quizHistoryLoading, setQuizHistoryLoading] = useState(false);
+  const [flagsLoading, setFlagsLoading] = useState(false);
   const [notesRemountKey, setNotesRemountKey] = useState(0);
+
+  const scoreLoadedForRef = useRef<string | null>(null);
+  const quizHistoryLoadedForRef = useRef<string | null>(null);
+  const prevResolvedResumeRef = useRef<string | null>(null);
 
   const [countScore, setCountScore] = useState(0);
   const [scoreAnimDone, setScoreAnimDone] = useState(false);
@@ -99,21 +104,19 @@ export function RoastDashboard() {
   }, [liveScore]);
 
   useEffect(() => {
-    if (resultTab !== "questions" || !resolvedResumeId || resolving || hydrating) return;
+    if (resultTab !== "questions" || !resolvedResumeId || resolving) return;
+    if (quizHistoryLoadedForRef.current === resolvedResumeId) return;
+
     let cancelled = false;
     (async () => {
       setQuizHistoryLoading(true);
       try {
         const token = await bearer();
         const auth = token ? { token } : undefined;
-        const [s, history] = await Promise.all([
-          getScore(resolvedResumeId, auth),
-          fetchQuizHistory(resolvedResumeId, auth),
-        ]);
+        const history = await fetchQuizHistory(resolvedResumeId, auth);
         if (!cancelled) {
-          setLiveScore(s);
-          setQuizScores(parseInterviewQuizScores(s.interview_quiz_scores));
           setQuizHistory(history.sessions ?? []);
+          quizHistoryLoadedForRef.current = resolvedResumeId;
         }
       } catch {
         /* keep existing */
@@ -124,7 +127,30 @@ export function RoastDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [resultTab, resolvedResumeId, resolving, hydrating, bearer]);
+  }, [resultTab, resolvedResumeId, resolving, bearer]);
+
+  useEffect(() => {
+    if (resultTab !== "insights" || !resolvedResumeId || resolving) return;
+    if (liveFlags !== null) return;
+
+    let cancelled = false;
+    (async () => {
+      setFlagsLoading(true);
+      try {
+        const token = await bearer();
+        const auth = token ? { token } : undefined;
+        const f = await getFlags(resolvedResumeId, auth);
+        if (!cancelled) setLiveFlags(f);
+      } catch {
+        /* keep existing */
+      } finally {
+        if (!cancelled) setFlagsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [resultTab, resolvedResumeId, resolving, liveFlags, bearer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,30 +234,25 @@ export function RoastDashboard() {
 
   useEffect(() => {
     if (resolving || !resolvedResumeId) return;
+    if (scoreLoadedForRef.current === resolvedResumeId) return;
 
     let cancelled = false;
     setHydrating(true);
     setHydrateError(null);
-    setLiveScore(null);
-    setLiveFlags(null);
     (async () => {
       try {
         const token = await bearer();
         const auth = token ? { token } : undefined;
-        const [s, f] = await Promise.all([
-          getScore(resolvedResumeId, auth),
-          getFlags(resolvedResumeId, auth),
-        ]);
+        const s = await getScore(resolvedResumeId, auth);
         if (cancelled) return;
         setLiveScore(s);
-        setLiveFlags(f);
-        setResultTab("score");
+        scoreLoadedForRef.current = resolvedResumeId;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Could not load roast";
+        const msg = e instanceof Error ? e.message : "Could not load score";
         if (!cancelled) {
           setHydrateError(msg);
           setLiveScore(null);
-          setLiveFlags(null);
+          scoreLoadedForRef.current = null;
         }
         try {
           window.localStorage.removeItem(LAST_RESUME_LS);
@@ -248,30 +269,63 @@ export function RoastDashboard() {
     };
   }, [resolvedResumeId, resolving, bearer]);
 
-  const rawFlags = (liveFlags?.flags ?? liveFlags?.red_flags) as unknown;
-  const flags = Array.isArray(rawFlags) ? rawFlags.filter(isStructuredFlag) : [];
-
-  const headline = liveScore?.one_liner ?? liveScore?.headline ?? null;
-
-  const displayScore =
-    liveScore?.cooked_score !== null && liveScore?.cooked_score !== undefined
-      ? liveScore.cooked_score
-      : null;
-
-  const showResultTabs = Boolean(liveScore && displayScore !== null);
-
-  const heatNorm = liveScore ? normalizeHeatLabel(liveScore.heat_label) : "Medium";
-  const heatColor = scoreHeatColor(heatNorm);
+  useEffect(() => {
+    if (!resolvedResumeId) {
+      prevResolvedResumeRef.current = null;
+      scoreLoadedForRef.current = null;
+      quizHistoryLoadedForRef.current = null;
+      setLiveScore(null);
+      setLiveFlags(null);
+      setQuizHistory([]);
+      return;
+    }
+    if (prevResolvedResumeRef.current === resolvedResumeId) return;
+    const switched = prevResolvedResumeRef.current !== null;
+    prevResolvedResumeRef.current = resolvedResumeId;
+    scoreLoadedForRef.current = null;
+    quizHistoryLoadedForRef.current = null;
+    setLiveFlags(null);
+    setQuizHistory([]);
+    if (switched) setLiveScore(null);
+  }, [resolvedResumeId]);
 
   const currentRoast = useMemo(
     () => myRoasts.find((r) => r.resume_id === resolvedResumeId),
     [myRoasts, resolvedResumeId],
   );
 
+  const rawFlags = (liveFlags?.ai_insights ?? liveFlags?.flags ?? liveFlags?.red_flags) as unknown;
+  const insights = Array.isArray(rawFlags) ? rawFlags.filter(isStructuredFlag) : [];
+  const inDepthReview = liveScore?.ai_in_depth_review?.trim() || null;
+  const scoreDimensions = liveScore
+    ? resolveScoreDimensions(
+        liveScore.score_dimensions,
+        liveScore.score_breakdown,
+        liveScore.cooked_score,
+      )
+    : null;
+
+  const headline = liveScore?.one_liner ?? liveScore?.headline ?? null;
+
+  const displayScore =
+    liveScore?.cooked_score !== null && liveScore?.cooked_score !== undefined
+      ? liveScore.cooked_score
+      : currentRoast?.cooked_score ?? null;
+
+  const showResultTabs =
+    Boolean(resolvedResumeId && displayScore !== null) ||
+    (resultTab === "notes" && Boolean(resolvedResumeId));
+
+  const heatNorm = liveScore ? normalizeHeatLabel(liveScore.heat_label) : "Medium";
+  const heatColor = scoreHeatColor(heatNorm);
+
+  useEffect(() => {
+    setResultTab(tabFromUrl);
+  }, [tabFromUrl]);
+
   useEffect(() => {
     if (!openNotesTabFromUrl || !showResultTabs || !resolvedResumeId) return;
-    setResultTab("notes");
-    router.replace(`/dashboard?resume=${encodeURIComponent(resolvedResumeId)}`, { scroll: false });
+    router.replace(buildDashboardHref(resolvedResumeId, "notes"), { scroll: false });
   }, [openNotesTabFromUrl, showResultTabs, resolvedResumeId, router]);
 
   useEffect(() => {
@@ -309,7 +363,7 @@ export function RoastDashboard() {
   }, [displayScore, resolvedResumeId]);
 
   function openResume(id: string) {
-    router.push(`/dashboard?resume=${id}`);
+    router.push(buildDashboardHref(id, "score"));
   }
 
   function startQuizFromRoast() {
@@ -336,76 +390,10 @@ export function RoastDashboard() {
     window.setTimeout(() => setQuizStarting(false), 900);
   }
 
-  function navCount(id: ResultTabId): number | null {
-    if (id === "flags") return flags.length > 0 ? flags.length : null;
-    if (id === "questions") {
-      const n = quizHistory.length || quizScores.length;
-      return n > 0 ? n : null;
-    }
-    return null;
-  }
+  const notesTabActive = resultTab === "notes";
+  const blockOnScoreHydrate = hydrating && !hydrateError && !notesTabActive && !liveScore;
 
-  function MobileTabBar() {
-    return (
-      <nav className="landing-dash-mobile-tabs" role="tablist" aria-label="Roast sections">
-        {NAV.map(({ id, label }) => {
-          const active = resultTab === id;
-          const c = navCount(id);
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setResultTab(id)}
-              className={`landing-dash-mobile-tab${active ? " landing-dash-mobile-tab--active" : ""}`}
-            >
-              <span className="landing-dash-mobile-tab-label">{label}</span>
-              {c !== null ? <span className="landing-dash-mobile-tab-count">{c}</span> : null}
-            </button>
-          );
-        })}
-      </nav>
-    );
-  }
-
-  function NavRow() {
-    return (
-      <nav className="hidden flex-col gap-0.5 lg:flex" aria-label="Roast sections">
-        {NAV.map(({ id, label }) => {
-          const active = resultTab === id;
-          const c = navCount(id);
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setResultTab(id)}
-              className={`relative flex h-9 w-full items-center rounded-sm pl-3 pr-2 text-left text-[13px] transition-colors duration-100 ease-out hover:text-lc-text ${
-                active ? "text-lc-text" : "text-lc-muted"
-              }`}
-            >
-              <span
-                className={`pointer-events-none absolute left-0 top-1 bottom-1 w-0.5 origin-left rounded-full bg-lc-orange transition-transform duration-150 ease-out ${
-                  active ? "scale-x-100" : "scale-x-0"
-                }`}
-                aria-hidden
-              />
-              <span className="relative flex min-w-0 flex-1 items-center justify-between gap-2">
-                <span>{label}</span>
-                {c !== null ? (
-                  <span className="shrink-0 tabular-nums text-[11px] text-lc-dim">{c}</span>
-                ) : null}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-    );
-  }
-
-  if (resolving || (hydrating && !hydrateError)) {
+  if (resolving || blockOnScoreHydrate) {
     return <DashboardSkeleton />;
   }
 
@@ -413,13 +401,13 @@ export function RoastDashboard() {
     return (
       <div className="rounded-xl border border-lc-border bg-lc-surface p-8 text-center">
         <p className="text-[15px] text-lc-muted">
-          No roast on file yet — upload a resume to get your score and tabs.
+          No resume score yet — upload a resume to start interview prep.
         </p>
         <Link
           href="/roast"
           className="mt-6 inline-flex items-center justify-center rounded-lg bg-lc-orange px-6 py-3 text-[14px] font-semibold text-black transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orangeHover"
         >
-          Go to upload
+          Score my resume
         </Link>
       </div>
     );
@@ -459,13 +447,12 @@ export function RoastDashboard() {
         ) : (
           <p className="landing-dash-mobile-score-empty">—</p>
         )}
-        <MobileTabBar />
       </div>
 
       {/* Desktop sidebar */}
       <aside
         className="animate-dashboard-sidebar-in hidden w-[220px] shrink-0 flex-col border-r border-lc-divider px-6 pb-4 pt-8 lg:flex"
-        aria-label="Roast overview"
+        aria-label="Resume score overview"
       >
         {displayScore !== null ? (
           <>
@@ -499,18 +486,8 @@ export function RoastDashboard() {
 
         <hr className="my-4 border-0 border-t border-lc-divider" />
 
-        <NavRow />
-
-        <hr className="my-4 border-0 border-t border-lc-divider" />
-
         <p className="break-all font-mono text-[12px] text-lc-text">{resumeLine1}</p>
         <p className="mt-1 text-[11px] leading-snug text-lc-dim">{resumeLine2}</p>
-        <Link
-          href="/roast?new=1"
-          className="mt-4 flex h-8 w-full items-center justify-center rounded-md border border-lc-border bg-transparent text-[12px] text-lc-muted transition-transform duration-100 ease-out hover:-translate-y-px hover:border-lc-orange/50 hover:text-lc-text"
-        >
-          upload new
-        </Link>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden">
@@ -557,7 +534,7 @@ export function RoastDashboard() {
 
         {liveScore && displayScore === null && !hydrating ? (
           <div className="mx-4 mt-4 rounded-lg border border-lc-orange/25 bg-lc-orange/5 p-4 text-[13px] text-lc-muted lg:mx-8">
-            Score unavailable for this analysis — try running another roast from{" "}
+            Score unavailable for this analysis — try scoring again from{" "}
             <Link href="/roast?new=1" className="text-lc-orange hover:underline">
               upload
             </Link>
@@ -565,10 +542,10 @@ export function RoastDashboard() {
           </div>
         ) : null}
 
-        {showResultTabs && liveScore ? (
+        {showResultTabs ? (
           <main
             className="animate-dashboard-main-in flex-1 overflow-y-auto px-4 pb-16 pt-4 lg:px-8 lg:pt-6"
-            aria-label="Roast detail"
+            aria-label="Resume prep detail"
           >
             {resultTab !== "notes" ? (
             <div
@@ -577,23 +554,66 @@ export function RoastDashboard() {
               role="tabpanel"
             >
               {resultTab === "score" ? (
-                <div className="mx-auto w-full max-w-[820px]">
-                  <ScoreCard
-                    cookedScore={displayScore ?? 0}
-                    heatLabel={normalizeHeatLabel(liveScore.heat_label)}
-                    headline={headline}
-                    showFooter
-                    showTargetRole={false}
-                    degraded={liveScore.degraded}
-                    size="hero"
-                  />
+                hydrating && !liveScore ? (
+                  <p className="text-[14px] text-lc-muted">Loading Resume Score…</p>
+                ) : liveScore ? (
+                <div className="mx-auto w-full max-w-[960px]">
+                  <div
+                    className={
+                      liveScore.resume_has_pdf
+                        ? "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start lg:gap-8"
+                        : "flex flex-col gap-6"
+                    }
+                  >
+                    {liveScore.resume_has_pdf && resolvedResumeId ? (
+                      <div className="order-2 lg:order-1">
+                        <ResumePreviewPanel resumeId={resolvedResumeId} />
+                      </div>
+                    ) : null}
+                    <div
+                      className={`order-1 space-y-4 ${liveScore.resume_has_pdf ? "lg:order-2" : ""}`}
+                    >
+                      <ScoreCard
+                        cookedScore={displayScore ?? 0}
+                        scoreDimensions={liveScore.score_dimensions}
+                        scoreBreakdown={liveScore.score_breakdown}
+                        heatLabel={normalizeHeatLabel(liveScore.heat_label)}
+                        headline={headline}
+                        targetRole={liveScore.role}
+                        showFooter={false}
+                        showTargetRole
+                        degraded={liveScore.degraded}
+                        size="hero"
+                      />
+                      {liveScore.share_slug ? (
+                        <ScoreShareActions
+                          score={scoreDimensions?.total ?? displayScore ?? 0}
+                          shareSlug={liveScore.share_slug}
+                          heatLabel={liveScore.heat_label}
+                          headline={headline}
+                        />
+                      ) : null}
+                      <Link
+                        href="/plan?new=1"
+                        className="flex h-10 w-full items-center justify-center rounded-lg border border-lc-border text-[13px] font-medium text-lc-text transition-colors hover:border-lc-orange/50 hover:text-lc-orange"
+                      >
+                        Start prep plan →
+                      </Link>
+                    </div>
+                  </div>
                 </div>
+                ) : null
               ) : null}
 
-              {resultTab === "flags" ? (
+              {resultTab === "insights" ? (
                 <div className="space-y-3">
-                  {flags.length > 0 ? (
-                    flags.map((flag, idx) => (
+                  <p className="text-[13px] text-lc-muted">
+                    Specific callouts on your bullets — each includes a suggested rewrite or prep action.
+                  </p>
+                  {flagsLoading ? (
+                    <p className="text-[14px] text-lc-muted">Loading AI Insights…</p>
+                  ) : insights.length > 0 ? (
+                    insights.map((flag, idx) => (
                       <article
                         key={`${flag.issue}-${idx}`}
                         className="animate-flag-card-in rounded-lg border border-white/[0.03] border-l-2 border-l-[#EF4444] bg-[#1d1d1d] p-5"
@@ -610,7 +630,27 @@ export function RoastDashboard() {
                       </article>
                     ))
                   ) : (
-                    <p className="text-[14px] text-lc-muted">No flagged bullets for this run.</p>
+                    <p className="text-[14px] text-lc-muted">No AI Insights for this run.</p>
+                  )}
+                </div>
+              ) : null}
+
+              {resultTab === "review" ? (
+                <div className="space-y-4">
+                  <h2 className="font-mono text-[11px] uppercase tracking-wider text-lc-dim">AI In-Depth Review</h2>
+                  {hydrating && !liveScore ? (
+                    <p className="text-[14px] text-lc-muted">Loading review…</p>
+                  ) : inDepthReview ? (
+                    <div className="space-y-4 text-[14px] leading-relaxed text-lc-text">
+                      {inDepthReview.split(/\n\n+/).map((para, i) => (
+                        <p key={i}>{para}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[14px] text-lc-muted">
+                      No in-depth review yet. Re-run scoring after we ship the updated model output, or check back
+                      on your next upload.
+                    </p>
                   )}
                 </div>
               ) : null}
@@ -663,15 +703,20 @@ export function RoastDashboard() {
             ) : null}
 
             {resultTab === "notes" && resolvedResumeId ? (
-              <div
-                className="animate-dashboard-panel-in mx-auto block w-full max-w-[820px]"
-                role="tabpanel"
-              >
+              <div className="animate-dashboard-panel-in w-full" role="tabpanel">
                 <NotesStudyPage
                   key={`${resolvedResumeId}-${notesRemountKey}`}
                   resumeId={resolvedResumeId}
                   embedded
                   notesTabActive
+                  initialRoleLabel={
+                    liveScore?.role?.trim() ||
+                    currentRoast?.target_role?.trim() ||
+                    undefined
+                  }
+                  skipScoreFetch={Boolean(
+                    liveScore?.role?.trim() || currentRoast?.target_role?.trim(),
+                  )}
                   onNotesCreated={() => {
                     setNotesRemountKey((k) => k + 1);
                   }}

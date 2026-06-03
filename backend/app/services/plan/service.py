@@ -534,7 +534,7 @@ async def generate_plan(
     resume_id: uuid.UUID,
     company_name: str,
     role: str,
-    interview_date: date,
+    days_count: int,
     jd_text: str,
     experience_level: str | None,
 ) -> dict[str, Any]:
@@ -542,21 +542,22 @@ async def generate_plan(
     await assert_can_generate_plan(db, user.id)
 
     resume = await require_resume_readable(db, resume_id, clerk_subject)
-    interview_date = plan_input.validate_interview_date(interview_date)
+    days_count = plan_input.validate_days_count(days_count)
+    interview_date = plan_input.interview_date_for_days_count(days_count)
     jd_clean = plan_input.validate_jd_text(jd_text)
     company_clean = plan_input.sanitize_text(company_name, max_len=200)
     role_clean = plan_input.sanitize_text(role or resume.target_role, max_len=128)
     exp = normalize_experience_level(experience_level or resume.experience_level)
-
-    days_count = plan_input.compute_days_count(interview_date)
     summary_text = await build_resume_summary(db, resume=resume, resume_id=resume_id)
 
     settings = get_settings()
+    today = plan_input.utc_today()
     user_prompt = prompts.build_generate_user_prompt(
         experience_level=exp,
         company_name=company_clean,
         role=role_clean,
-        interview_date=interview_date.isoformat(),
+        plan_start_date=today.isoformat(),
+        plan_end_date=interview_date.isoformat(),
         days_count=days_count,
         jd_text=jd_clean,
         resume_summary=summary_text,

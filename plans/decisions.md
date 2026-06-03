@@ -11,6 +11,28 @@ Format:
 
 ---
 
+### D-019: Interview prep first, Resume Score terminology, diagnostic score report
+
+**Date**: 2026-06-03
+**Status**: Accepted
+
+- **Context**: The prior UI overhaul plan over-indexed on "resume roast" and a meme/share card. User direction changed: interview prep is the main product focus, while resume scoring is the diagnostic entry point.
+- **Decision**:
+  - Public positioning is **interview prep first**.
+  - Visible UI copy says **Resume Score**, not "resume roast."
+  - Visible UI copy says **AI Insights**, not "flags" or "red flags."
+  - Add an **AI In-Depth Review** surface for the longer narrative analysis.
+  - Score reports must be multi-dimensional, not just one number. Required dimensions (four, sum max 95, total shown `/100`): ATS `0-20`, Content `0-40`, Writing `0-10`, Job Match `0-25`. **Ready** was removed (vague, overlapped Job Match); legacy five-dim and 15/45/10/30 rows are migrated on read.
+  - Stop using cooked/meme images on score cards and share cards.
+  - The authenticated score page should show a resume PDF preview beside the score/report on desktop, with a text-preview fallback for pasted resumes. Public share pages must not expose private resume previews unless redacted and explicitly approved.
+- **Consequences**:
+  - D-010's share-card emphasis is refined: score/share still matters, but the main product story is now resume-powered interview prep.
+  - Existing route names such as `/roast` may remain temporarily for compatibility, but visible copy should migrate away from "roast."
+  - Backend/API may need additive score-dimension fields; any schema change must use Alembic and preserve old analyses.
+  - `ScoreCard` should become a professional diagnostic report component instead of a meme-led artifact.
+
+---
+
 ### D-018: Interview prep planner (`/plan`)
 
 **Date**: 2026-05-29

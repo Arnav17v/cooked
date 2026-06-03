@@ -6,6 +6,19 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-06-03
+
+- **frontend — dashboard tabs:** Lazy-load per tab — score only on entry; flags on AI Insights; quiz history on Practice only; Notes skips duplicate getScore; tab URL changes no longer re-fetch everything.
+- **frontend — dashboard notes:** Notes tab uses the same Coursera split (curriculum sidebar + inline lesson panel) and full player width as `/plan`, replacing the section list + bottom drawer.
+- **frontend — landing scroll progress:** shared `useLandingScrollFill` for how-it-works horizontal rail + plan-overview vertical rail; step numbers tint rust as the line advances.
+- **product — Resume Score rubric:** LLM + API caps ATS 20 / Content 40 / Writing 10 / Job Match 25; `score` = sum of dimensions; legacy 15/45/10/30 and five-dim rows migrate on read; frontend trusts `score_dimensions` from `/score` and `/share`.
+- **frontend — landing overhaul:** rebuilt the homepage around interview prep as the primary job, with a Resume Score diagnostic preview, resume-side report layout, AI Insights, AI In-Depth Review, and five score dimensions including Ready.
+- **product — prep plan:** `days_count` (1–8) on generate instead of interview date picker; day 1 = today; `interview_date` derived in DB for calendar mapping.
+- **product — Resume Score dimensions:** four buckets only — ATS 15, Content 45, Writing 10, Job Match 30; dropped Ready; legacy analyses migrate on read (ready folded into Job Match).
+- **product — D-019 slice:** multi-dimensional Resume Score (ATS/Content/Writing/Job Match/Ready) in `ScoreCard` + share/OG; LLM prompt outputs `score_dimensions`, `ai_insights`, `ai_in_depth_review` stored in `score_breakdown` jsonb; dashboard tabs Resume Score → AI Insights → In-Depth Review → Practice; authenticated `GET /resume/{id}/pdf` preview; landing/nav copy interview-prep-first; Seminar removed from public nav.
+- **product — positioning:** accepted interview-prep-first direction: Resume Score terminology, AI Insights, AI In-Depth Review, multi-dimensional scoring, no cooked/meme score-card images, and authenticated resume preview beside score report.
+- **plans — UI overhaul:** updated `ui-overhaul-plan.md` into an interview-prep-first simplification plan for landing, score intake, AI insights, in-depth review, dashboard, share preview, and visual-system cleanup.
+
 ## 2026-05-29
 
 - **product — interview prep planner:** `/plan` with `prep_plans`, `plan_days`, LLM generate/modify, quiz handoff, optional Web Push reminders (08:00 UTC).

@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Share2 } from "lucide-react";
 
 import {
   buildShareCaption,
   buildShareUrl,
   buildTwitterShareUrl,
-  downloadScoreMeme,
   shareScore,
 } from "@/lib/score-meme";
 
@@ -20,7 +19,7 @@ export type ScoreShareActionsProps = {
   tone?: "default" | "landing";
 };
 
-type Flash = "link" | "caption" | "download" | "share" | null;
+type Flash = "link" | "caption" | "share" | null;
 
 export function ScoreShareActions({
   score,
@@ -32,7 +31,7 @@ export function ScoreShareActions({
 }: ScoreShareActionsProps) {
   const [flash, setFlash] = useState<Flash>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"download" | "share" | null>(null);
+  const [busy, setBusy] = useState<"share" | null>(null);
 
   const shareUrl = buildShareUrl(shareSlug);
   const caption = buildShareCaption({ score, heatLabel, headline, shareUrl });
@@ -62,19 +61,6 @@ export function ScoreShareActions({
     }
   }, [caption, blink]);
 
-  const onDownload = useCallback(async () => {
-    setErr(null);
-    setBusy("download");
-    try {
-      await downloadScoreMeme(score);
-      blink("download");
-    } catch {
-      setErr("Download failed — try again.");
-    } finally {
-      setBusy(null);
-    }
-  }, [score, blink]);
-
   const onShare = useCallback(async () => {
     setErr(null);
     setBusy("share");
@@ -103,10 +89,6 @@ export function ScoreShareActions({
   return (
     <div className={className}>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={btn} onClick={() => void onDownload()} disabled={busy !== null}>
-          <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {busy === "download" ? "Saving…" : flash === "download" ? "Saved!" : "Save image"}
-        </button>
         <button type="button" className={btn} onClick={() => void onShare()} disabled={busy !== null}>
           <Share2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {busy === "share" ? "Opening…" : "Share"}
@@ -124,7 +106,7 @@ export function ScoreShareActions({
         </button>
       </div>
       <p className={tone === "landing" ? "landing-dash-muted mt-2 text-[11px]" : "mt-2 text-[11px] leading-relaxed text-lc-dim"}>
-        Save the meme, share to stories or messages, or post with your public score link.
+        Share your public score link — no private resume content is included.
       </p>
       {err ? (
         <p className="mt-2 text-[12px] text-lc-hard" role="alert">

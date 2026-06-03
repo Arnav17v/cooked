@@ -38,8 +38,8 @@ We are in **Phase 1 / v1** (see [`current-goals.md`](./current-goals.md)). Anyth
 - **Calling any paid LLM model.** v1 is free-only. Google API (`GEMINI_MODEL`: Gemma or Gemini Flash) + Groq Llama 3.3 70B. GPT-4o, Claude Sonnet, GPT-4o Mini, Claude Haiku 3.5, etc. are **v2 candidates only** — do not wire them up. See [D-008](./decisions.md#d-008-v1-ships-on-a-completely-free-llm-v2-upgrades-after-user-feedback) + [D-009](./decisions.md#d-009-llm-routing--gemini-for-analyzequestions-groq-for-evaluatefeedback-cross-vendor-failover).
 - **Importing an LLM SDK outside `backend/app/services/llm/`.** The router is the single allowed boundary. The Next.js frontend **never** talks to an LLM directly — it talks to FastAPI only. See [D-011](./decisions.md#d-011-backend--infra-stack-fastapi--postgres--r2--clerk--posthog).
 - **Shipping an LLM call without prompt caching.** Mandatory from day 1 per [D-009](./decisions.md#d-009-llm-routing--gemini-for-analyzequestions-groq-for-evaluatefeedback-cross-vendor-failover).
-- **Adding features beyond the three v1 must-haves.** v1 = Cooked Score + Red Flags + Personalized Questions. Nothing else. Specifically banned in v1: flashcards, structured rubric scoring, voice input, JD targeting, "Can AI Replace Me?", community, ranked queues, credits, seminars. See [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
-- **Skipping the score card.** The score card is the v1 viral artifact and its design must be locked at Step 0 of the build order. Implementation at Step 3. If you find yourself building feature UI before there is a clean, screenshot-able, OG-renderable score card design, stop. See [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
+- **Breaking the D-019 positioning.** v1 is now interview-prep-first. Visible copy should say **Resume Score**, **AI Insights**, and **AI In-Depth Review**, not "resume roast," "red flags," or meme-led score-card copy. See [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report).
+- **Adding features beyond the current prep loop.** v1 = Resume Score + AI Insights + AI In-Depth Review + Personalized Questions + prep continuation. Specifically banned in v1: flashcards, structured rubric scoring, voice input, JD targeting, "Can AI Replace Me?", community, ranked queues, credits, seminars, payments. See [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report).
 - **Running `ALTER TABLE` manually in production.** Every schema change goes through Alembic. No exceptions. See [D-012](./decisions.md#d-012-alembic-migrations--jsonb-as-evolution-buffer).
 - **Introducing Redis, Celery, or any worker queue in v1.** `BackgroundTasks` + SSE is the only async we use. See [D-011](./decisions.md#d-011-backend--infra-stack-fastapi--postgres--r2--clerk--posthog).
 - **Exposing internal UUIDs in public URLs.** Share routes use `share_slug` only. See [D-011](./decisions.md#d-011-backend--infra-stack-fastapi--postgres--r2--clerk--posthog).
@@ -50,7 +50,7 @@ We are in **Phase 1 / v1** (see [`current-goals.md`](./current-goals.md)). Anyth
 - Use `lc.*` Tailwind tokens. Do not introduce a new brand color.
 - Primary CTA = black text on `lc-orange`. Never white-on-orange.
 - Use mono font for code-flavored affordances (filenames, scores, `// section` labels, question numbers).
-- Use difficulty colors **semantically**: green = safe/strength, yellow = warning, red = risk/red-flag. Do not use them as random decoration.
+- Use difficulty colors **semantically**: green = safe/strength, yellow = warning, red = risk/AI insight severity. Do not use them as random decoration.
 - See anti-patterns in [`design-system.md`](./design-system.md#anti-patterns).
 
 ## 4. Keep the docs alive
@@ -66,10 +66,10 @@ Failing to update docs is the single biggest way this knowledge base decays. Tre
 
 ## 5. Tone of feedback the AI generates
 
-The product itself is "savage + actionable". Internal copy must follow [D-005](./decisions.md#d-005-tone-calibration):
+The product is useful first, lightly savage second. Internal copy must follow [D-005](./decisions.md#d-005-tone-calibration) and [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report):
 
 - Mock the bullet, not the human.
-- Every red flag must come with a fix or a question that surfaces the gap.
+- Every AI Insight must come with a fix, rewrite, or prep action that surfaces the gap.
 - No condescending phrasing about juniors or career switchers.
 
 ## 6. UX invariants — every async surface
@@ -84,7 +84,7 @@ Any component that calls an API must ship **all five** of these states. Happy-pa
 
 Additional invariants:
 
-- **Mobile-first at 375px.** The score card especially — that's the screenshot context.
+- **Mobile-first at 375px.** The Resume Score/report and share preview especially.
 - **Stream progress via SSE** for any operation > 2s (analysis, question generation). Show stages (*extracting resume… analyzing… generating questions…*), not a blank spinner.
 - **Server Components by default** in Next.js. Add `"use client"` only when state/effects/events/browser APIs are needed.
 
@@ -94,7 +94,7 @@ Additional invariants:
 - `cd backend && uvicorn app.main:app --reload` runs cleanly.
 - `npm run lint` passes (or only has pre-existing warnings). Run `ruff check .` on backend changes.
 - Visual sanity check at `http://localhost:<port>` for any UI change.
-- For UI changes: spot-check both desktop and a **375px mobile width**. **For the score card specifically, spot-check it as a phone screenshot AND as an unfurled OG card on at least Twitter and LinkedIn.**
+- For UI changes: spot-check both desktop and a **375px mobile width**. For the score/share preview specifically, spot-check the 375px layout and the OG image dimensions.
 - For backend changes: verify `curl` round-trips against the relevant `/api/v1/...` endpoint.
 - For schema changes: confirm Alembic migration applies cleanly and is reversible.
 
@@ -120,9 +120,9 @@ If a decision is missing from [`decisions.md`](./decisions.md), surface the ques
 | Want to… | Touch | Cross-check |
 | --- | --- | --- |
 | Add a section to the landing page | `frontend/src/app/page.tsx` | [`design-system.md`](./design-system.md) |
-| Change the interactive demo | `frontend/src/components/resume-roast-demo.tsx` | [`current-goals.md`](./current-goals.md) |
+| Change the score/prep intake flow | `frontend/src/app/roast/page.tsx` + `frontend/src/components/roast/roast-upload.tsx` | [`current-goals.md`](./current-goals.md), [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report) |
 | Tweak colors / tokens | `frontend/tailwind.config.ts` + `frontend/src/app/globals.css` | [`design-system.md`](./design-system.md) |
-| Build the score card / share artifact | `frontend/src/components/score/ScoreCard.tsx`, `frontend/src/app/share/[slug]/page.tsx`, `frontend/src/app/share/[slug]/opengraph-image.tsx` | [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share), [`tasks.md → Step 3`](./tasks.md#p0--v1-build-order) |
+| Build the Resume Score / share preview | `frontend/src/components/score/ScoreCard.tsx`, `frontend/src/app/share/[slug]/page.tsx`, `frontend/src/app/share/[slug]/opengraph-image.tsx` | [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report), [`ui-overhaul-plan.md`](./ui-overhaul-plan.md) |
 | Add or modify an LLM call | `backend/app/services/llm/` (only) | [`architecture.md → LLM provider strategy`](./architecture.md#llm-provider-strategy), [D-009](./decisions.md#d-009-llm-routing--gemini-for-analyzequestions-groq-for-evaluatefeedback-cross-vendor-failover) |
 | Add or modify a backend route | `backend/app/api/v1/routes/` | [`infra.md → API contract`](./infra.md#api-contract-v1) |
 | Add or change a DB column/table | Generate an Alembic migration in `backend/app/db/migrations/` | [`database-schema.md`](./database-schema.md), [D-012](./decisions.md#d-012-alembic-migrations--jsonb-as-evolution-buffer) |

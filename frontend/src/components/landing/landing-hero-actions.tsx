@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
+import { ArrowRight } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 const MotionLink = motion.create(Link);
@@ -10,10 +11,10 @@ export function LandingHeroActions() {
   const { isSignedIn, isLoaded } = useAuth();
   const reduce = useReducedMotion();
 
-  const planHref =
-    isLoaded && isSignedIn ? "/plan" : "/sign-up?redirect_url=%2Fplan";
-  const planLabel =
-    isLoaded && isSignedIn ? "Open prep plan" : "Start prep plan";
+  const primaryHref =
+    isLoaded && isSignedIn ? "/dashboard" : "/roast";
+  const primaryLabel =
+    isLoaded && isSignedIn ? "Open dashboard" : "Start interview prep";
 
   const hover = reduce ? undefined : { y: -1 };
   const tap = reduce ? undefined : { scale: 0.98 };
@@ -21,13 +22,13 @@ export function LandingHeroActions() {
   return (
     <div className="landing-hero-actions">
       <MotionLink
-        href={planHref}
+        href={primaryHref}
         className="landing-btn-primary"
         whileHover={hover}
         whileTap={tap}
       >
-        <span>{planLabel}</span>
-        <span aria-hidden>→</span>
+        <span>{primaryLabel}</span>
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden strokeWidth={2} />
       </MotionLink>
       <MotionLink
         href="/roast"
@@ -35,10 +36,10 @@ export function LandingHeroActions() {
         whileHover={hover}
         whileTap={tap}
       >
-        Roast my resume
+        Score my resume
       </MotionLink>
-      <MotionLink href="/#how" className="landing-btn-ghost" whileHover={hover} whileTap={tap}>
-        See how it works
+      <MotionLink href="/#sample" className="landing-btn-ghost" whileHover={hover} whileTap={tap}>
+        See sample score
       </MotionLink>
     </div>
   );

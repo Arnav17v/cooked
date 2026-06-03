@@ -21,11 +21,11 @@ from fastapi import (
 )
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import StreamingResponse
+from starlette.responses import Response, StreamingResponse
 
 from app.api.deps_auth import optional_clerk_subject
 from app.core.config import get_settings
-from app.core.storage import delete_object_key, r2_configured, upload_resume_pdf
+from app.core.storage import delete_object_key, download_object_bytes, r2_configured, upload_resume_pdf
 from app.db.session import SessionFactory, get_session
 from app.models.analysis import Analysis
 from app.models.resume import Resume
@@ -216,6 +216,29 @@ async def upload_resume(
         "word_count": parsed.word_count,
         "extracted_text_preview": _preview(parsed.text),
     }
+
+
+@router.get("/{resume_id}/pdf")
+async def download_resume_pdf(
+    resume_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    clerk_subject: str | None = Depends(optional_clerk_subject),
+) -> Response:
+    """Authenticated PDF preview only — never exposed on public share routes."""
+    resume = await session.get(Resume, resume_id)
+    if resume is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="resume not found")
+    await assert_resume_owned_if_authenticated(session, resume, clerk_subject)
+    if not resume.file_url:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No PDF on file")
+    data = download_object_bytes(resume.file_url)
+    if not data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF not found")
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"},
+    )
 
 
 async def enqueue_analysis_for_resume(

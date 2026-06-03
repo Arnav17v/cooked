@@ -17,6 +17,10 @@ from app.models.user import User
 from app.schemas.llm_outputs import SectionVerdictsObj
 from app.services.llm.dev_trace_ctx import llm_dev_trace
 from app.services.resume.analyzer import roast_resume_with_llm
+from app.services.resume.score_dimensions import (
+    normalize_score_dimensions,
+    total_from_dimensions,
+)
 
 log = logging.getLogger(__name__)
 
@@ -102,21 +106,34 @@ async def run_analysis_pipeline(analysis_id: uuid.UUID) -> None:
                 sv_dict = {}
 
             heat = out.heat_label
+            dims_raw = (
+                out.score_dimensions.model_dump()
+                if out.score_dimensions is not None
+                else None
+            )
+            dims = normalize_score_dimensions(dims_raw, fallback_total=out.score)
+            total_score = total_from_dimensions(dims) if total_from_dimensions(dims) > 0 else out.score
+
+            insights = list(out.ai_insights or out.flags or [])[:5]
+
             breakdown = {
                 "heat_label": heat,
                 "headline": out.one_liner,
                 "one_liner": out.one_liner,
                 "section_verdicts": sv_dict,
+                "score_dimensions": dims,
+                "total_score": total_score,
+                "ai_in_depth_review": (out.ai_in_depth_review or "").strip(),
             }
             if llm_res.degraded:
                 breakdown["analyze_degraded"] = True
 
-            analysis.cooked_score = out.score
+            analysis.cooked_score = total_score
             analysis.one_liner = out.one_liner
             analysis.model_used = llm_res.provider
             analysis.section_verdicts = sv_dict
             analysis.score_breakdown = breakdown
-            analysis.red_flags = [f.model_dump() for f in out.flags[:5]]
+            analysis.red_flags = [f.model_dump() for f in insights]
             analysis.rewritten_bullets = []
             analysis.interview_questions = [
                 {

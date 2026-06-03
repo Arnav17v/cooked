@@ -52,7 +52,7 @@ export function buildShareCaption(opts: {
   const score = clampCookedScore(opts.score);
   const heat = (opts.heatLabel ?? "Cooked").trim();
   const line = opts.headline?.trim();
-  const parts = [`I scored ${score}/100 (${heat}) on my resume roast.`];
+  const parts = [`My Resume Score: ${score}/100 (${heat}) on Am I Cooked?`];
   if (line) parts.push(`"${line}"`);
   parts.push(`See yours: ${opts.shareUrl}`);
   return parts.join(" ");
@@ -107,7 +107,7 @@ export async function shareScore(opts: {
 
   if (typeof navigator !== "undefined" && navigator.share) {
     const withFiles: ShareData = {
-      title: "My Cooked Score",
+      title: "My Resume Score",
       text: opts.caption,
       url: opts.shareUrl,
       files: [file],
@@ -117,7 +117,7 @@ export async function shareScore(opts: {
       return "shared";
     }
     await navigator.share({
-      title: "My Cooked Score",
+      title: "My Resume Score",
       text: opts.caption,
       url: opts.shareUrl,
     });

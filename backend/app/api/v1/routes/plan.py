@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
@@ -23,7 +22,7 @@ class PlanGenerateBody(BaseModel):
     resume_id: uuid.UUID
     company_name: str = Field(min_length=1, max_length=200)
     role: str = Field(min_length=1, max_length=128)
-    interview_date: date
+    days_count: int = Field(ge=1, le=8)
     jd_text: str = Field(min_length=1)
     experience_level: str | None = None
 
@@ -52,7 +51,7 @@ async def plan_generate(
         resume_id=body.resume_id,
         company_name=body.company_name,
         role=body.role,
-        interview_date=body.interview_date,
+        days_count=body.days_count,
         jd_text=body.jd_text,
         experience_level=body.experience_level,
     )

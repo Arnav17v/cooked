@@ -13,6 +13,12 @@ from app.db.session import get_session
 from app.models.analysis import Analysis
 from app.models.resume import Resume
 from app.schemas.interview_quiz_scores import normalize_interview_quiz_scores
+from app.services.resume.score_dimensions import (
+    derive_dimensions_from_total,
+    dimensions_from_breakdown,
+    public_dimensions_payload,
+    total_from_dimensions,
+)
 from app.services.users.access import require_resume_readable
 
 router = APIRouter(prefix="/resume", tags=["analysis"])
@@ -49,6 +55,14 @@ async def get_score(
         )
     bd = row.score_breakdown or {}
     one = row.one_liner or bd.get("one_liner") or bd.get("headline")
+    dims = dimensions_from_breakdown(bd)
+    if row.cooked_score is not None and total_from_dimensions(dims) == 0:
+        dims = derive_dimensions_from_total(row.cooked_score)
+    in_depth = (bd.get("ai_in_depth_review") or "").strip()
+    raw_text = (resume.raw_text or "").strip()
+    preview = " ".join(raw_text.split())
+    if len(preview) > 1200:
+        preview = preview[:1199] + "…"
     return {
         "cooked_score": row.cooked_score,
         "score": row.cooked_score,
@@ -57,9 +71,13 @@ async def get_score(
         "one_liner": one,
         "role": resume.target_role,
         "score_breakdown": bd,
+        "score_dimensions": public_dimensions_payload(dims),
+        "ai_in_depth_review": in_depth or None,
         "share_slug": row.share_slug,
         "degraded": bool(bd.get("analyze_degraded") or bd.get("degraded")),
         "interview_quiz_scores": normalize_interview_quiz_scores(resume.interview_quiz_scores),
+        "resume_has_pdf": bool(resume.file_url),
+        "resume_text_preview": preview or None,
     }
 
 
@@ -76,9 +94,11 @@ async def get_flags(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No completed analysis yet",
         )
+    insights = row.red_flags or []
     return {
-        "red_flags": row.red_flags or [],
-        "flags": row.red_flags or [],
+        "red_flags": insights,
+        "flags": insights,
+        "ai_insights": insights,
         "rewritten_bullets": row.rewritten_bullets or [],
         "share_slug": row.share_slug,
     }

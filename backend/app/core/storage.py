@@ -330,6 +330,26 @@ def upload_resume_pdf(*, resume_id: uuid.UUID, data: bytes, content_type: str) -
     raise RuntimeError("upload_resume_pdf: no attempts configured")
 
 
+def download_object_bytes(key: str | None) -> bytes | None:
+    """Fetch object bytes for authenticated resume preview. Returns None if missing."""
+    if not key or not r2_configured():
+        return None
+    settings = get_settings()
+    client = get_r2_client()
+    try:
+        resp = client.get_object(Bucket=settings.r2_bucket, Key=key)
+        body = resp.get("Body")
+        if body is None:
+            return None
+        return body.read()
+    except ClientError as e:
+        err = e.response.get("Error", {}) if hasattr(e, "response") else {}
+        if err.get("Code") in ("NoSuchKey", "404", "NotFound"):
+            return None
+        log.warning("R2 get_object failed for key=%s: %s", key, e)
+        raise
+
+
 def delete_object_key(key: str | None) -> None:
     """Best-effort delete; logs and swallows NotFound."""
     if not key or not r2_configured():

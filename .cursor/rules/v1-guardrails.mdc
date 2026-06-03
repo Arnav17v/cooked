@@ -9,11 +9,13 @@ Read `plans/` (especially `current-goals.md`, `decisions.md`, `tasks.md`) before
 
 ## Scope (v1)
 
-Three must-have features, nothing else:
+Core v1 flow after D-019:
 
-1. Resume upload + Cooked Score (screenshot-able card)
-2. Resume red-flag detection with suggested rewrites
-3. 10–15 personalized interview questions from the user's exact bullets
+1. Resume upload + multi-dimensional **Resume Score**
+2. **AI Insights** with suggested rewrites or prep actions
+3. **AI In-Depth Review**
+4. 10–15 personalized interview questions from the user's exact bullets
+5. Prep-plan/practice continuation
 
 Stretch only if cheap: text-only answer practice, no rubric.
 
@@ -21,7 +23,7 @@ Stretch only if cheap: text-only answer practice, no rubric.
 
 ## Priority override
 
-After the core API works, **build the score card UI before anything else.** Do not default to building auth or dashboards first. Score card → /share/[slug] page → OG image. Then everything else.
+After the core API works, build the resume-powered prep loop: Resume Score → AI Insights → AI In-Depth Review → interview questions/practice → prep plan continuation. Visible copy should say "Resume Score" and "AI Insights," not "resume roast" or "red flags." Score/share cards should not use cooked/meme images.
 
 ## Repo
 

@@ -260,7 +260,7 @@ export function parseSectionVerdicts(
   return out;
 }
 
-export type ResultTabId = "score" | "flags" | "questions" | "notes";
+export type ResultTabId = "score" | "insights" | "review" | "questions" | "notes";
 
 export function QuestionDifficultyPill({ level }: { level: string }) {
   const styles: Record<string, string> = {

@@ -43,7 +43,8 @@ def build_generate_user_prompt(
     experience_level: str,
     company_name: str,
     role: str,
-    interview_date: str,
+    plan_start_date: str,
+    plan_end_date: str,
     days_count: int,
     jd_text: str,
     resume_summary: str,
@@ -52,8 +53,7 @@ def build_generate_user_prompt(
     return f"""{exp_block}
 Company: {company_name}
 Role: {role}
-Interview date: {interview_date}
-Days until interview: {days_count}
+Plan length: {days_count} days (day_number 1 = {plan_start_date}, day {days_count} = {plan_end_date})
 
 JD:
 {jd_text}

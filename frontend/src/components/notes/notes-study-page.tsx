@@ -71,6 +71,19 @@ function notifyIfNewWeakSections(
   }
 }
 
+function sectionKindLabel(kind: string | undefined): string {
+  const k = (kind ?? "").toLowerCase();
+  if (k === "experience") return "Experience";
+  if (k === "project") return "Project";
+  if (k === "domain") return "Domain";
+  if (k === "skills") return "Skills";
+  if (k === "weak_area") return "Weak area";
+  if (k === "research") return "Research";
+  if (k === "certifications") return "Certifications";
+  if (k === "other") return "Other";
+  return "Note";
+}
+
 /** Map stored `section_kind` to tier accent (legacy kinds → project). */
 function tierFromKind(kind: string | undefined): "project" | "domain" | "weak_area" | "research" {
   const k = (kind ?? "").toLowerCase();
@@ -238,6 +251,10 @@ export type NotesStudyPageProps = {
   embedded?: boolean;
   /** When false (dashboard on another tab), close/hide the section drawer. Default true. */
   notesTabActive?: boolean;
+  /** Role from dashboard roast list / score — skips an extra getScore when set with skipScoreFetch. */
+  initialRoleLabel?: string;
+  /** When true and initialRoleLabel is set, notes load does not call getScore. */
+  skipScoreFetch?: boolean;
 };
 
 export function NotesStudyPage({
@@ -245,6 +262,8 @@ export function NotesStudyPage({
   onNotesCreated,
   embedded = false,
   notesTabActive = true,
+  initialRoleLabel,
+  skipScoreFetch = false,
 }: NotesStudyPageProps) {
   const router = useRouter();
   const { isSignedIn, getToken } = useAuth();
@@ -252,7 +271,7 @@ export function NotesStudyPage({
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [notes, setNotes] = useState<NotesGetResponse | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [roleLabel, setRoleLabel] = useState<string>("your role");
+  const [roleLabel, setRoleLabel] = useState<string>(initialRoleLabel?.trim() || "your role");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const baselineRef = useRef<string | null>(null);
   const weakSnapshotRef = useRef<Set<string> | null>(null);
@@ -302,71 +321,112 @@ export function NotesStudyPage({
     setPortalReady(true);
   }, []);
 
-  const [drawerSectionId, setDrawerSectionId] = useState<string | null>(null);
-  const [drawerEditing, setDrawerEditing] = useState(false);
-  const drawerEditorRef = useRef<NotesRichEditorHandle>(null);
-  const drawerEditingRef = useRef(false);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [panelEditing, setPanelEditing] = useState(false);
+  const [curriculumOpen, setCurriculumOpen] = useState(false);
+  const panelEditorRef = useRef<NotesRichEditorHandle>(null);
+  const panelEditingRef = useRef(false);
 
   useEffect(() => {
-    drawerEditingRef.current = drawerEditing;
-  }, [drawerEditing]);
+    panelEditingRef.current = panelEditing;
+  }, [panelEditing]);
 
-  const openDrawer = useCallback((sectionId: string) => {
-    setDrawerSectionId(sectionId);
-    setDrawerEditing(false);
+  const selectSection = useCallback((sectionId: string) => {
+    setActiveSectionId(sectionId);
+    setPanelEditing(false);
+    setCurriculumOpen(false);
   }, []);
 
-  const closeDrawer = useCallback(() => {
-    if (drawerEditingRef.current) {
-      drawerEditorRef.current?.commit();
+  const closeSectionPanel = useCallback(() => {
+    if (panelEditingRef.current) {
+      panelEditorRef.current?.commit();
     }
-    setDrawerEditing(false);
-    setDrawerSectionId(null);
+    setPanelEditing(false);
+    setActiveSectionId(null);
   }, []);
 
   useEffect(() => {
-    if (!notesTabActive) {
-      closeDrawer();
-      return;
-    }
-    if (!highlightSectionId) return;
-    openDrawer(highlightSectionId);
-  }, [notesTabActive, highlightSectionId, openDrawer, closeDrawer]);
+    if (!embedded || !sortedSections.length) return;
+    if (activeSectionId && sortedSections.some((s) => s.section_id === activeSectionId)) return;
+    setActiveSectionId(sortedSections[0].section_id);
+  }, [embedded, sortedSections, activeSectionId]);
 
   useEffect(() => {
-    if (!drawerSectionId) return;
+    const mq = window.matchMedia("(min-width: 769px)");
+    const onChange = () => setCurriculumOpen(false);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!embedded || !curriculumOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [drawerSectionId]);
+  }, [embedded, curriculumOpen]);
 
   useEffect(() => {
-    if (!drawerSectionId) return;
+    if (!notesTabActive) {
+      if (embedded) {
+        setPanelEditing(false);
+      } else {
+        closeSectionPanel();
+      }
+      return;
+    }
+    if (!highlightSectionId) return;
+    selectSection(highlightSectionId);
+  }, [notesTabActive, highlightSectionId, selectSection, closeSectionPanel, embedded]);
+
+  useEffect(() => {
+    if (embedded || !activeSectionId) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [embedded, activeSectionId]);
+
+  useEffect(() => {
+    if (embedded || !activeSectionId) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDrawer();
+      if (e.key === "Escape") closeSectionPanel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [drawerSectionId, closeDrawer]);
+  }, [embedded, activeSectionId, closeSectionPanel]);
 
-  const drawerSection = useMemo(
-    () => (drawerSectionId ? sortedSections.find((s) => s.section_id === drawerSectionId) ?? null : null),
-    [sortedSections, drawerSectionId],
+  const activeSection = useMemo(
+    () =>
+      activeSectionId ? sortedSections.find((s) => s.section_id === activeSectionId) ?? null : null,
+    [sortedSections, activeSectionId],
   );
 
-  const drawerDraft = drawerSectionId ? (drafts[drawerSectionId] ?? drawerSection?.content ?? "") : "";
+  const activeDraft = activeSectionId
+    ? (drafts[activeSectionId] ?? activeSection?.content ?? "")
+    : "";
+
+  const activeSectionIndex = useMemo(() => {
+    if (!activeSectionId) return -1;
+    return sortedSections.findIndex((s) => s.section_id === activeSectionId);
+  }, [sortedSections, activeSectionId]);
+
+  const mobileSectionLabel = useMemo(() => {
+    if (!activeSection) return "Select a section";
+    return activeSection.title;
+  }, [activeSection]);
 
   const drawerDragControls = useDragControls();
 
   const onDrawerDragEnd = useCallback(
     (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
       if (info.offset.y > 72 || info.velocity.y > 420) {
-        closeDrawer();
+        closeSectionPanel();
       }
     },
-    [closeDrawer],
+    [closeSectionPanel],
   );
 
   const readHighlightFromStorage = useCallback(() => {
@@ -489,23 +549,32 @@ export function NotesStudyPage({
         const token = await bearer();
         const auth = token ? { token } : undefined;
 
+        const skipScore = skipScoreFetch && Boolean(initialRoleLabel?.trim());
+
         if (hadCache && !postQuizPoll) {
-          const score = await getScore(resumeId, auth).catch(() => null);
-          if (cancelled) return;
-          const rl = score?.role?.trim();
-          if (rl) {
-            setRoleLabel(rl);
-            writeNotesSessionCache(resumeId, cached!.notes, rl);
+          if (!skipScore) {
+            const score = await getScore(resumeId, auth).catch(() => null);
+            if (cancelled) return;
+            const rl = score?.role?.trim();
+            if (rl) {
+              setRoleLabel(rl);
+              writeNotesSessionCache(resumeId, cached!.notes, rl);
+            }
+          } else if (initialRoleLabel?.trim()) {
+            setRoleLabel(initialRoleLabel.trim());
+            writeNotesSessionCache(resumeId, cached!.notes, initialRoleLabel.trim());
           }
           return;
         }
 
         const [n, score] = await Promise.all([
           getNotes(resumeId, auth),
-          getScore(resumeId, auth).catch(() => null),
+          skipScore
+            ? Promise.resolve(null)
+            : getScore(resumeId, auth).catch(() => null),
         ]);
         if (cancelled) return;
-        const rl = score?.role?.trim() || "your role";
+        const rl = score?.role?.trim() || initialRoleLabel?.trim() || "your role";
         setRoleLabel(rl);
 
         if (!n) {
@@ -548,7 +617,7 @@ export function NotesStudyPage({
     return () => {
       cancelled = true;
     };
-  }, [resumeId, bearer, applyNotesPayload]);
+  }, [resumeId, bearer, applyNotesPayload, skipScoreFetch, initialRoleLabel]);
 
   useEffect(() => {
     if (!pollUpdating || !notesRef.current) return;
@@ -609,15 +678,15 @@ export function NotesStudyPage({
     setDrafts((d) => ({ ...d, [sectionId]: value }));
   };
 
-  const onDrawerBlurCommitted = useCallback(
+  const onPanelBlurCommitted = useCallback(
     (html: string) => {
-      const sid = drawerSectionId;
+      const sid = activeSectionId;
       if (!sid) return;
       onDraftChange(sid, html);
       void flushPatch(sid, html);
-      setDrawerEditing(false);
+      setPanelEditing(false);
     },
-    [drawerSectionId, flushPatch],
+    [activeSectionId, flushPatch],
   );
 
   async function onCreateNotes() {
@@ -735,29 +804,47 @@ export function NotesStudyPage({
     );
   }
 
-  return (
-    <div className={embedded ? "w-full" : "w-full max-md:-mx-5 max-md:px-0"}>
-      {embedded ? (
-        pollUpdating ? (
-          <div className="mb-4 space-y-2">
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-lc-muted">
-              <span className="inline-block animate-spin font-mono" aria-hidden>
-                ↻
-              </span>
-              <span>updating notes…</span>
+  const renewDevBlock = isDev ? (
+    <div className="mt-8 border-t border-lc-divider pt-6">
+      <button
+        type="button"
+        disabled={renewBusy}
+        onClick={() => void onRenewDev()}
+        className="inline-flex h-9 items-center rounded-lg border border-lc-border bg-lc-elevated px-4 text-[12px] font-medium text-lc-muted transition-transform duration-100 ease-out hover:-translate-y-px hover:border-lc-orange/40 hover:text-lc-text disabled:opacity-50"
+      >
+        {renewBusy ? "Working…" : "Renew notes (dev)"}
+      </button>
+      {renewErr ? (
+        <p className="mt-2 text-[12px] text-lc-hard" role="alert">
+          {renewErr}
+        </p>
+      ) : null}
+    </div>
+  ) : null;
+
+  if (embedded) {
+    const curriculumClass = curriculumOpen ? " plan-curriculum--drawer-open" : "";
+    const shellClass = curriculumOpen ? " plan-coursera-shell--curriculum-open" : "";
+    const hasPrev = activeSectionIndex > 0;
+    const hasNext =
+      activeSectionIndex >= 0 && activeSectionIndex < sortedSections.length - 1;
+
+    return (
+      <div className="notes-page notes-page--player">
+        <div className="plan-execution-header">
+          <h1 className="plan-execution-title">
+            <span className="plan-execution-title-primary">Interview prep notes</span>
+            <span className="plan-execution-title-sep" aria-hidden>
+              {" "}
+              ·{" "}
             </span>
-            <p className="text-[12px] text-lc-dim">{LONG_RUN_TIME_HINT}</p>
-          </div>
-        ) : null
-      ) : (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-lc-divider pb-4">
-          <p className="min-w-0 text-[13px] text-lc-text">
-            <span className="font-mono text-lc-dim">{"// interview prep notes"}</span>
-            <span className="text-lc-muted"> · </span>
-            <span>{roleLabel}</span>
-          </p>
+            <span className="plan-execution-title-role">{roleLabel}</span>
+          </h1>
           {pollUpdating ? (
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-lc-muted">
+            <span
+              className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-lc-muted"
+              role="status"
+            >
               <span className="inline-block animate-spin font-mono" aria-hidden>
                 ↻
               </span>
@@ -765,7 +852,192 @@ export function NotesStudyPage({
             </span>
           ) : null}
         </div>
-      )}
+
+        <div className={`plan-execution-wrap plan-coursera-shell${shellClass}`}>
+          <div className="plan-coursera-split">
+            {curriculumOpen ? (
+              <button
+                type="button"
+                className="plan-curriculum-backdrop"
+                aria-label="Close sections"
+                onClick={() => setCurriculumOpen(false)}
+              />
+            ) : null}
+
+            <aside
+              className={`plan-curriculum${curriculumClass}`}
+              aria-label="Resume note sections"
+            >
+              <div className="plan-curriculum-header">
+                <p className="plan-field-label">Notes from your resume</p>
+                <h2 className="plan-curriculum-title">{roleLabel}</h2>
+              </div>
+              <nav className="plan-curriculum-days" aria-label="Sections">
+                <ul className="plan-curriculum-items">
+                  {sortedSections.map((s) => {
+                    const isActive = activeSectionId === s.section_id;
+                    return (
+                      <li key={s.section_id}>
+                        <button
+                          type="button"
+                          className={`plan-curriculum-item${isActive ? " plan-curriculum-item--active" : ""}${
+                            highlightSectionId === s.section_id ? " ring-1 ring-inset ring-lc-orange/35" : ""
+                          }`}
+                          onClick={() => selectSection(s.section_id)}
+                        >
+                          <span
+                            className="plan-curriculum-icon plan-curriculum-icon--notes"
+                            aria-hidden
+                          >
+                            N
+                          </span>
+                          <span className="plan-curriculum-item-title">{s.title}</span>
+                          {s.weak_indicator ? (
+                            <span className="plan-curriculum-weak-tag">weak</span>
+                          ) : null}
+                          {pulseSaveSectionId === s.section_id ? (
+                            <span className="sr-only">Saved</span>
+                          ) : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            </aside>
+
+            <div className="plan-lesson-main">
+              <div className="plan-mobile-chrome">
+                <button
+                  type="button"
+                  className="plan-mobile-chrome-btn"
+                  aria-expanded={curriculumOpen}
+                  onClick={() => setCurriculumOpen((open) => !open)}
+                >
+                  Sections
+                </button>
+                <span className="plan-mobile-chrome-title">{mobileSectionLabel}</span>
+              </div>
+
+              <div className="plan-lesson-panel">
+                {activeSection ? (
+                  <article className="plan-lesson-article">
+                    <nav className="plan-lesson-breadcrumb" aria-label="Breadcrumb">
+                      <span>{roleLabel}</span>
+                      <span className="plan-lesson-breadcrumb-sep" aria-hidden>
+                        ›
+                      </span>
+                      <span>{sectionKindLabel(activeSection.section_kind)}</span>
+                      <span className="plan-lesson-breadcrumb-sep" aria-hidden>
+                        ›
+                      </span>
+                      <span className="plan-lesson-breadcrumb-current">{activeSection.title}</span>
+                    </nav>
+
+                    <header className="plan-lesson-header">
+                      <div className="notes-lesson-header-row">
+                        <div className="min-w-0 flex-1">
+                          <span className="plan-module-kind">
+                            {sectionKindLabel(activeSection.section_kind)}
+                          </span>
+                          <h1 className="plan-lesson-title">{activeSection.title}</h1>
+                        </div>
+                        {panelEditing ? (
+                          <button
+                            type="button"
+                            className="plan-secondary-btn"
+                            onClick={() => panelEditorRef.current?.commit()}
+                          >
+                            Done
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="plan-secondary-btn"
+                            onClick={() => setPanelEditing(true)}
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    </header>
+
+                    <div className="plan-lesson-body">
+                      {panelEditing ? (
+                        <>
+                          <NotesRichEditor
+                            ref={panelEditorRef}
+                            variant="drawer"
+                            value={activeDraft}
+                            onBlurCommitted={onPanelBlurCommitted}
+                          />
+                          <p className="notes-lesson-edit-hint">
+                            {"// tap Done or leave the editor to save"}
+                          </p>
+                        </>
+                      ) : (
+                        <NotesSectionReadPanel content={activeDraft} />
+                      )}
+                    </div>
+
+                    {renewDevBlock}
+                  </article>
+                ) : (
+                  <p className="plan-day-modules-status">Select a section from the list.</p>
+                )}
+
+                {activeSection ? (
+                  <footer className="plan-lesson-nav">
+                    <button
+                      type="button"
+                      className="plan-secondary-btn plan-lesson-nav-btn"
+                      disabled={!hasPrev}
+                      onClick={() =>
+                        selectSection(sortedSections[activeSectionIndex - 1].section_id)
+                      }
+                    >
+                      Previous
+                    </button>
+                    <span className="plan-lesson-nav-pos">
+                      {activeSectionIndex + 1} / {sortedSections.length}
+                    </span>
+                    <button
+                      type="button"
+                      className="plan-secondary-btn plan-lesson-nav-btn"
+                      disabled={!hasNext}
+                      onClick={() =>
+                        selectSection(sortedSections[activeSectionIndex + 1].section_id)
+                      }
+                    >
+                      Next
+                    </button>
+                  </footer>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-md:-mx-5 max-md:px-0">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-lc-divider pb-4">
+        <p className="min-w-0 text-[13px] text-lc-text">
+          <span className="font-mono text-lc-dim">{"// interview prep notes"}</span>
+          <span className="text-lc-muted"> · </span>
+          <span>{roleLabel}</span>
+        </p>
+        {pollUpdating ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-lc-muted">
+            <span className="inline-block animate-spin font-mono" aria-hidden>
+              ↻
+            </span>
+            <span>updating notes…</span>
+          </span>
+        ) : null}
+      </div>
 
       <div className="min-w-0 flex-1">
         <p className="sr-only" id="notes-sections-list-desc">
@@ -775,7 +1047,7 @@ export function NotesStudyPage({
           {sortedSections.map((s, idx) => {
             const tier = tierFromKind(s.section_kind);
             const borderCls = TIER_BORDER[tier];
-            const isOpen = drawerSectionId === s.section_id;
+            const isOpen = activeSectionId === s.section_id;
             const entryDelay = notesCardEntryAnim ? Math.min(idx, 4) * 0.045 : 0;
             return (
               <motion.li
@@ -791,7 +1063,7 @@ export function NotesStudyPage({
               >
                 <button
                   type="button"
-                  onClick={() => openDrawer(s.section_id)}
+                  onClick={() => selectSection(s.section_id)}
                   className={`relative flex w-full items-center gap-3 border-l-4 ${borderCls} bg-lc-surface/40 py-3.5 pl-4 pr-3 text-left transition-colors duration-100 ease-out hover:bg-lc-elevated/35 ${
                     highlightSectionId === s.section_id ? "ring-1 ring-lc-orange/35 ring-inset" : ""
                   } ${flashBorderIds.has(s.section_id) ? "shadow-[inset_4px_0_0_rgba(255,255,255,0.22)]" : ""}`}
@@ -823,46 +1095,28 @@ export function NotesStudyPage({
           })}
         </ul>
 
-        {!embedded ? (
-          <div className="mt-10 border-t border-lc-divider pt-8">
-            <QuizLengthPicker value={quizLength} onChange={setQuizLength} />
-            <button
-              type="button"
-              onClick={() => startQuizFromNotes()}
-              className="mt-4 inline-flex h-10 items-center rounded-lg border border-lc-orange/50 bg-lc-orange/10 px-5 text-[13px] font-semibold text-lc-orange transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orange/20"
-            >
-              quiz me on this
-            </button>
-          </div>
-        ) : null}
+        <div className="mt-10 border-t border-lc-divider pt-8">
+          <QuizLengthPicker value={quizLength} onChange={setQuizLength} />
+          <button
+            type="button"
+            onClick={() => startQuizFromNotes()}
+            className="mt-4 inline-flex h-10 items-center rounded-lg border border-lc-orange/50 bg-lc-orange/10 px-5 text-[13px] font-semibold text-lc-orange transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orange/20"
+          >
+            quiz me on this
+          </button>
+        </div>
 
-        {isDev ? (
-          <div className="mt-6 border-t border-lc-divider pt-6">
-            <button
-              type="button"
-              disabled={renewBusy}
-              onClick={() => void onRenewDev()}
-              className="inline-flex h-9 items-center rounded-lg border border-lc-border bg-lc-elevated px-4 text-[12px] font-medium text-lc-muted transition-transform duration-100 ease-out hover:-translate-y-px hover:border-lc-orange/40 hover:text-lc-text disabled:opacity-50"
-            >
-              {renewBusy ? "Working…" : "Renew notes (dev)"}
-            </button>
-            {renewErr ? (
-              <p className="mt-2 text-[12px] text-lc-hard" role="alert">
-                {renewErr}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        {renewDevBlock}
       </div>
 
       {portalReady && notesTabActive
         ? createPortal(
             <div className="landing-v3 landing-notes-drawer-root">
               <AnimatePresence>
-              {drawerSectionId && drawerSection ? (
+              {activeSectionId && activeSection ? (
                 <>
                   <motion.button
-                    key={`${drawerSectionId}-scrim`}
+                    key={`${activeSectionId}-scrim`}
                     type="button"
                     aria-label="Close section"
                     className="landing-notes-drawer-scrim"
@@ -870,10 +1124,10 @@ export function NotesStudyPage({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.26, ease: EASE_DEFAULT }}
-                    onClick={closeDrawer}
+                    onClick={closeSectionPanel}
                   />
                   <motion.div
-                    key={`${drawerSectionId}-sheet`}
+                    key={`${activeSectionId}-sheet`}
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="notes-drawer-title"
@@ -899,7 +1153,7 @@ export function NotesStudyPage({
                 <header className="landing-notes-drawer-header">
                   <button
                     type="button"
-                    onClick={closeDrawer}
+                    onClick={closeSectionPanel}
                     className="landing-notes-drawer-icon-btn"
                     aria-label="Close"
                   >
@@ -908,13 +1162,13 @@ export function NotesStudyPage({
                   <div className="min-w-0 flex-1">
                     <p className="landing-notes-drawer-eyebrow">{"// section"}</p>
                     <h2 id="notes-drawer-title" className="landing-notes-drawer-title">
-                      {drawerSection.title}
+                      {activeSection.title}
                     </h2>
                   </div>
-                  {drawerEditing ? (
+                  {panelEditing ? (
                     <button
                       type="button"
-                      onClick={() => drawerEditorRef.current?.commit()}
+                      onClick={() => panelEditorRef.current?.commit()}
                       className="landing-notes-drawer-done"
                     >
                       Done
@@ -922,7 +1176,7 @@ export function NotesStudyPage({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setDrawerEditing(true)}
+                      onClick={() => setPanelEditing(true)}
                       className="landing-notes-drawer-edit"
                     >
                       Edit
@@ -930,20 +1184,20 @@ export function NotesStudyPage({
                   )}
                 </header>
                 <div className="landing-notes-drawer-body">
-                  {drawerEditing ? (
+                  {panelEditing ? (
                     <div>
                       <NotesRichEditor
-                        ref={drawerEditorRef}
+                        ref={panelEditorRef}
                         variant="drawer"
-                        value={drawerDraft}
-                        onBlurCommitted={onDrawerBlurCommitted}
+                        value={activeDraft}
+                        onBlurCommitted={onPanelBlurCommitted}
                       />
                       <p className="landing-notes-drawer-hint">
                         {"// tap Done or leave the editor to save"}
                       </p>
                     </div>
                   ) : (
-                    <NotesSectionReadPanel content={drawerDraft} />
+                    <NotesSectionReadPanel content={activeDraft} />
                   )}
                 </div>
                   </motion.div>

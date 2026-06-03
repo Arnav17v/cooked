@@ -9,6 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.models.analysis import Analysis
 from app.models.resume import Resume
+from app.services.resume.score_dimensions import (
+    derive_dimensions_from_total,
+    dimensions_from_breakdown,
+    public_dimensions_payload,
+    total_from_dimensions,
+)
 
 router = APIRouter(prefix="/share", tags=["share"])
 
@@ -31,6 +37,19 @@ async def get_share(
     analysis, resume = row
     bd = analysis.score_breakdown or {}
     one = analysis.one_liner or bd.get("one_liner") or bd.get("headline")
+    dims = dimensions_from_breakdown(bd)
+    if analysis.cooked_score is not None and total_from_dimensions(dims) == 0:
+        dims = derive_dimensions_from_total(analysis.cooked_score)
+    insights = analysis.red_flags or []
+    preview_insights = []
+    for item in insights[:2]:
+        if isinstance(item, dict) and item.get("issue"):
+            preview_insights.append(
+                {
+                    "issue": str(item.get("issue", ""))[:280],
+                    "suggested_rewrite": str(item.get("suggested_rewrite", ""))[:280],
+                }
+            )
     return {
         "share_slug": analysis.share_slug,
         "role": resume.target_role,
@@ -40,5 +59,7 @@ async def get_share(
         "heat_label": bd.get("heat_label"),
         "one_liner": one,
         "headline": one,
+        "score_dimensions": public_dimensions_payload(dims),
+        "ai_insights_preview": preview_insights,
         "degraded": bool(bd.get("analyze_degraded") or bd.get("degraded")),
     }

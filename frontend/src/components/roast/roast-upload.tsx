@@ -295,7 +295,7 @@ export function RoastUpload() {
       }
 
       setProgressPct(26);
-      appendLine("→ enqueueing roast…");
+      appendLine("→ starting Resume Score…");
       const queued = await enqueueAnalyze(uploaded.resume_id, auth);
       setProgressPct(28);
 
@@ -406,7 +406,7 @@ export function RoastUpload() {
             <p className="mt-2 text-[11px] leading-relaxed text-lv-cream/45">
               {experienceLevel
                 ? EXPERIENCE_LEVEL_OPTIONS.find((o) => o.value === experienceLevel)?.hint
-                : "Helps the AI calibrate the roast — e.g. don’t score a fresher like a staff engineer."}
+                : "Helps calibrate your Resume Score — e.g. don’t score a fresher like a staff engineer."}
             </p>
           </label>
 
@@ -518,7 +518,7 @@ export function RoastUpload() {
               />
               <p className="mt-2 text-[11px] leading-relaxed text-lv-cream/45">
                 {pasteWordCount >= 30
-                  ? `${pasteWordCount} words — ready to roast`
+                  ? `${pasteWordCount} words — ready to score`
                   : `Minimum ~30 words (${pasteWordCount} so far)`}
               </p>
             </div>
@@ -532,7 +532,7 @@ export function RoastUpload() {
             disabled={isRoasting || !hasStagedInput || !hasRole || !hasExperience}
             className="sm:flex-1 lg:flex-none"
           >
-            {isRoasting ? "Running…" : "Run roast"}
+            {isRoasting ? "Running…" : "Score my resume"}
           </RoastPrimaryButton>
           {runFinished ? (
             <button

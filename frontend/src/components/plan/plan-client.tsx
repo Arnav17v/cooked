@@ -48,7 +48,7 @@ export function PlanClient() {
 
   const [companyName, setCompanyName] = useState("");
   const [role, setRole] = useState("");
-  const [interviewDate, setInterviewDate] = useState("");
+  const [daysCount, setDaysCount] = useState(7);
   const [jdText, setJdText] = useState("");
   const [generating, setGenerating] = useState(false);
   const [initiating, setInitiating] = useState(false);
@@ -234,7 +234,7 @@ export function PlanClient() {
           resume_id: resumeId,
           company_name: companyName.trim(),
           role: role.trim(),
-          interview_date: interviewDate,
+          days_count: daysCount,
           jd_text: jdText.trim(),
         },
         token,
@@ -494,12 +494,12 @@ export function PlanClient() {
       <PlanForm
         companyName={companyName}
         role={role}
-        interviewDate={interviewDate}
+        daysCount={daysCount}
         jdText={jdText}
         loading={generating || phase === "generating"}
         onCompanyName={setCompanyName}
         onRole={setRole}
-        onInterviewDate={setInterviewDate}
+        onDaysCount={setDaysCount}
         onJdText={setJdText}
         onSubmit={() => {
           setPhase("generating");

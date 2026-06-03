@@ -2,13 +2,15 @@
 
 ## North star
 
-**Does someone screenshot the Cooked Score and share it?**
+**Does the user start useful interview prep from their resume?**
 
-If yes, v1 worked. Everything else is secondary. **Design the score card first, features second.** See [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
+As of [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report), the public product story is **interview prep first**. Resume scoring is the diagnostic entry point: users upload a resume, get a multi-dimensional **Resume Score**, read **AI Insights** and an **AI In-Depth Review**, then continue into questions, quizzes, notes, and a prep plan.
+
+The share card still matters, but it is no longer the only success signal and it should no longer be meme-led.
 
 ## Priority override
 
-After the core backend API works, **build the `/share/[slug]` score-card UI before anything else.** The default temptation is to build auth and dashboards next — resist it. The viral artifact ships before any session-bound surface. This is locked in [`/.cursor/rules/v1-guardrails.mdc`](../.cursor/rules/v1-guardrails.mdc) and in the [build order](./tasks.md#p0--v1-build-order) (score card is Step 3, auth is Step 6).
+Build the resume-powered prep loop in this order: **Resume Score → AI Insights → AI In-Depth Review → interview questions/practice → prep plan continuation**. The authenticated score page should show the resume preview beside the diagnostic report on desktop; public share pages must not expose private resume previews.
 
 ## Current phase
 
@@ -20,17 +22,18 @@ After the core backend API works, **build the `/share/[slug]` score-card UI befo
 
 ## Next phase
 
-**Phase 1 (v1) — Real MVP loop on a completely free LLM.** Three must-have features, one nice-to-have, screenshot-able score card as the headliner. **No paid model spend in v1** — see [D-008](./decisions.md#d-008-v1-ships-on-a-completely-free-llm-v2-upgrades-after-user-feedback). **Scope locked** — see [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
+**Phase 1 (v1) — Real MVP loop on a completely free LLM.** Interview prep is the headliner; Resume Score is the diagnostic entry point. **No paid model spend in v1** — see [D-008](./decisions.md#d-008-v1-ships-on-a-completely-free-llm-v2-upgrades-after-user-feedback). **Product positioning updated** — see [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report).
 
 ### Must-have (v1 ships when all three work)
 
-1. **Resume Upload + Cooked Score**
-   - Paste or upload resume, pick a target role, get a score with a brutal breakdown.
-   - The **score card must be designed as a screenshot-able artifact** — clean, branded, looks good on Twitter/LinkedIn/Reddit. This is the viral mechanic.
-   - Ship an OG / share image so links unfurl with the score baked in.
-2. **Resume Red Flag Detection**
+1. **Resume Upload + Resume Score**
+   - Paste or upload resume, pick a target role, get a multi-dimensional score.
+   - Required dimensions: ATS `0-20`, Content `0-40`, Writing `0-10`, Job Match `0-25` (Ready removed; sum max 95, shown `/100`).
+   - Stop using cooked/meme images on score cards.
+2. **AI Insights + In-Depth Review**
    - Specific, actionable callouts on the user's exact bullets.
-   - Each red flag must include a **suggested rewrite**, not just "add metrics."
+   - Each insight must include a **suggested rewrite or prep action**, not just "add metrics."
+   - Add a longer **AI In-Depth Review** narrative for strengths, risks, interview story gaps, and recommended prep focus.
 3. **Personalized Interview Questions**
    - 10–15 questions pulled **directly from the user's bullets/projects**.
    - Test: would a generic ChatGPT prompt produce this? If yes, the question is too generic — regenerate.
@@ -48,23 +51,23 @@ After the core backend API works, **build the `/share/[slug]` score-card UI befo
 - JD targeting.
 - "Can AI Replace Me?" report.
 
-> **v1 is intentionally lower quality than the theoretical ceiling.** The goal is *can users get a score worth screenshotting*, not *is the LLM best-in-class*. Quality upgrade happens in v2 after user feedback.
+> **v1 is intentionally lower quality than the theoretical ceiling.** The goal is whether users can start useful interview prep from the resume-powered score/review loop. Quality upgrade happens in v2 after user feedback.
 
 ### Definition of done for Phase 1 (v1)
 
 > Implementation is sequenced by the 8-step build order in [`tasks.md`](./tasks.md#p0--v1-build-order).
 
-**Score card / virality (the headline — Step 3)**
+**Resume Score report / share preview**
 
-- [ ] **Score card is screenshot-optimized**: clean composition that looks good as a phone screenshot, branded with the Cooked logo + score + heat label, no surrounding UI chrome bleeding into the shot.
-- [ ] **`/share/[slug]` page** renders the card cleanly with no nav/footer. Slug, not UUID.
+- [ ] Score report shows multi-dimensional scoring, not just one number.
+- [ ] Authenticated score page shows resume PDF preview beside the report on desktop, with text-preview fallback for pasted resumes.
+- [ ] **`/share/[slug]` page** renders a clean public score/review preview with no private resume preview. Slug, not UUID.
 - [ ] **OG / share image** auto-generated via `next/og` at `app/share/[slug]/opengraph-image.tsx`.
-- [ ] **"Share / screenshot" affordance** visible on the result panel (copy link, download image, or both).
 
 **The three core features**
 
-- [ ] User can paste resume text **or upload a PDF** + select role → click Run → see a real LLM-generated roast within ~10s (excluding Render cold-start).
-- [ ] Output includes: cooked score (0–100) + heat label, **3+ red flags each pointing to the user's exact bullet and including a suggested rewrite**, and **10–15 personalized interview questions** drawn directly from their bullets/projects (not generic).
+- [ ] User can paste resume text **or upload a PDF** + select role → click Run → see a real LLM-generated Resume Score within ~10s (excluding Render cold-start).
+- [ ] Output includes: Resume Score dimensions, **3+ AI Insights each pointing to the user's exact bullet and including a suggested rewrite or prep action**, an AI In-Depth Review, and **10–15 personalized interview questions** drawn directly from their bullets/projects (not generic).
 - [ ] No regressions in the existing landing page sections.
 - [ ] Public `/share/[slug]` path is **unauthenticated**; the rest of the app may live behind Clerk after Step 6.
 - [ ] Privacy copy reflects what actually happens to the resume text (sent to provider X via FastAPI, retention policy is X).
@@ -93,18 +96,18 @@ After the core backend API works, **build the `/share/[slug]` score-card UI befo
 
 ## Success signal before moving past Phase 1 (v1 → v2 trigger)
 
-- **The one metric**: at least one user organically screenshots their Cooked Score and shares it where we can see it (Twitter / LinkedIn / Reddit / WhatsApp screenshot circulating, etc.). See [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
-- ~100 unique users actually run a roast.
-- At least one organic share that brings in non-friend traffic.
-- Some concrete user feedback telling us **where the free model is hurting us** (which red flags felt wrong, which questions felt generic, etc.).
-- A first paying user for a "full roast" report (also Phase 2 trigger).
+- **Primary signal**: users continue from Resume Score / AI Insights into practice questions or a prep plan. See [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report).
+- ~100 unique users complete a score/prep intake.
+- At least one organic share of the score/review preview that brings in non-friend traffic.
+- Some concrete user feedback telling us **where the free model is hurting us** (which AI Insights felt wrong, which questions felt generic, etc.).
+- A first paying user for a deeper review/prep upgrade (also Phase 2 trigger).
 
 ## Phase 2 (v2 — queued, not started)
 
 v2 is **both** a feature upgrade and a model upgrade:
 
 - **Model upgrade**: move off the free v1 LLM to a paid / higher-quality model on the dimensions the user feedback flagged. See [D-008](./decisions.md#d-008-v1-ships-on-a-completely-free-llm-v2-upgrades-after-user-feedback).
-- **Full Roast Report** — one-time paid (₹99–₹299), deeper analysis, rewritten bullets, danger zones, cram plan. See [D-004](./decisions.md#d-004-monetization).
+- **Full In-Depth Review / prep upgrade** — one-time paid candidate (₹99–₹299), deeper analysis, rewritten bullets, danger zones, cram plan. See [D-004](./decisions.md#d-004-monetization) and [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report).
 - **Can AI Replace Me?** report — shareable LinkedIn bait that separates commodity skills from durable signals.
 
 See [`roadmap.md`](./roadmap.md) for the full phased view including later bets.

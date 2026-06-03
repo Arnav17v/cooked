@@ -1,11 +1,13 @@
 import { ImageResponse } from "next/og";
 
 import { fetchSharePayload } from "@/lib/api";
+import { DIMENSION_LABELS, DIMENSION_ORDER, resolveScoreDimensions } from "@/lib/score-dimensions";
+import { dimensionScoreColor, formatHeatLabel, scoreHeatColor } from "@/lib/score-utils";
 import { siteHostLabel } from "@/lib/site-url";
 
 export const runtime = "edge";
 
-export const alt = "Cooked Score";
+export const alt = "Resume Score";
 
 export const size = {
   width: 1200,
@@ -13,27 +15,6 @@ export const size = {
 };
 
 export const contentType = "image/png";
-
-function normalizeHeat(label: string | null | undefined): string {
-  const lower = (label ?? "Medium").trim().toLowerCase();
-  const map: Record<string, string> = {
-    easy: "Raw",
-    raw: "Raw",
-    medium: "Medium",
-    hard: "Hard",
-    cooked: "Cooked",
-  };
-  return map[lower] ?? "Medium";
-}
-
-function heatColor(heat: string): string {
-  const h = heat.toLowerCase();
-  if (h === "raw" || h === "easy") return "#00b8a3";
-  if (h === "medium") return "#ffc01e";
-  if (h === "hard") return "#ff8c42";
-  if (h === "cooked") return "#ef4743";
-  return "#ffc01e";
-}
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -44,12 +25,13 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     scoreRaw !== null && scoreRaw !== undefined
       ? Math.min(100, Math.max(0, scoreRaw))
       : null;
-  const heat = normalizeHeat(data?.heat_label);
-  const color = heatColor(heat);
+  const dims = resolveScoreDimensions(data?.score_dimensions, undefined, score);
+  const heat = formatHeatLabel(data?.heat_label);
+  const color = scoreHeatColor(heat);
   const headline =
     data?.one_liner ??
     data?.headline ??
-    (score !== null ? `I scored ${score}/100 on the Cooked Score.` : "Am I Cooked?");
+    (score !== null ? `Resume Score ${dims.total}/100` : "Am I Cooked?");
   const role = data?.target_role ?? data?.role ?? "Target role";
 
   return new ImageResponse(
@@ -86,20 +68,36 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           ) : null}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ fontSize: 22, color: "#8f8f8f", textTransform: "uppercase" }}>
-            Cooked Score
+        <div style={{ display: "flex", gap: 48 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
+            <div style={{ fontSize: 20, color: "#8f8f8f", textTransform: "uppercase" }}>Resume Score</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+              <div style={{ fontSize: 96, fontWeight: 700, color, lineHeight: 1 }}>{dims.total}</div>
+              <div style={{ fontSize: 28, color: "#bdbdbd" }}>/ {dims.total_max}</div>
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 600, color }}>{heat}</div>
+            <div style={{ fontSize: 24, color: "#cfcfcf" }}>{role}</div>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <div style={{ fontSize: 120, fontWeight: 700, color, lineHeight: 1 }}>{score ?? "--"}</div>
-            <div style={{ fontSize: 28, color: "#bdbdbd" }}>/ 100</div>
-          </div>
-          <div style={{ fontSize: 34, fontWeight: 600, color }}>{heat}</div>
-          <div style={{ fontSize: 28, color: "#cfcfcf" }}>{role}</div>
-          <div style={{ fontSize: 26, color: "#a8a8a8", maxWidth: 980, lineHeight: 1.35 }}>
-            “{headline}”
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, width: 380 }}>
+            {DIMENSION_ORDER.map((key) => {
+              const entry = dims[key];
+              const dimColor = dimensionScoreColor(entry.score, entry.max);
+              return (
+                <div
+                  key={key}
+                  style={{ display: "flex", justifyContent: "space-between", fontSize: 20, color: "#a8a8a8" }}
+                >
+                  <span>{DIMENSION_LABELS[key]}</span>
+                  <span style={{ color: dimColor }}>
+                    {entry.score}/{entry.max}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
+
+        <div style={{ fontSize: 22, color: "#9a9a9a", maxWidth: 1000, lineHeight: 1.35 }}>“{headline}”</div>
 
         <div style={{ fontSize: 20, color: "#7a7a7a" }}>{siteHostLabel()}</div>
       </div>
