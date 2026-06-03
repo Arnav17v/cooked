@@ -208,6 +208,13 @@ html.landing-cursor-vim .landing-cur-ring {
   border-color: rgba(212, 77, 31, 0.45);
 }
 
+.landing-v3 .landing-nav-logout {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
 .landing-v3 .landing-nav-menu-btn,
 .landing-nav-portal .landing-nav-scrim,
 .landing-nav-portal .landing-nav-panel {
@@ -1158,6 +1165,16 @@ html.landing-cursor-vim .landing-cur-ring {
     text-align: center;
     border: 1px solid var(--lv-rule);
     border-radius: 6px;
+  }
+
+  .landing-nav-portal .landing-nav-panel-inner .landing-nav-logout {
+    display: block;
+    width: 100%;
+    margin-top: auto;
+    padding: 16px 0 0;
+    text-align: left;
+    border: none;
+    border-top: 1px solid var(--lv-rule);
   }
 
   .landing-nav-portal .landing-nav-panel-inner .landing-nav-cta {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
+import { SignOutButton, useAuth } from "@clerk/nextjs";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import {
@@ -68,6 +68,15 @@ export function LandingNavLinks({ onNavigate, className = "" }: Props) {
       <Link href="/roast?new=1" className="landing-nav-link landing-nav-upload" onClick={onNavigate}>
         upload new
       </Link>
+      <SignOutButton redirectUrl="/">
+        <button
+          type="button"
+          className="landing-nav-link landing-nav-logout"
+          onClick={onNavigate}
+        >
+          Log out
+        </button>
+      </SignOutButton>
     </div>
   );
 }
