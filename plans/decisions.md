@@ -11,6 +11,23 @@ Format:
 
 ---
 
+### D-020: In-Depth Analysis — on-demand, separate from roast bundle
+
+**Date**: 2026-06-03
+**Status**: Accepted
+
+- **Context**: The roast bundle’s `ai_in_depth_review` string is a short narrative, not the six-section hiring-manager product users need (market position, inner monologue, interview forecast, etc.).
+- **Decision**:
+  - Store structured output in `analyses.indepth_analysis` (JSONB) + `indepth_generated_at`.
+  - Generate via dedicated `POST /resume/{id}/analysis/{analysis_id}/indepth` (cached until explicit regenerate).
+  - LLM input is **resume text** + target role + experience level + optional JD; not score/flags/quiz data.
+  - Do **not** change the roast pipeline or remove `ai_in_depth_review` from the bundle yet; dashboard tab ignores the legacy field.
+- **Consequences**:
+  - Extra LLM call per user action (not counted against daily roast cap).
+  - Dashboard tab renamed **In-Depth Analysis** with richer UI (radar, hire pill, accordions).
+
+---
+
 ### D-019: Interview prep first, Resume Score terminology, diagnostic score report
 
 **Date**: 2026-06-03

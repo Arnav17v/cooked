@@ -101,7 +101,65 @@ export type QuizHistoryResponse = {
   sessions: QuizHistorySessionItem[];
 };
 
+export type HireSignal = "strong" | "moderate" | "weak" | "pass";
+export type InterviewDangerLevel = "high" | "medium" | "low";
+
+export type InDepthAnalysis = {
+  market_positioning: {
+    percentile: number;
+    percentile_label: string;
+    positioning_summary: string;
+    ceiling: string;
+  };
+  hiring_manager_read: {
+    first_impression: string;
+    inner_monologue: string;
+    hire_signal: HireSignal;
+    hire_reasoning: string;
+  };
+  interview_forecast: Array<{
+    topic: string;
+    reason: string;
+    likely_question: string;
+    danger_level: InterviewDangerLevel;
+  }>;
+  competitive_gap: {
+    vs_top_10_percent: string;
+    quickest_gap_to_close: string;
+    hardest_gap_to_close: string;
+  };
+  highest_leverage_rewrite: {
+    original: string;
+    rewritten: string;
+    why_this_one: string;
+  };
+  thirty_day_plan: {
+    week_1: string;
+    week_2: string;
+    week_3: string;
+    week_4: string;
+    north_star: string;
+  };
+  _prompt_version?: string;
+  analyze_degraded?: boolean;
+};
+
+export type InDepthGetResponse =
+  | {
+      status: "ready";
+      analysis_id: string;
+      indepth_analysis: InDepthAnalysis;
+      indepth_generated_at: string | null;
+      degraded: boolean;
+    }
+  | {
+      status: "not_generated";
+      analysis_id: string;
+    };
+
 export type ScoreResponse = {
+  analysis_id?: string;
+  indepth_ready?: boolean;
   cooked_score: number | null;
   score?: number | null;
   heat_label?: string | null;
@@ -267,6 +325,45 @@ export async function getScore(resumeId: string, auth?: ApiAuth): Promise<ScoreR
     throw new Error(body || `${res.status}`);
   }
   return (await res.json()) as ScoreResponse;
+}
+
+export async function fetchInDepthAnalysis(
+  resumeId: string,
+  auth?: ApiAuth,
+): Promise<InDepthGetResponse> {
+  const res = await fetch(`${getApiBase()}/api/v1/resume/${resumeId}/indepth`, {
+    headers: headersWithAuth(auth?.token),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+  }
+  return (await res.json()) as InDepthGetResponse;
+}
+
+export async function generateInDepthAnalysis(
+  resumeId: string,
+  analysisId: string,
+  auth?: ApiAuth,
+  opts?: { regenerate?: boolean; jobDescription?: string },
+): Promise<Extract<InDepthGetResponse, { status: "ready" }>> {
+  const q = opts?.regenerate ? "?regenerate=true" : "";
+  const res = await fetch(
+    `${getApiBase()}/api/v1/resume/${resumeId}/analysis/${analysisId}/indepth${q}`,
+    {
+      method: "POST",
+      headers: jsonPostHeaders(auth?.token),
+      body: JSON.stringify({
+        regenerate: Boolean(opts?.regenerate),
+        job_description: opts?.jobDescription?.trim() || null,
+      }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(formatApiError(body, "Could not generate in-depth analysis"));
+  }
+  return (await res.json()) as Extract<InDepthGetResponse, { status: "ready" }>;
 }
 
 export async function fetchResumePdfBlob(

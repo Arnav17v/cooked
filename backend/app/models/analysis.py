@@ -45,6 +45,11 @@ class Analysis(Base):
     interview_questions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+    indepth_analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    indepth_generated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

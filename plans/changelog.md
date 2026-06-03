@@ -8,6 +8,7 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ## 2026-06-03
 
+- **product — In-Depth Analysis:** On-demand six-section hiring-manager analysis (`analyses.indepth_analysis`); dashboard tab with radar chart, hire pill, accordions, rewrite diff; roast bundle unchanged.
 - **frontend — dashboard tabs:** Lazy-load per tab — score only on entry; flags on AI Insights; quiz history on Practice only; Notes skips duplicate getScore; tab URL changes no longer re-fetch everything.
 - **frontend — dashboard notes:** Notes tab uses the same Coursera split (curriculum sidebar + inline lesson panel) and full player width as `/plan`, replacing the section list + bottom drawer.
 - **frontend — landing scroll progress:** shared `useLandingScrollFill` for how-it-works horizontal rail + plan-overview vertical rail; step numbers tint rust as the line advances.

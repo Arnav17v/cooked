@@ -15,6 +15,7 @@ import {
   buildDashboardHref,
   dashboardTabFromSearch,
 } from "@/lib/dashboard-nav";
+import { InDepthAnalysisTab } from "@/components/indepth/indepth-analysis-tab";
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
 import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
@@ -296,7 +297,6 @@ export function RoastDashboard() {
 
   const rawFlags = (liveFlags?.ai_insights ?? liveFlags?.flags ?? liveFlags?.red_flags) as unknown;
   const insights = Array.isArray(rawFlags) ? rawFlags.filter(isStructuredFlag) : [];
-  const inDepthReview = liveScore?.ai_in_depth_review?.trim() || null;
   const scoreDimensions = liveScore
     ? resolveScoreDimensions(
         liveScore.score_dimensions,
@@ -547,7 +547,19 @@ export function RoastDashboard() {
             className="animate-dashboard-main-in flex-1 overflow-y-auto px-4 pb-16 pt-4 lg:px-8 lg:pt-6"
             aria-label="Resume prep detail"
           >
-            {resultTab !== "notes" ? (
+            {resultTab === "review" && resolvedResumeId ? (
+              <div
+                className="animate-dashboard-panel-in mx-auto w-full max-w-[960px]"
+                role="tabpanel"
+              >
+                <InDepthAnalysisTab
+                  resumeId={resolvedResumeId}
+                  analysisId={currentRoast?.analysis_id ?? liveScore?.analysis_id ?? null}
+                />
+              </div>
+            ) : null}
+
+            {resultTab !== "notes" && resultTab !== "review" ? (
             <div
               key={resultTab}
               className="animate-dashboard-panel-in mx-auto w-full max-w-[740px]"
@@ -631,26 +643,6 @@ export function RoastDashboard() {
                     ))
                   ) : (
                     <p className="text-[14px] text-lc-muted">No AI Insights for this run.</p>
-                  )}
-                </div>
-              ) : null}
-
-              {resultTab === "review" ? (
-                <div className="space-y-4">
-                  <h2 className="font-mono text-[11px] uppercase tracking-wider text-lc-dim">AI In-Depth Review</h2>
-                  {hydrating && !liveScore ? (
-                    <p className="text-[14px] text-lc-muted">Loading review…</p>
-                  ) : inDepthReview ? (
-                    <div className="space-y-4 text-[14px] leading-relaxed text-lc-text">
-                      {inDepthReview.split(/\n\n+/).map((para, i) => (
-                        <p key={i}>{para}</p>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[14px] text-lc-muted">
-                      No in-depth review yet. Re-run scoring after we ship the updated model output, or check back
-                      on your next upload.
-                    </p>
                   )}
                 </div>
               ) : null}
