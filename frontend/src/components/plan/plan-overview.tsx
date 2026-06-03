@@ -5,7 +5,11 @@ import type { ActivePlanResponse, PrepPlanDayDto } from "@/lib/api";
 type Props = {
   data: ActivePlanResponse;
   initiating: boolean;
+  initiationRunning: boolean;
+  initiationFailed: boolean;
+  initiationError?: string | null;
   onInitiate: () => void;
+  onGoToList: () => void;
 };
 
 function mergedSummary(day: PrepPlanDayDto): string {
@@ -20,7 +24,15 @@ function intensityClass(intensity: string): string {
   return "plan-intensity";
 }
 
-export function PlanOverview({ data, initiating, onInitiate }: Props) {
+export function PlanOverview({
+  data,
+  initiating,
+  initiationRunning,
+  initiationFailed,
+  initiationError,
+  onInitiate,
+  onGoToList,
+}: Props) {
   const { plan, days } = data;
 
   return (
@@ -35,6 +47,20 @@ export function PlanOverview({ data, initiating, onInitiate }: Props) {
         {plan.degraded_summary ? (
           <p className="plan-banner plan-banner--warn">
             AI was degraded for this plan — run a roast for sharper personalization next time.
+          </p>
+        ) : null}
+        {initiationRunning ? (
+          <p className="plan-banner plan-banner--info" role="status">
+            Building your plan in the background.{" "}
+            <button type="button" className="plan-inline-link-btn" onClick={onGoToList}>
+              View all plans
+            </button>{" "}
+            for progress, or stay here and read the timeline.
+          </p>
+        ) : null}
+        {initiationFailed && initiationError ? (
+          <p className="plan-banner plan-banner--warn" role="alert">
+            {initiationError}
           </p>
         ) : null}
       </header>
@@ -61,14 +87,21 @@ export function PlanOverview({ data, initiating, onInitiate }: Props) {
         <button
           type="button"
           className="plan-primary-btn plan-initiate-btn"
-          disabled={initiating}
+          disabled={initiating || initiationRunning}
           onClick={onInitiate}
         >
-          {initiating ? "Preparing your first days…" : "Initiate plan"}
+          {initiating
+            ? "Starting…"
+            : initiationRunning
+              ? "Building plan…"
+              : initiationFailed
+                ? "Retry start plan"
+                : "Start plan"}
         </button>
         <p className="plan-initiate-hint">
-          Builds detailed notes and tasks for today plus the next two days. Other days generate when
-          you open them. You can still edit the overview above until you initiate.
+          {initiationRunning
+            ? "We are generating notes and tasks for your first days. This continues if you leave the page."
+            : "Starts building notes and tasks for today plus the next two days in the background. You will land on your plans list and can come back when it is ready."}
         </p>
       </div>
     </div>

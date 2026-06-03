@@ -52,6 +52,7 @@ export function PlanClient() {
   const [jdText, setJdText] = useState("");
   const [generating, setGenerating] = useState(false);
   const [initiating, setInitiating] = useState(false);
+  const [initiatingPlanId, setInitiatingPlanId] = useState<string | null>(null);
   const [generatingDayId, setGeneratingDayId] = useState<string | null>(null);
   const [modifying, setModifying] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -69,12 +70,15 @@ export function PlanClient() {
     const token = await bearer();
     if (!token) {
       setPhase("list");
-      return;
+      return [];
     }
     const out = await listPrepPlans(token);
     setPlans(out.plans);
     setPhase("list");
+    return out.plans;
   }, [bearer]);
+
+  const hasBuildingPlans = plans.some((p) => p.initiation_status === "running");
 
   const loadPlan = useCallback(
     async (planId: string) => {
@@ -165,6 +169,38 @@ export function PlanClient() {
     });
   }, [planQuery, newQuery, isLoaded, isSignedIn, resolveView]);
 
+  useEffect(() => {
+    if (phase !== "list" || !hasBuildingPlans) return;
+    const id = window.setInterval(() => {
+      void loadList();
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [phase, hasBuildingPlans, loadList]);
+
+  useEffect(() => {
+    const planId = planData?.plan.id;
+    if (phase !== "plan" || !planId || planData.plan.initiation_status !== "running") return;
+
+    let cancelled = false;
+    const id = window.setInterval(() => {
+      void (async () => {
+        const token = await bearer();
+        if (!token || cancelled) return;
+        try {
+          const out = await getPrepPlan(planId, token);
+          if (!cancelled) setPlanData(out);
+        } catch {
+          /* keep last snapshot */
+        }
+      })();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [phase, planData?.plan.id, planData?.plan.initiation_status, bearer]);
+
   function goToList() {
     setPlanData(null);
     router.push("/plan");
@@ -229,20 +265,26 @@ export function PlanClient() {
     }
   }
 
-  async function onInitiate() {
-    if (!planData) return;
+  async function onInitiate(planId?: string) {
+    const id = planId ?? planData?.plan.id;
+    if (!id) return;
     const token = await bearer();
     if (!token) return;
     setInitiating(true);
+    setInitiatingPlanId(id);
     setErrorMsg(null);
     try {
-      const out = await initiatePrepPlan(planData.plan.id, token);
-      setPlanData(out);
+      await initiatePrepPlan(id, token);
+      setPlanData(null);
+      skipPlanQueryRefetch.current = true;
+      router.push("/plan");
+      setPhase("list");
+      await loadList();
     } catch (e) {
-      setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Initiation failed."));
-      setPhase("error");
+      setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not start plan."));
     } finally {
       setInitiating(false);
+      setInitiatingPlanId(null);
     }
   }
 
@@ -373,9 +415,11 @@ export function PlanClient() {
         <PlanList
           plans={plans}
           deletingId={deletingId}
+          initiatingPlanId={initiatingPlanId}
           onOpen={openPlan}
           onDelete={(id) => void onDelete(id)}
           onNewPlan={goToNewPlan}
+          onRetryInitiate={(id) => void onInitiate(id)}
         />
       </div>
     );
@@ -383,6 +427,8 @@ export function PlanClient() {
 
   if (phase === "plan" && planData) {
     const isOverview = planData.plan.phase === "overview";
+    const initiationRunning = planData.plan.initiation_status === "running";
+    const initiationFailed = planData.plan.initiation_status === "failed";
 
     return (
       <div className={`plan-page${isOverview ? "" : " plan-page--player"}`}>
@@ -402,8 +448,19 @@ export function PlanClient() {
 
         {isOverview ? (
           <>
-            <PlanOverview data={planData} initiating={initiating} onInitiate={() => void onInitiate()} />
-            <PlanModifyBar loading={modifying} onModify={(t) => void onModify(t)} />
+            <PlanOverview
+              data={planData}
+              initiating={initiating}
+              initiationRunning={initiationRunning}
+              initiationFailed={initiationFailed}
+              initiationError={planData.plan.initiation_error}
+              onInitiate={() => void onInitiate()}
+              onGoToList={goToList}
+            />
+            <PlanModifyBar
+              loading={modifying || initiationRunning}
+              onModify={(t) => void onModify(t)}
+            />
           </>
         ) : (
           <PlanExecution

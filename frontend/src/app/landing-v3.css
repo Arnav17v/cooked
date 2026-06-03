@@ -4179,6 +4179,86 @@ html.landing-cursor-vim .landing-cur-ring {
   color: var(--lv-cream-dim);
 }
 
+.landing-v3 .plan-banner--info {
+  border-color: rgba(212, 77, 31, 0.25);
+  background: rgba(212, 77, 31, 0.06);
+  color: var(--lv-cream-dim);
+}
+
+.landing-v3 .plan-list-card-phase--building {
+  color: #c96a5a;
+  animation: plan-building-pulse 1.4s ease-in-out infinite;
+}
+
+.landing-v3 .plan-list-card-phase--failed {
+  color: #c96a5a;
+}
+
+@keyframes plan-building-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.landing-v3 .plan-list-card-building-hint,
+.landing-v3 .plan-list-card-error-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--lv-cream-dim);
+}
+
+.landing-v3 .plan-list-card-error-hint {
+  color: #c96a5a;
+}
+
+.landing-v3 .plan-list-card-building-hint--hot {
+  color: #c96a5a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.landing-v3 .plan-list-building-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(201, 106, 90, 0.35);
+  border-top-color: #c96a5a;
+  flex-shrink: 0;
+  animation: plan-list-spin 0.8s linear infinite;
+}
+
+@keyframes plan-list-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.landing-v3 .plan-list-retry-btn {
+  align-self: center;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.landing-v3 .plan-inline-link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--lv-rust);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.landing-v3 .plan-inline-link-btn:hover {
+  color: var(--lv-cream);
+}
+
 .landing-v3 .plan-meta-line {
   margin-top: 8px;
   font-size: 13px;

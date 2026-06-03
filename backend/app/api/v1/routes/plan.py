@@ -6,7 +6,8 @@ import uuid
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -108,17 +109,24 @@ async def plan_push_subscribe(
     )
 
 
-@router.post("/{plan_id}/initiate")
+@router.post("/{plan_id}/initiate", status_code=status.HTTP_202_ACCEPTED)
 async def plan_initiate(
     plan_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     clerk_subject: str = Depends(require_clerk_subject),
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
-    return await plan_service.initiate_plan(
+) -> JSONResponse:
+    out = await plan_service.enqueue_initiate_plan(
         session,
         clerk_subject=clerk_subject,
         plan_id=plan_id,
     )
+    background_tasks.add_task(
+        plan_service.run_initiate_plan_pipeline,
+        plan_id,
+        clerk_subject,
+    )
+    return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=out)
 
 
 @router.post("/day/{day_id}/generate-modules")

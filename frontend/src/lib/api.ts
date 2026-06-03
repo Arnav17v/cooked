@@ -731,6 +731,8 @@ export async function updateSeminarSession(
 
 export type PrepPlanStatus = "active" | "completed" | "abandoned";
 export type PrepPlanPhase = "overview" | "execution";
+
+export type PrepPlanInitiationStatus = "idle" | "running" | "failed";
 export type PlanModuleKind = "notes" | "task" | "quiz";
 
 export type PlanDayModulesStatus = "pending" | "generating" | "ready" | "failed";
@@ -786,6 +788,8 @@ export type PrepPlanDto = {
   updated_at: string;
   degraded_summary?: boolean;
   backlog_count: number;
+  initiation_status?: PrepPlanInitiationStatus;
+  initiation_error?: string | null;
 };
 
 export type PrepPlanSummaryDto = {
@@ -802,6 +806,13 @@ export type PrepPlanSummaryDto = {
   updated_at: string;
   days_count: number;
   progress_pct: number;
+  initiation_status?: PrepPlanInitiationStatus;
+  initiation_error?: string | null;
+};
+
+export type PrepPlanInitiateResponse = {
+  plan_id: string;
+  initiation_status: PrepPlanInitiationStatus;
 };
 
 export type PrepPlanListResponse = {
@@ -892,7 +903,10 @@ export async function modifyPrepPlan(
   return (await res.json()) as ActivePlanResponse;
 }
 
-export async function initiatePrepPlan(planId: string, token: string): Promise<ActivePlanResponse> {
+export async function initiatePrepPlan(
+  planId: string,
+  token: string,
+): Promise<PrepPlanInitiateResponse> {
   const res = await fetch(`${getApiBase()}/api/v1/plan/${planId}/initiate`, {
     method: "POST",
     headers: jsonPostHeaders(token),
@@ -901,7 +915,7 @@ export async function initiatePrepPlan(planId: string, token: string): Promise<A
     const body = await res.text();
     throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
   }
-  return (await res.json()) as ActivePlanResponse;
+  return (await res.json()) as PrepPlanInitiateResponse;
 }
 
 export async function generatePrepPlanDayModules(

@@ -13,12 +13,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
+from app.db.session import SessionFactory
 from app.models.interview_session import InterviewSession
 from app.models.plan_day import PlanDay, PlanDayModulesStatus
 from app.models.plan_day_module import PlanDayModule, PlanModuleKind
-from app.models.prep_plan import PrepPlan, PrepPlanPhase, PrepPlanStatus
+from app.models.prep_plan import (
+    PrepPlan,
+    PrepPlanInitiationStatus,
+    PrepPlanPhase,
+    PrepPlanStatus,
+)
 from app.models.push_subscription import PushSubscription
 from app.models.resume import Resume
+from app.models.user import User
 from app.schemas.llm_outputs import (
     PrepPlanDayLLMItem,
     PrepPlanDayModulesLLMItem,
@@ -191,6 +198,8 @@ def _plan_to_dict(
             "updated_at": plan.updated_at.isoformat(),
             "degraded_summary": plan_json.get("_degraded"),
             "backlog_count": backlog_count,
+            "initiation_status": plan.initiation_status,
+            "initiation_error": plan.initiation_error,
         },
         "days": day_payloads,
     }
@@ -304,6 +313,8 @@ def _plan_summary_dict(plan: PrepPlan, *, progress_pct: int, days_count: int) ->
         "updated_at": plan.updated_at.isoformat(),
         "days_count": days_count,
         "progress_pct": progress_pct,
+        "initiation_status": plan.initiation_status,
+        "initiation_error": plan.initiation_error,
     }
 
 
@@ -715,12 +726,13 @@ async def modify_plan(
     return await _build_plan_response(db, plan.id)
 
 
-async def initiate_plan(
+async def enqueue_initiate_plan(
     db: AsyncSession,
     *,
     clerk_subject: str,
     plan_id: uuid.UUID,
 ) -> dict[str, Any]:
+    """Mark plan as building and return immediately; worker runs ``run_initiate_plan_pipeline``."""
     user = await require_user_for_clerk(db, clerk_subject)
 
     plan = await _load_plan_owned(db, plan_id, user.id)
@@ -731,37 +743,114 @@ async def initiate_plan(
             status_code=status.HTTP_409_CONFLICT,
             detail="Plan already initiated.",
         )
+    if plan.initiation_status == PrepPlanInitiationStatus.running.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Plan is already building.",
+        )
 
-    day_rows = await _plan_days_for_plan(db, plan.id)
-    resume = await require_resume_readable(db, plan.resume_id, clerk_subject)
-    summary_text = await build_resume_summary(db, resume=resume, resume_id=plan.resume_id)
-
-    plan.phase = PrepPlanPhase.execution.value
+    plan.initiation_status = PrepPlanInitiationStatus.running.value
+    plan.initiation_error = None
     await db.commit()
 
-    today = _utc_today()
-    initial_days = _initial_generation_days(day_rows, today)
-    for day_row in initial_days:
-        if day_row.modules_status == PlanDayModulesStatus.ready.value:
-            continue
-        try:
-            await _generate_day_modules(
-                db,
-                user_id=user.id,
-                plan=plan,
-                day_row=day_row,
-                day_rows=day_rows,
-                resume=resume,
-                resume_summary=summary_text,
-            )
-        except HTTPException as exc:
+    return {
+        "plan_id": str(plan.id),
+        "initiation_status": PrepPlanInitiationStatus.running.value,
+    }
+
+
+async def run_initiate_plan_pipeline(plan_id: uuid.UUID, clerk_subject: str) -> None:
+    """Background: generate modules for the initial day window, then flip to execution."""
+    async with SessionFactory() as session:
+        plan = await session.get(PrepPlan, plan_id)
+        if plan is None:
+            log.error("initiate pipeline: plan %s not found", plan_id)
+            return
+        if plan.initiation_status != PrepPlanInitiationStatus.running.value:
             log.warning(
-                "plan initiate: day %s generation failed: %s",
-                day_row.day_number,
-                exc.detail,
+                "initiate pipeline: plan %s not running (status=%s)",
+                plan_id,
+                plan.initiation_status,
+            )
+            return
+
+        user = await session.get(User, plan.user_id)
+        if user is None:
+            plan.initiation_status = PrepPlanInitiationStatus.failed.value
+            plan.initiation_error = "User not found."
+            await session.commit()
+            return
+
+        try:
+            day_rows = await _plan_days_for_plan(session, plan.id)
+            resume = await require_resume_readable(session, plan.resume_id, clerk_subject)
+            summary_text = await build_resume_summary(
+                session,
+                resume=resume,
+                resume_id=plan.resume_id,
             )
 
-    return await _build_plan_response(db, plan.id)
+            today = _utc_today()
+            initial_days = _initial_generation_days(day_rows, today)
+            for day_row in initial_days:
+                if day_row.modules_status == PlanDayModulesStatus.ready.value:
+                    continue
+                try:
+                    await _generate_day_modules(
+                        session,
+                        user_id=user.id,
+                        plan=plan,
+                        day_row=day_row,
+                        day_rows=day_rows,
+                        resume=resume,
+                        resume_summary=summary_text,
+                    )
+                except HTTPException as exc:
+                    log.warning(
+                        "plan initiate: day %s generation failed: %s",
+                        day_row.day_number,
+                        exc.detail,
+                    )
+
+            await session.refresh(plan)
+            day_rows = await _plan_days_for_plan(session, plan.id)
+            initial_days = _initial_generation_days(day_rows, today)
+            ready_count = sum(
+                1
+                for d in initial_days
+                if d.modules_status == PlanDayModulesStatus.ready.value
+            )
+
+            if ready_count >= 1:
+                plan.phase = PrepPlanPhase.execution.value
+                plan.initiation_status = PrepPlanInitiationStatus.idle.value
+                plan.initiation_error = None
+            else:
+                plan.initiation_status = PrepPlanInitiationStatus.failed.value
+                plan.initiation_error = (
+                    "Could not build modules for the first days — try Start plan again."
+                )
+            await session.commit()
+        except Exception:
+            log.exception("initiate pipeline failed for plan %s", plan_id)
+            await session.rollback()
+            plan = await session.get(PrepPlan, plan_id)
+            if plan is not None:
+                plan.initiation_status = PrepPlanInitiationStatus.failed.value
+                plan.initiation_error = "Plan build failed — please try again."
+                await session.commit()
+
+
+# Backwards-compatible alias for tests or imports
+async def initiate_plan(
+    db: AsyncSession,
+    *,
+    clerk_subject: str,
+    plan_id: uuid.UUID,
+) -> dict[str, Any]:
+    await enqueue_initiate_plan(db, clerk_subject=clerk_subject, plan_id=plan_id)
+    await run_initiate_plan_pipeline(plan_id, clerk_subject)
+    return await _build_plan_response(db, plan_id)
 
 
 async def generate_plan_day_modules(
