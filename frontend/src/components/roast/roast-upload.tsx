@@ -1,12 +1,12 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ClipboardPaste, Upload, X } from "lucide-react";
 
 import { PipelineProgress } from "@/components/ui/pipeline-progress";
+import { PaywallModal } from "@/components/billing/paywall-modal";
 import {
   formatBytes,
   LAST_RESUME_LS,
@@ -20,12 +20,15 @@ import {
 } from "@/components/roast/roast-shared";
 import {
   enqueueAnalyze,
+  fetchEntitlements,
   openAnalysisEventSource,
+  PaymentRequiredError,
   RateLimitedError,
   uploadResumeMultipart,
   type AnalysisEventPayload,
 } from "@/lib/api";
 import { showLlmDevToast, type LlmDevEvent } from "@/lib/llm-dev-toast";
+import { useStableClerkBearer } from "@/lib/use-stable-clerk-bearer";
 
 const fieldInputClass =
   "roast-field-input w-full h-12 px-3.5 text-sm text-lv-cream bg-lv-surface border border-lv-rule outline-none transition-colors focus:border-lv-rust disabled:opacity-50 placeholder:text-lv-cream/35";
@@ -70,8 +73,6 @@ export function RoastUpload() {
   const fileRef = useRef<HTMLInputElement>(null);
   const esRef = useRef<EventSource | null>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
-  const { isSignedIn, getToken } = useAuth();
-
   const [role, setRole] = useState<string>("");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevelId | "">("");
   const [resumeInputMode, setResumeInputMode] = useState<ResumeInputMode>("pdf");
@@ -84,12 +85,9 @@ export function RoastUpload() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [runFinished, setRunFinished] = useState(false);
   const [progressPct, setProgressPct] = useState(0);
+  const [paywall, setPaywall] = useState<PaymentRequiredError | null>(null);
 
-  const bearer = useCallback(async () => {
-    if (!isSignedIn) return undefined;
-    const t = await getToken();
-    return t ?? undefined;
-  }, [getToken, isSignedIn]);
+  const bearer = useStableClerkBearer();
 
   const appendLine = useCallback((line: string) => {
     setTerminalLines((prev) => [...prev, line]);
@@ -276,6 +274,28 @@ export function RoastUpload() {
       const token = await bearer();
       const auth = token ? { token } : undefined;
 
+      if (token) {
+        const ent = await fetchEntitlements(token);
+        if (
+          ent.plan === "free" &&
+          ent.usage.resumes_count >= ent.usage.resumes_limit
+        ) {
+          setPaywall(
+            new PaymentRequiredError({
+              code: "resume_limit_reached",
+              message: `You've uploaded ${ent.usage.resumes_count}/${ent.usage.resumes_limit} resumes. Upgrade to Pro for unlimited uploads.`,
+              usage: {
+                current: ent.usage.resumes_count,
+                limit: ent.usage.resumes_limit,
+              },
+              upgrade_url: "/upgrade",
+            }),
+          );
+          setRunFinished(true);
+          return;
+        }
+      }
+
       const fd = new FormData();
       fd.append("target_role", role.trim());
       fd.append("experience_level", experienceLevel);
@@ -316,6 +336,11 @@ export function RoastUpload() {
 
       router.push(`/dashboard?resume=${queued.resume_id}`);
     } catch (e) {
+      if (e instanceof PaymentRequiredError) {
+        setPaywall(e);
+        setRunFinished(true);
+        return;
+      }
       const raw =
         e instanceof RateLimitedError
           ? e.message
@@ -587,6 +612,7 @@ export function RoastUpload() {
           replace the upload.
         </p>
       </div>
+      <PaywallModal open={paywall !== null} onClose={() => setPaywall(null)} error={paywall} />
     </>
   );
 }

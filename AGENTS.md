@@ -1,4 +1,4 @@
-# AGENTS.md — Am I Cooked?
+# AGENTS.md — Get Uncooked
 
 Persistent context for any AI agent (Cursor, Claude, Codex, etc.) working in this repo.
 

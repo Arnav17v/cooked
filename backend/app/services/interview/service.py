@@ -540,7 +540,7 @@ async def start_session(
     if reused is not None:
         return reused
 
-    await assert_can_start_quiz(session, resume.user_id)
+    await assert_can_start_quiz(session, resume.user_id, resume.id)
 
     await _purge_unviewed_scored_sessions(session, resume.id)
     await _evict_oldest_completed_session_if_needed(session, resume.id)

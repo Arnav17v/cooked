@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { FileCode2, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
-import { LandingCustomCursor } from "@/components/landing/landing-custom-cursor";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { PipelineProgress } from "@/components/ui/pipeline-progress";
 
@@ -25,7 +24,6 @@ export function QuizPageShell({
 }) {
   return (
     <div className="landing-v3 overflow-x-clip max-w-full bg-lv-black text-lv-cream">
-      <LandingCustomCursor />
       <LandingNav />
       {showHero ? (
         <div className="mx-auto max-w-[1100px] border-b border-lv-rule px-4 sm:px-6 lg:px-12">

@@ -1,4 +1,4 @@
-# Am I Cooked?
+# Get Uncooked
 
 AI resume roast and interview-prep app. Upload a resume, pick a target role, get a brutally honest **Cooked Score**, red flags with rewrites, and 10–15 interview questions pulled from your actual bullets.
 

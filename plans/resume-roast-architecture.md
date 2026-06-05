@@ -1,4 +1,4 @@
-# Am I Cooked — Backend Architecture & Output Spec (source of truth)
+# Get Uncooked — Backend Architecture & Output Spec (source of truth)
 
 This document mirrors the product contract for the resume roast: **one unified LLM response**, **Gemini primary + Groq failover**, R2/B2-style storage with **`uploads/{resume_id}.pdf`**, and **public share cards without flags or questions**.
 
@@ -78,7 +78,7 @@ Reasons map from internal `failure_reason` (e.g. `too_short` → surfaced as app
 
 ## Share card (public)
 
-`/share/{slug}` and OG image: **score, heat label, one-liner, role** — **no** flags or interview questions. CTA: roast yours → `amicooked.app`.
+`/share/{slug}` and OG image: **score, heat label, one-liner, role** — **no** flags or interview questions. CTA: roast yours → `getuncooked.pro`.
 
 ---
 

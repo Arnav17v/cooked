@@ -1,6 +1,7 @@
 "use client";
 
 import { PlanModuleContent } from "@/components/plan/plan-module-content";
+import { siteHostLabel } from "@/lib/site-url";
 
 const PLAN_TITLE = "Stripe — Full Stack Engineer prep";
 
@@ -64,7 +65,7 @@ export function LandingPlanMock() {
           <span className="landing-prep-stage-dot" />
           <span className="landing-prep-stage-dot" />
           <span className="landing-prep-stage-dot" />
-          <span className="landing-prep-stage-url">isitcooked.vercel.app/plan</span>
+          <span className="landing-prep-stage-url">{siteHostLabel()}/plan</span>
         </div>
 
         <div className="landing-plan-mock-shell plan-coursera-split">

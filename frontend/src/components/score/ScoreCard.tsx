@@ -57,7 +57,7 @@ export function ScoreCard({
               isHero ? "text-[12px]" : "text-[11px]"
             }`}
           >
-            Am I Cooked?
+            Get Uncooked
           </p>
           {degraded ? (
             <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] text-lc-muted">

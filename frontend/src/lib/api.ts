@@ -49,6 +49,10 @@ export function formatApiError(body: string, fallback: string): string {
     const parsed = JSON.parse(trimmed) as { detail?: unknown };
     const d = parsed.detail;
     if (typeof d === "string" && d.trim()) return d.trim();
+    if (d && typeof d === "object" && "message" in d) {
+      const msg = (d as { message?: unknown }).message;
+      if (typeof msg === "string" && msg.trim()) return msg.trim();
+    }
     if (Array.isArray(d)) {
       const parts = d
         .map((item) => {
@@ -66,6 +70,94 @@ export function formatApiError(body: string, fallback: string): string {
   }
   if (trimmed.length > 240 || trimmed.startsWith("<")) return fallback;
   return trimmed;
+}
+
+export type PaymentRequiredDetail = {
+  code: string;
+  message: string;
+  usage: Record<string, unknown>;
+  upgrade_url: string;
+};
+
+export class PaymentRequiredError extends Error {
+  readonly code: string;
+  readonly usage: Record<string, unknown>;
+  readonly upgradeUrl: string;
+
+  constructor(detail: PaymentRequiredDetail) {
+    super(detail.message);
+    this.name = "PaymentRequiredError";
+    this.code = detail.code;
+    this.usage = detail.usage ?? {};
+    this.upgradeUrl = detail.upgrade_url || "/upgrade";
+  }
+}
+
+export function parsePaymentRequired(body: string): PaymentRequiredError | null {
+  try {
+    const parsed = JSON.parse(body.trim()) as { detail?: unknown };
+    const d = parsed.detail;
+    if (d && typeof d === "object" && d !== null && "code" in d && "message" in d) {
+      const obj = d as PaymentRequiredDetail;
+      return new PaymentRequiredError(obj);
+    }
+  } catch {
+    /* not JSON */
+  }
+  return null;
+}
+
+async function throwIfNotOk(res: Response, fallback: string): Promise<void> {
+  if (res.ok) return;
+  const body = await res.text();
+  if (res.status === 402) {
+    const paywall = parsePaymentRequired(body);
+    if (paywall) throw paywall;
+  }
+  throw new Error(formatApiError(body, fallback));
+}
+
+async function throwPlanApiError(res: Response, fallback: string): Promise<never> {
+  await throwIfNotOk(res, fallback);
+  throw new Error(fallback);
+}
+
+export type EntitlementsResponse = {
+  plan: "free" | "pro";
+  pro_unlocked_at: string | null;
+  usage: {
+    resumes_count: number;
+    resumes_limit: number;
+    quizzes_this_resume: number;
+    quizzes_limit: number;
+    plans_count: number;
+    plans_limit: number;
+    plan_hours_remaining: number | null;
+  };
+  features: {
+    indepth_analysis: boolean;
+    unlimited_quizzes: boolean;
+    unlimited_resumes: boolean;
+    plan_no_expiry: boolean;
+    unlimited_plans: boolean;
+  };
+  pricing: {
+    pro_monthly_usd: number;
+    pro_monthly_cents: number;
+  };
+};
+
+export async function fetchEntitlements(
+  token: string,
+  resumeId?: string,
+): Promise<EntitlementsResponse> {
+  const q = resumeId?.trim() ? `?resume_id=${encodeURIComponent(resumeId.trim())}` : "";
+  const res = await fetch(`${getApiBase()}/api/v1/me/entitlements${q}`, {
+    headers: headersWithAuth(token),
+    cache: "no-store",
+  });
+  await throwIfNotOk(res, "Could not load entitlements");
+  return (await res.json()) as EntitlementsResponse;
 }
 
 export type UploadResumeResponse = {
@@ -155,6 +247,10 @@ export type InDepthGetResponse =
   | {
       status: "not_generated";
       analysis_id: string;
+    }
+  | {
+      status: "locked";
+      upgrade_url: string;
     };
 
 export type ScoreResponse = {
@@ -277,7 +373,11 @@ export async function uploadResumeMultipart(
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `${res.status} ${res.statusText}`);
+    if (res.status === 402) {
+      const paywall = parsePaymentRequired(body);
+      if (paywall) throw paywall;
+    }
+    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
   }
   return (await res.json()) as UploadResumeResponse;
 }
@@ -361,6 +461,10 @@ export async function generateInDepthAnalysis(
   );
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 402) {
+      const paywall = parsePaymentRequired(body);
+      if (paywall) throw paywall;
+    }
     throw new Error(formatApiError(body, "Could not generate in-depth analysis"));
   }
   return (await res.json()) as Extract<InDepthGetResponse, { status: "ready" }>;
@@ -524,6 +628,10 @@ export async function startInterviewQuiz(
   });
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 402) {
+      const paywall = parsePaymentRequired(body);
+      if (paywall) throw paywall;
+    }
     throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
   }
   return (await res.json()) as InterviewStartResponse;
@@ -876,6 +984,16 @@ export type PlanModuleDto = {
   completed: boolean;
   completed_at: string | null;
   is_backlog: boolean;
+  content_locked?: boolean;
+};
+
+export type PlanAccessDto = {
+  execution_locked?: boolean;
+  locked_reason?: string | null;
+  locked_at?: string | null;
+  unlock_at?: string | null;
+  free_access_expires_at?: string | null;
+  hours_remaining?: number | null;
 };
 
 export type PrepPlanDayDto = {
@@ -943,7 +1061,7 @@ export type PrepPlanListResponse = {
   plans: PrepPlanSummaryDto[];
 };
 
-export type ActivePlanResponse = {
+export type ActivePlanResponse = PlanAccessDto & {
   plan: PrepPlanDto;
   days: PrepPlanDayDto[];
 };
@@ -1004,8 +1122,7 @@ export async function generatePrepPlan(
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as ActivePlanResponse;
 }
@@ -1021,8 +1138,7 @@ export async function modifyPrepPlan(
     body: JSON.stringify({ natural_language_instruction }),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as ActivePlanResponse;
 }
@@ -1036,8 +1152,7 @@ export async function initiatePrepPlan(
     headers: jsonPostHeaders(token),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as PrepPlanInitiateResponse;
 }
@@ -1051,8 +1166,7 @@ export async function generatePrepPlanDayModules(
     headers: jsonPostHeaders(token),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as ActivePlanResponse;
 }
@@ -1066,8 +1180,7 @@ export async function completePrepPlanModule(
     headers: jsonPostHeaders(token),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as ActivePlanResponse;
 }
@@ -1083,8 +1196,7 @@ export async function linkPrepPlanModuleQuiz(
     body: JSON.stringify({ session_id: sessionId }),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as ActivePlanResponse;
 }
@@ -1095,8 +1207,7 @@ export async function completePrepPlanDay(dayId: string, token: string): Promise
     headers: jsonPostHeaders(token),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(formatApiError(body, `${res.status} ${res.statusText}`));
+    await throwPlanApiError(res, `${res.status} ${res.statusText}`);
   }
   return (await res.json()) as ActivePlanResponse;
 }

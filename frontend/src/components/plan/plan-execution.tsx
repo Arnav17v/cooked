@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { formatHoursRemaining } from "@/components/billing/entitlements-context";
 import type { ActivePlanResponse } from "@/lib/api";
 import { PlanCurriculumSidebar } from "@/components/plan/plan-curriculum-sidebar";
 import { PlanModuleViewer } from "@/components/plan/plan-module-viewer";
@@ -23,6 +25,18 @@ export function PlanExecution({
   onGenerateDay,
 }: Props) {
   const { plan, days } = data;
+  const executionLocked = Boolean(data.execution_locked);
+  const [displayHours, setDisplayHours] = useState(data.hours_remaining ?? null);
+
+  useEffect(() => {
+    setDisplayHours(data.hours_remaining ?? null);
+    if (executionLocked || data.hours_remaining == null) return;
+    const id = window.setInterval(() => {
+      setDisplayHours((h) => (h != null && h > 1 / 60 ? h - 1 / 60 : 0));
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, [data.hours_remaining, executionLocked]);
+
   const [selectedDayId, setSelectedDayId] = useState<string>(() => pickDefaultDayId(days));
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(() => {
     const day = days.find((d) => d.id === pickDefaultDayId(days));
@@ -137,8 +151,14 @@ export function PlanExecution({
     <div
       className={`plan-execution-wrap plan-coursera-shell${
         curriculumOpen ? " plan-coursera-shell--curriculum-open" : ""
-      }`}
+      }${executionLocked ? " plan-execution-locked" : ""}`}
     >
+      {!executionLocked && displayHours != null && displayHours > 0 ? (
+        <p className="plan-access-banner" role="status">
+          Free access expires in {formatHoursRemaining(displayHours)} —{" "}
+          <Link href="/upgrade">upgrade to keep your plan</Link>.
+        </p>
+      ) : null}
       <div className="plan-execution-header">
         <h1 className="plan-execution-title">
           <span className="plan-execution-title-primary">{plan.company_name}</span>
@@ -215,6 +235,15 @@ export function PlanExecution({
           ) : null}
         </div>
       </div>
+      {executionLocked ? (
+        <div className="plan-execution-lock-overlay">
+          <div className="indepth-locked-panel">
+            <h3>Plan access expired</h3>
+            <p>Your 48-hour free preview ended. Upgrade to Pro to keep using your prep plan.</p>
+            <Link href="/upgrade">Upgrade to Pro — $20/month</Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

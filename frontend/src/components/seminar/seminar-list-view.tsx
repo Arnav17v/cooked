@@ -109,7 +109,7 @@ export function SeminarListView({ sessions }: Props) {
 
       <footer className="landing-bottom-bar">
         <span>
-          Am I Cooked? · <Link href="/">Home</Link>
+          Get Uncooked · <Link href="/">Home</Link>
         </span>
         <span>Pay on Razorpay · seats are limited per batch</span>
         <span className="landing-bottom-accent">{"// seminars"}</span>

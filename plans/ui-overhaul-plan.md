@@ -2,7 +2,7 @@
 
 **Date**: 2026-06-03  
 **Status**: Updated after product direction change  
-**Purpose**: Simplify the Am I Cooked UI around interview prep as the main product, with Resume Score as the diagnostic entry point that powers AI insights, in-depth review, and practice.
+**Purpose**: Simplify the Get Uncooked UI around interview prep as the main product, with Resume Score as the diagnostic entry point that powers AI insights, in-depth review, and practice.
 
 ## Reference Reviewed
 
@@ -21,7 +21,7 @@ Important terminology:
 - Say **Resume Score**, not "resume roast."
 - Say **AI Insights**, not "flags" or "red flags."
 - Say **AI In-Depth Review** for the deeper written analysis.
-- Keep "Am I Cooked?" as the brand, but make the product experience more useful and less meme-first.
+- Keep "Get Uncooked" as the brand, but make the product experience more useful and less meme-first.
 - Stop using cooked/meme images on the score card.
 
 ## Current Diagnosis

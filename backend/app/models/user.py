@@ -31,6 +31,9 @@ class User(Base):
         String(36), unique=True, nullable=True
     )
     plan: Mapped[str] = mapped_column(String(32), default="free", nullable=False)
+    pro_unlocked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     analyses_today: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_analysis_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

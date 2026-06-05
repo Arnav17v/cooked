@@ -67,15 +67,12 @@ async def count_user_in_progress_quizzes(
     return len((await session.execute(stmt)).all())
 
 
-async def assert_can_start_quiz(session: AsyncSession, user_id: uuid.UUID) -> None:
-    settings = get_settings()
-    if settings.unlimited_daily_quizzes:
-        return
-    cap = settings.daily_quiz_cap
-    completed = await count_user_quizzes_completed_today(session, user_id)
-    in_progress = await count_user_in_progress_quizzes(session, user_id)
-    if completed + in_progress >= cap:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Daily quiz limit reached ({cap} per day) — try again tomorrow.",
-        )
+async def assert_can_start_quiz(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    resume_id: uuid.UUID,
+) -> None:
+    """Per-resume completed-session cap for free tier; Pro/dev bypass in entitlements."""
+    from app.services.users.entitlements import assert_can_start_quiz as _assert
+
+    await _assert(session, user_id, resume_id)

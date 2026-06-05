@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { LandingCustomCursor } from "@/components/landing/landing-custom-cursor";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { SeminarDetailView } from "@/components/seminar/seminar-detail-view";
 import { getSeminarSessionById } from "@/lib/api";
@@ -16,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const seminar = await getSeminarSessionById(id);
   if (!seminar) {
-    return { title: "Seminar not found | Am I Cooked?" };
+    return { title: "Seminar not found | Get Uncooked" };
   }
   return {
     title: `${seminar.title} | Seminars`,
@@ -31,7 +30,6 @@ export default async function SeminarDetailPage({ params }: Props) {
 
   return (
     <div className="landing-v3">
-      <LandingCustomCursor />
       <LandingNav />
       <SeminarDetailView seminar={seminar} />
     </div>

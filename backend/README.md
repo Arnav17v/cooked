@@ -1,6 +1,6 @@
 # backend
 
-FastAPI service for **Am I Cooked?**. See [`../plans/architecture.md`](../plans/architecture.md) and [`../plans/infra.md`](../plans/infra.md) for the full picture.
+FastAPI service for **Get Uncooked** ([getuncooked.pro](https://getuncooked.pro)). See [`../plans/architecture.md`](../plans/architecture.md) and [`../plans/infra.md`](../plans/infra.md) for the full picture.
 
 ## Local dev
 

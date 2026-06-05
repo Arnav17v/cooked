@@ -4,6 +4,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import dynamic from "next/dynamic";
 
+import { SITE_URL } from "@/lib/site-url";
+
 import "./globals.css";
 
 /** Separate async chunk from root layout (smaller `layout.js`, fewer dev ChunkLoad timeouts). */
@@ -35,7 +37,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Am I Cooked? | AI Interview Prep",
+  metadataBase: new URL(SITE_URL),
+  title: "Get Uncooked | AI Interview Prep",
   description:
     "Interview prep built from your resume — multi-dimensional Resume Score, AI Insights, day-by-day prep plans, and practice questions.",
 };

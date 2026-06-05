@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { SignOutButton, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { LandingNavUserMenu } from "@/components/landing/landing-nav-user-menu";
 import {
   buildDashboardHref,
   buildPlanHref,
@@ -65,18 +66,7 @@ export function LandingNavLinks({ onNavigate, className = "" }: Props) {
       >
         Plan
       </Link>
-      <Link href="/roast?new=1" className="landing-nav-link landing-nav-upload" onClick={onNavigate}>
-        upload new
-      </Link>
-      <SignOutButton redirectUrl="/">
-        <button
-          type="button"
-          className="landing-nav-link landing-nav-logout"
-          onClick={onNavigate}
-        >
-          Log out
-        </button>
-      </SignOutButton>
+      <LandingNavUserMenu onNavigate={onNavigate} />
     </div>
   );
 }

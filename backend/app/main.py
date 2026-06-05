@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="Am I Cooked? — backend",
+        title="Get Uncooked — backend",
         version="0.1.0",
         lifespan=lifespan,
     )

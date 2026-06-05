@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
+import { PaywallModal } from "@/components/billing/paywall-modal";
 import { formatRoastFailure, LAST_RESUME_LS } from "@/components/roast/roast-shared";
 import { PlanExecution } from "@/components/plan/plan-execution";
 import { PlanForm } from "@/components/plan/plan-form";
@@ -15,6 +16,7 @@ import { PlanToolbarMenu } from "@/components/plan/plan-toolbar-menu";
 import {
   abandonPrepPlan,
   completePrepPlanModule,
+  fetchEntitlements,
   fetchMyRoasts,
   generatePrepPlan,
   generatePrepPlanDayModules,
@@ -24,16 +26,20 @@ import {
   listPrepPlans,
   modifyPrepPlan,
   subscribePlanPush,
+  PaymentRequiredError,
   type ActivePlanResponse,
+  type EntitlementsResponse,
   type PrepPlanSummaryDto,
 } from "@/lib/api";
+import { useStableClerkBearer } from "@/lib/use-stable-clerk-bearer";
 
 type Phase = "loading" | "list" | "form" | "generating" | "plan" | "error";
 
 const PLAN_SW_URL = "/plan-sw.js";
 
 export function PlanClient() {
-  const { isSignedIn, isLoaded, getToken } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
+  const bearer = useStableClerkBearer();
   const router = useRouter();
   const searchParams = useSearchParams();
   const planQuery = searchParams.get("plan");
@@ -57,20 +63,60 @@ export function PlanClient() {
   const [modifying, setModifying] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [completingModuleId, setCompletingModuleId] = useState<string | null>(null);
+  const [paywall, setPaywall] = useState<PaymentRequiredError | null>(null);
+  const [entitlements, setEntitlements] = useState<EntitlementsResponse | null>(null);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const skipPlanQueryRefetch = useRef(true);
+  const entitlementsRef = useRef(entitlements);
+  const planBootstrapKeyRef = useRef<string | null>(null);
 
-  const bearer = useCallback(async () => {
-    if (!isSignedIn) return undefined;
-    return (await getToken()) ?? undefined;
-  }, [getToken, isSignedIn]);
+  entitlementsRef.current = entitlements;
+
+  function handlePaywallError(e: unknown): boolean {
+    if (e instanceof PaymentRequiredError) {
+      setPaywall(e);
+      return true;
+    }
+    return false;
+  }
+
+  const planLimitReached =
+    entitlements?.plan === "free" &&
+    entitlements.usage.plans_count >= entitlements.usage.plans_limit;
+
+  const openPlanLimitPaywall = useCallback((source?: EntitlementsResponse | null) => {
+    const usage = (source ?? entitlementsRef.current)?.usage;
+    if (!usage) return;
+    setPaywall(
+      new PaymentRequiredError({
+        code: "plan_limit_reached",
+        message: `You already have ${usage.plans_count}/${usage.plans_limit} prep plan${usage.plans_limit === 1 ? "" : "s"}. Upgrade to Pro for unlimited plans.`,
+        usage: { current: usage.plans_count, limit: usage.plans_limit },
+        upgrade_url: "/upgrade",
+      }),
+    );
+  }, []);
+
+  function tryGoToNewPlan() {
+    if (planLimitReached) {
+      openPlanLimitPaywall();
+      return;
+    }
+    goToNewPlan();
+  }
 
   const loadList = useCallback(async () => {
     const token = await bearer();
     if (!token) {
       setPhase("list");
       return [];
+    }
+    try {
+      const ent = await fetchEntitlements(token);
+      setEntitlements(ent);
+    } catch {
+      setEntitlements(null);
     }
     const out = await listPrepPlans(token);
     setPlans(out.plans);
@@ -101,17 +147,35 @@ export function PlanClient() {
       return;
     }
     if (newQuery === "1") {
+      try {
+        const ent = await fetchEntitlements(token);
+        setEntitlements(ent);
+        if (ent.plan === "free" && ent.usage.plans_count >= ent.usage.plans_limit) {
+          openPlanLimitPaywall(ent);
+          await loadList();
+          router.replace("/plan");
+          return;
+        }
+      } catch {
+        /* fall through to form */
+      }
       setPlanData(null);
       setPhase("form");
       return;
     }
     await loadList();
-  }, [bearer, planQuery, newQuery, loadPlan, loadList]);
+  }, [bearer, planQuery, newQuery, loadPlan, loadList, router, openPlanLimitPaywall]);
 
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
+      planBootstrapKeyRef.current = null;
       router.replace("/sign-in?redirect_url=/plan");
+      return;
+    }
+
+    const bootstrapKey = `${resumeQuery ?? ""}:${newQuery ?? ""}:${planQuery ?? ""}`;
+    if (planBootstrapKeyRef.current === bootstrapKey) {
       return;
     }
 
@@ -145,6 +209,7 @@ export function PlanClient() {
       if (!cancelled) {
         try {
           await resolveView();
+          planBootstrapKeyRef.current = bootstrapKey;
         } catch (e) {
           setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not load plans."));
           setPhase("error");
@@ -155,7 +220,7 @@ export function PlanClient() {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, resumeQuery, newQuery, bearer, resolveView, router]);
+  }, [isLoaded, isSignedIn, resumeQuery, newQuery, planQuery, bearer, resolveView, router]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -163,11 +228,21 @@ export function PlanClient() {
       skipPlanQueryRefetch.current = false;
       return;
     }
-    void resolveView().catch((e) => {
-      setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not load plans."));
-      setPhase("error");
-    });
-  }, [planQuery, newQuery, isLoaded, isSignedIn, resolveView]);
+
+    const bootstrapKey = `${resumeQuery ?? ""}:${newQuery ?? ""}:${planQuery ?? ""}`;
+    if (planBootstrapKeyRef.current === bootstrapKey) {
+      return;
+    }
+
+    void resolveView()
+      .then(() => {
+        planBootstrapKeyRef.current = bootstrapKey;
+      })
+      .catch((e) => {
+        setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not load plans."));
+        setPhase("error");
+      });
+  }, [planQuery, newQuery, resumeQuery, isLoaded, isSignedIn, resolveView]);
 
   useEffect(() => {
     if (phase !== "list" || !hasBuildingPlans) return;
@@ -243,6 +318,10 @@ export function PlanClient() {
       router.push(`/plan?plan=${out.plan.id}`);
       setPhase("plan");
     } catch (e) {
+      if (handlePaywallError(e)) {
+        setPhase("form");
+        return;
+      }
       setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Generation failed."));
       setPhase("error");
     } finally {
@@ -259,6 +338,7 @@ export function PlanClient() {
       const out = await modifyPrepPlan(planData.plan.id, instruction, token);
       setPlanData(out);
     } catch (e) {
+      if (handlePaywallError(e)) return;
       setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Update failed."));
     } finally {
       setModifying(false);
@@ -281,6 +361,7 @@ export function PlanClient() {
       setPhase("list");
       await loadList();
     } catch (e) {
+      if (handlePaywallError(e)) return;
       setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not start plan."));
     } finally {
       setInitiating(false);
@@ -299,6 +380,7 @@ export function PlanClient() {
       const out = await generatePrepPlanDayModules(dayId, token);
       setPlanData(out);
     } catch (e) {
+      if (handlePaywallError(e)) return;
       setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Day generation failed."));
       try {
         const refreshed = await getPrepPlan(planData.plan.id, token);
@@ -319,6 +401,7 @@ export function PlanClient() {
       const out = await completePrepPlanModule(moduleId, token);
       setPlanData(out);
     } catch (e) {
+      if (handlePaywallError(e)) return;
       setErrorMsg(formatRoastFailure(e instanceof Error ? e.message : "Could not update module."));
     } finally {
       setCompletingModuleId(null);
@@ -411,17 +494,20 @@ export function PlanClient() {
 
   if (phase === "list") {
     return (
-      <div className="plan-page">
-        <PlanList
-          plans={plans}
-          deletingId={deletingId}
-          initiatingPlanId={initiatingPlanId}
-          onOpen={openPlan}
-          onDelete={(id) => void onDelete(id)}
-          onNewPlan={goToNewPlan}
-          onRetryInitiate={(id) => void onInitiate(id)}
-        />
-      </div>
+      <>
+        <div className="plan-page">
+          <PlanList
+            plans={plans}
+            deletingId={deletingId}
+            initiatingPlanId={initiatingPlanId}
+            onOpen={openPlan}
+            onDelete={(id) => void onDelete(id)}
+            onNewPlan={tryGoToNewPlan}
+            onRetryInitiate={(id) => void onInitiate(id)}
+          />
+        </div>
+        <PaywallModal open={paywall !== null} onClose={() => setPaywall(null)} error={paywall} />
+      </>
     );
   }
 
@@ -431,9 +517,10 @@ export function PlanClient() {
     const initiationFailed = planData.plan.initiation_status === "failed";
 
     return (
+      <>
       <div className={`plan-page${isOverview ? "" : " plan-page--player"}`}>
         <div className="plan-toolbar">
-          <button type="button" className="plan-link-btn" onClick={goToList}>
+          <button type="button" className="plan-back-btn" onClick={goToList}>
             ← All plans
           </button>
           <PlanToolbarMenu
@@ -472,26 +559,29 @@ export function PlanClient() {
           />
         )}
       </div>
+        <PaywallModal open={paywall !== null} onClose={() => setPaywall(null)} error={paywall} />
+      </>
     );
   }
 
   return (
-    <div className="plan-page">
-      <div className="plan-toolbar">
-        <button type="button" className="plan-link-btn" onClick={goToList}>
-          ← All plans
-        </button>
-      </div>
-      {!resumeId ? (
-        <p className="plan-banner plan-banner--warn">
-          No resume found —{" "}
-          <a href="/roast" className="plan-inline-link">
-            upload and roast
-          </a>{" "}
-          first.
-        </p>
-      ) : null}
-      <PlanForm
+    <>
+      <div className="plan-page">
+        <div className="plan-toolbar">
+          <button type="button" className="plan-back-btn" onClick={goToList}>
+            ← All plans
+          </button>
+        </div>
+        {!resumeId ? (
+          <p className="plan-banner plan-banner--warn">
+            No resume found —{" "}
+            <a href="/roast" className="plan-inline-link">
+              upload and roast
+            </a>{" "}
+            first.
+          </p>
+        ) : null}
+        <PlanForm
         companyName={companyName}
         role={role}
         daysCount={daysCount}
@@ -506,7 +596,9 @@ export function PlanClient() {
           void onGenerate();
         }}
       />
-    </div>
+      </div>
+      <PaywallModal open={paywall !== null} onClose={() => setPaywall(null)} error={paywall} />
+    </>
   );
 }
 

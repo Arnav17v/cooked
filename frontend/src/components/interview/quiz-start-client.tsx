@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { formatRoastFailure } from "@/components/roast/roast-shared";
+import { PaywallModal } from "@/components/billing/paywall-modal";
 import {
   QuizEditorPane,
   QuizErrorPanel,
@@ -15,7 +16,7 @@ import {
   QuizMetaRow,
   QuizPrimaryButton,
 } from "@/components/interview/quiz-ui";
-import { linkPrepPlanDayQuiz, linkPrepPlanModuleQuiz, startInterviewQuiz } from "@/lib/api";
+import { linkPrepPlanDayQuiz, linkPrepPlanModuleQuiz, PaymentRequiredError, startInterviewQuiz } from "@/lib/api";
 import { showLlmDevTrace } from "@/lib/llm-dev-toast";
 import { quizCountForLength } from "@/lib/quiz-length";
 import {
@@ -43,6 +44,7 @@ export function QuizStartClient() {
   const [handoff, setHandoff] = useState<QuizStartHandoff | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [paywall, setPaywall] = useState<PaymentRequiredError | null>(null);
   const [progressPct, setProgressPct] = useState(28);
 
   const bearer = useCallback(async () => {
@@ -165,6 +167,11 @@ export function QuizStartClient() {
 
       router.replace(`/quiz/${out.session_id}`);
     } catch (e) {
+      if (e instanceof PaymentRequiredError) {
+        setPaywall(e);
+        setPhase("setup");
+        return;
+      }
       const raw = e instanceof Error ? e.message : "Could not start the quiz.";
       setPhase("error");
       setErrorMsg(formatRoastFailure(raw));
@@ -173,6 +180,15 @@ export function QuizStartClient() {
 
   if (phase === "error") {
     return <QuizErrorPanel message={errorMsg ?? "Something went wrong."} />;
+  }
+
+  if (paywall) {
+    return (
+      <>
+        <QuizErrorPanel message={paywall.message} />
+        <PaywallModal open onClose={() => setPaywall(null)} error={paywall} />
+      </>
+    );
   }
 
   if (phase === "starting") {

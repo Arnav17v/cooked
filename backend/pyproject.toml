@@ -1,7 +1,7 @@
 [project]
 name = "cooked-backend"
 version = "0.1.0"
-description = "Am I Cooked? backend — FastAPI service"
+description = "Get Uncooked backend — FastAPI service"
 requires-python = ">=3.11"
 dependencies = [
     # Web framework

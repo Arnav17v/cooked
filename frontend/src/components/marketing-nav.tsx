@@ -14,7 +14,7 @@ export function MarketingNav() {
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-lc-orange text-black">
             <Flame className="h-4 w-4" strokeWidth={2.5} />
           </span>
-          <span className="text-[15px] text-lc-text">am i cooked</span>
+          <span className="text-[15px] text-lc-text">get uncooked</span>
         </Link>
 
         <div className="hidden items-center gap-1 text-[13px] text-lc-muted md:flex">

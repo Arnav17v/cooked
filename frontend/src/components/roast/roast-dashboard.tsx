@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   isStructuredFlag,
@@ -18,6 +18,7 @@ import {
 import { InDepthAnalysisTab } from "@/components/indepth/indepth-analysis-tab";
 import { NotesStudyPage } from "@/components/notes/notes-study-page";
 import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
+import { PrepPlanStartLink } from "@/components/score/prep-plan-start-link";
 import { ScoreCard, scoreHeatColor } from "@/components/score/ScoreCard";
 import { ScoreShareActions } from "@/components/score/ScoreShareActions";
 import { ResumePreviewPanel } from "@/components/score/ResumePreviewPanel";
@@ -31,6 +32,8 @@ import {
   type MyRoastItem,
   type QuizHistorySessionItem,
   type ScoreResponse,
+  type EntitlementsResponse,
+  fetchEntitlements,
   fetchMyRoasts,
   fetchQuizHistory,
   getFlags,
@@ -42,6 +45,7 @@ import {
   parseInterviewQuizScores,
   type StoredQuizScore,
 } from "@/lib/interview-quiz-scores";
+import { useStableClerkBearer } from "@/lib/use-stable-clerk-bearer";
 
 function formatResumeDate(iso: string | undefined): string {
   if (!iso) return "—";
@@ -59,7 +63,8 @@ export function RoastDashboard() {
   const tabFromUrl = dashboardTabFromSearch(searchParams.get("tab"));
   const openNotesTabFromUrl = searchParams.get("tab") === "notes";
 
-  const { isSignedIn, isLoaded, getToken } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
+  const bearer = useStableClerkBearer();
 
   const [resolving, setResolving] = useState(true);
   const [resolvedResumeId, setResolvedResumeId] = useState<string | null>(null);
@@ -78,23 +83,20 @@ export function RoastDashboard() {
   const [quizScores, setQuizScores] = useState<StoredQuizScore[]>([]);
   const [quizHistory, setQuizHistory] = useState<QuizHistorySessionItem[]>([]);
   const [quizHistoryLoading, setQuizHistoryLoading] = useState(false);
+  const [entitlements, setEntitlements] = useState<EntitlementsResponse | null>(null);
   const [flagsLoading, setFlagsLoading] = useState(false);
   const [notesRemountKey, setNotesRemountKey] = useState(0);
 
   const scoreLoadedForRef = useRef<string | null>(null);
   const quizHistoryLoadedForRef = useRef<string | null>(null);
+  const entitlementsLoadedForRef = useRef<string | null>(null);
+  const roastsResolveKeyRef = useRef<string | null>(null);
   const prevResolvedResumeRef = useRef<string | null>(null);
 
   const [countScore, setCountScore] = useState(0);
   const [scoreAnimDone, setScoreAnimDone] = useState(false);
   const [linerExpanded, setLinerExpanded] = useState(false);
   const countRaf = useRef<number | null>(null);
-
-  const bearer = useCallback(async () => {
-    if (!isSignedIn) return undefined;
-    const t = await getToken();
-    return t ?? undefined;
-  }, [getToken, isSignedIn]);
 
   useEffect(() => {
     if (!liveScore) {
@@ -162,10 +164,16 @@ export function RoastDashboard() {
         return;
       }
 
+      const resolveKey = `${isSignedIn}:${resumeQuery ?? ""}`;
+      if (roastsResolveKeyRef.current === resolveKey) {
+        return;
+      }
+
       setResolving(true);
       setHydrateError(null);
 
       if (!isSignedIn) {
+        roastsResolveKeyRef.current = null;
         if (!cancelled) {
           setMyRoasts([]);
           setResolvedResumeId(null);
@@ -174,7 +182,7 @@ export function RoastDashboard() {
         return;
       }
 
-      const tok = await getToken();
+      const tok = await bearer();
       if (!tok || cancelled) {
         if (!cancelled) setResolving(false);
         return;
@@ -190,6 +198,7 @@ export function RoastDashboard() {
 
       const q = resumeQuery?.trim();
       if (q && isUuidShape(q)) {
+        roastsResolveKeyRef.current = resolveKey;
         if (!cancelled) {
           setResolvedResumeId(q);
           setResolving(false);
@@ -199,6 +208,7 @@ export function RoastDashboard() {
 
       const pick = items.find((i) => i.analysis_status === "done") ?? items[0];
       if (pick) {
+        roastsResolveKeyRef.current = resolveKey;
         router.replace(`/dashboard?resume=${pick.resume_id}`);
         if (!cancelled) {
           setResolvedResumeId(pick.resume_id);
@@ -211,6 +221,7 @@ export function RoastDashboard() {
         const ls =
           typeof window !== "undefined" ? window.localStorage.getItem(LAST_RESUME_LS)?.trim() : null;
         if (ls && isUuidShape(ls)) {
+          roastsResolveKeyRef.current = resolveKey;
           router.replace(`/dashboard?resume=${ls}`);
           if (!cancelled) {
             setResolvedResumeId(ls);
@@ -222,6 +233,7 @@ export function RoastDashboard() {
         /* */
       }
 
+      roastsResolveKeyRef.current = resolveKey;
       if (!cancelled) {
         setResolvedResumeId(null);
         setResolving(false);
@@ -231,7 +243,7 @@ export function RoastDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [resumeQuery, isSignedIn, isLoaded, getToken, router]);
+  }, [resumeQuery, isSignedIn, isLoaded, bearer, router]);
 
   useEffect(() => {
     if (resolving || !resolvedResumeId) return;
@@ -271,10 +283,41 @@ export function RoastDashboard() {
   }, [resolvedResumeId, resolving, bearer]);
 
   useEffect(() => {
+    if (!isSignedIn || !resolvedResumeId) {
+      entitlementsLoadedForRef.current = null;
+      setEntitlements(null);
+      return;
+    }
+    if (entitlementsLoadedForRef.current === resolvedResumeId) return;
+
+    let cancelled = false;
+    (async () => {
+      const token = await bearer();
+      if (!token || cancelled) return;
+      try {
+        const data = await fetchEntitlements(token, resolvedResumeId);
+        if (!cancelled) {
+          setEntitlements(data);
+          entitlementsLoadedForRef.current = resolvedResumeId;
+        }
+      } catch {
+        if (!cancelled) {
+          setEntitlements(null);
+          entitlementsLoadedForRef.current = null;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, resolvedResumeId, bearer]);
+
+  useEffect(() => {
     if (!resolvedResumeId) {
       prevResolvedResumeRef.current = null;
       scoreLoadedForRef.current = null;
       quizHistoryLoadedForRef.current = null;
+      entitlementsLoadedForRef.current = null;
       setLiveScore(null);
       setLiveFlags(null);
       setQuizHistory([]);
@@ -285,6 +328,7 @@ export function RoastDashboard() {
     prevResolvedResumeRef.current = resolvedResumeId;
     scoreLoadedForRef.current = null;
     quizHistoryLoadedForRef.current = null;
+    entitlementsLoadedForRef.current = null;
     setLiveFlags(null);
     setQuizHistory([]);
     if (switched) setLiveScore(null);
@@ -605,12 +649,7 @@ export function RoastDashboard() {
                           headline={headline}
                         />
                       ) : null}
-                      <Link
-                        href="/plan?new=1"
-                        className="flex h-10 w-full items-center justify-center rounded-lg border border-lc-border text-[13px] font-medium text-lc-text transition-colors hover:border-lc-orange/50 hover:text-lc-orange"
-                      >
-                        Start prep plan →
-                      </Link>
+                      <PrepPlanStartLink href="/plan?new=1" />
                     </div>
                   </div>
                 </div>
@@ -667,6 +706,12 @@ export function RoastDashboard() {
                           Start a practice quiz — questions are generated when you run it.
                         </p>
                       </>
+                    ) : null}
+                    {entitlements?.plan === "free" ? (
+                      <p className="quiz-usage-banner" role="status">
+                        {entitlements.usage.quizzes_this_resume}/
+                        {entitlements.usage.quizzes_limit} quiz sessions used on this resume
+                      </p>
                     ) : null}
                     <QuizLengthPicker
                       className="mt-2"

@@ -19,7 +19,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response, StreamingResponse
 
@@ -30,10 +30,7 @@ from app.db.session import SessionFactory, get_session
 from app.models.analysis import Analysis
 from app.models.resume import Resume
 from app.models.user import User
-from app.schemas.interview_quiz_scores import (
-    MAX_QUIZ_SCORE_HISTORY,
-    normalize_interview_quiz_scores,
-)
+from app.schemas.interview_quiz_scores import normalize_interview_quiz_scores
 from app.services.llm.dev_trace import clear_llm_dev_trace, drain_llm_dev_events
 from app.services.resume.experience_level import normalize_experience_level
 from app.services.resume.parser import ParsedResume, parse_pdf, parse_text, validate_min_words
@@ -42,6 +39,7 @@ from app.services.resume.retention import prune_analyses_for_user
 from app.services.share.slug import allocate_share_slug
 from app.services.users.access import assert_resume_owned_if_authenticated
 from app.services.users.bootstrap import resolve_upload_user
+from app.services.users.entitlements import assert_can_upload_resume
 from app.services.users.limits import reset_daily_counter_if_new_day
 
 log = logging.getLogger(__name__)
@@ -87,18 +85,7 @@ async def upload_resume(
         clerk_subject,
         anonymous_client_key=x_cooked_anonymous_id,
     )
-    prev_resume = await session.scalar(
-        select(Resume)
-        .where(Resume.user_id == user.id)
-        .order_by(Resume.created_at.desc())
-        .limit(1)
-    )
-    carried_quiz_scores: list | None = None
-    if prev_resume is not None:
-        carried_quiz_scores = normalize_interview_quiz_scores(prev_resume.interview_quiz_scores)[
-            -MAX_QUIZ_SCORE_HISTORY:
-        ]
-    await session.execute(delete(Resume).where(Resume.user_id == user.id))
+    await assert_can_upload_resume(session, user)
 
     resume = Resume(
         user_id=user.id,
@@ -106,7 +93,7 @@ async def upload_resume(
         file_url=None,
         target_role=role[:128],
         experience_level=exp_level,
-        interview_quiz_scores=carried_quiz_scores if carried_quiz_scores else None,
+        interview_quiz_scores=None,
     )
     session.add(resume)
     await session.flush()

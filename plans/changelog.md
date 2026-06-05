@@ -8,6 +8,9 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ## 2026-06-03
 
+- **frontend — dashboard/plan:** fix fetch loops spamming `GET /me/roasts` and `/me/entitlements` (stable Clerk bearer + plan `entitlements` dep cycle).
+- **brand:** rebrand Am I Cooked? → Get Uncooked; default public URL `getuncooked.pro` (nav, score card, OG, share captions, metadata).
+- **product — freemium gates:** server-side entitlements (2 resumes, 1 prep plan, in-depth locked, 3 quizzes/resume, 48h plan access); `GET /me/entitlements`; billing stubs 501; plan GET redacts locked content; PaywallModal + `/upgrade` shell (D-021).
 - **product — In-Depth Analysis:** On-demand six-section hiring-manager analysis (`analyses.indepth_analysis`); dashboard tab with radar chart, hire pill, accordions, rewrite diff; roast bundle unchanged.
 - **frontend — dashboard tabs:** Lazy-load per tab — score only on entry; flags on AI Insights; quiz history on Practice only; Notes skips duplicate getScore; tab URL changes no longer re-fetch everything.
 - **frontend — dashboard notes:** Notes tab uses the same Coursera split (curriculum sidebar + inline lesson panel) and full player width as `/plan`, replacing the section list + bottom drawer.

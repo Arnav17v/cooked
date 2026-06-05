@@ -43,6 +43,12 @@ from app.services.plan.resume_summary import build_resume_summary
 from app.services.resume.experience_level import normalize_experience_level
 from app.services.users.access import require_resume_readable
 from app.services.users.clerk_user import require_user_for_clerk
+from app.services.users.entitlements import (
+    assert_can_create_plan,
+    assert_plan_execution_access,
+    is_plan_execution_locked,
+    plan_access_payload,
+)
 
 log = logging.getLogger(__name__)
 
@@ -106,27 +112,30 @@ def _module_to_dict(
     day_date: date,
     today: date,
     quiz_summaries: dict[uuid.UUID, dict[str, Any]],
+    redact_content: bool = False,
 ) -> dict[str, Any]:
     is_backlog = day_date < today and not m.completed
     topics = m.quiz_topics if isinstance(m.quiz_topics, list) else []
     quiz_score: int | None = None
     quiz_heat_label: str | None = None
     quiz_one_liner: str | None = None
-    if m.quiz_session_id:
+    if m.quiz_session_id and not redact_content:
         summary = quiz_summaries.get(m.quiz_session_id)
         if summary:
             quiz_score = int(summary["final_score"])
             quiz_heat_label = str(summary["heat_label"])
             quiz_one_liner = summary.get("one_liner")
-    return {
+    payload: dict[str, Any] = {
         "id": str(m.id),
         "display_order": m.display_order,
         "kind": m.kind,
         "title": m.title,
-        "content": m.content,
-        "link_url": m.link_url,
-        "quiz_topics": topics,
-        "quiz_session_id": str(m.quiz_session_id) if m.quiz_session_id else None,
+        "content": None if redact_content else m.content,
+        "link_url": None if redact_content else m.link_url,
+        "quiz_topics": [] if redact_content else topics,
+        "quiz_session_id": None if redact_content else (
+            str(m.quiz_session_id) if m.quiz_session_id else None
+        ),
         "quiz_score": quiz_score,
         "quiz_heat_label": quiz_heat_label,
         "quiz_one_liner": quiz_one_liner,
@@ -134,6 +143,9 @@ def _module_to_dict(
         "completed_at": m.completed_at.isoformat() if m.completed_at else None,
         "is_backlog": is_backlog,
     }
+    if redact_content:
+        payload["content_locked"] = True
+    return payload
 
 
 def _plan_to_dict(
@@ -141,6 +153,8 @@ def _plan_to_dict(
     days: list[PlanDay],
     modules_by_day: dict[uuid.UUID, list[PlanDayModule]],
     quiz_summaries: dict[uuid.UUID, dict[str, Any]],
+    *,
+    redact_content: bool = False,
 ) -> dict[str, Any]:
     plan_json = plan.plan_json or {}
     day_json_by_num = {
@@ -176,7 +190,13 @@ def _plan_to_dict(
                 "modules_status": d.modules_status,
                 "modules_error": d.modules_error,
                 "modules": [
-                    _module_to_dict(m, day_date=d.date, today=today, quiz_summaries=quiz_summaries)
+                    _module_to_dict(
+                        m,
+                        day_date=d.date,
+                        today=today,
+                        quiz_summaries=quiz_summaries,
+                        redact_content=redact_content,
+                    )
                     for m in mods
                 ],
             }
@@ -223,20 +243,38 @@ async def _modules_for_days(
     return out
 
 
-async def _build_plan_response(db: AsyncSession, plan_id: uuid.UUID) -> dict[str, Any]:
+async def _build_plan_response(
+    db: AsyncSession,
+    plan_id: uuid.UUID,
+    *,
+    user: User | None = None,
+) -> dict[str, Any]:
     """Load plan + days + modules with explicit queries (safe after ``commit``)."""
     plan_row = await db.get(PrepPlan, plan_id)
     if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+    if user is None:
+        user = await db.get(User, plan_row.user_id)
+    redact_content = bool(user is not None and is_plan_execution_locked(user, plan_row))
     day_rows = await _plan_days_for_plan(db, plan_id)
     modules_by_day = await _modules_for_days(db, [d.id for d in day_rows])
     session_ids: list[uuid.UUID] = []
-    for mods in modules_by_day.values():
-        for mod in mods:
-            if mod.quiz_session_id:
-                session_ids.append(mod.quiz_session_id)
+    if not redact_content:
+        for mods in modules_by_day.values():
+            for mod in mods:
+                if mod.quiz_session_id:
+                    session_ids.append(mod.quiz_session_id)
     quiz_summaries = await _quiz_summaries_for_session_ids(db, session_ids)
-    return _plan_to_dict(plan_row, day_rows, modules_by_day, quiz_summaries)
+    payload = _plan_to_dict(
+        plan_row,
+        day_rows,
+        modules_by_day,
+        quiz_summaries,
+        redact_content=redact_content,
+    )
+    if user is not None:
+        payload.update(plan_access_payload(user, plan_row))
+    return payload
 
 
 async def _load_plan_owned(
@@ -540,6 +578,7 @@ async def generate_plan(
 ) -> dict[str, Any]:
     user = await require_user_for_clerk(db, clerk_subject)
     await assert_can_generate_plan(db, user.id)
+    await assert_can_create_plan(db, user)
 
     resume = await require_resume_readable(db, resume_id, clerk_subject)
     days_count = plan_input.validate_days_count(days_count)
@@ -613,7 +652,7 @@ async def generate_plan(
     for row in new_rows:
         db.add(row)
     await db.commit()
-    return await _build_plan_response(db, plan.id)
+    return await _build_plan_response(db, plan.id, user=user)
 
 
 async def list_plans(
@@ -657,7 +696,7 @@ async def get_plan(
     plan = await _load_plan_owned(db, plan_id, user.id)
     if plan.status == PrepPlanStatus.abandoned.value:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
-    return await _build_plan_response(db, plan.id)
+    return await _build_plan_response(db, plan.id, user=user)
 
 
 async def get_active_plan(
@@ -669,7 +708,7 @@ async def get_active_plan(
     plan = await _active_plan_for_user(db, user.id)
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active plan")
-    return await _build_plan_response(db, plan.id)
+    return await _build_plan_response(db, plan.id, user=user)
 
 
 async def modify_plan(
@@ -691,6 +730,7 @@ async def modify_plan(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Plan is already in execution — abandon and regenerate to change overview.",
         )
+    assert_plan_execution_access(user, plan)
 
     day_rows = await _plan_days_for_plan(db, plan.id)
     existing_by_day = {d.day_number: d for d in day_rows}
@@ -724,7 +764,7 @@ async def modify_plan(
     for old in to_delete:
         await db.delete(old)
     await db.commit()
-    return await _build_plan_response(db, plan.id)
+    return await _build_plan_response(db, plan.id, user=user)
 
 
 async def enqueue_initiate_plan(
@@ -749,6 +789,7 @@ async def enqueue_initiate_plan(
             status_code=status.HTTP_409_CONFLICT,
             detail="Plan is already building.",
         )
+    assert_plan_execution_access(user, plan)
 
     plan.initiation_status = PrepPlanInitiationStatus.running.value
     plan.initiation_error = None
@@ -779,6 +820,12 @@ async def run_initiate_plan_pipeline(plan_id: uuid.UUID, clerk_subject: str) -> 
         if user is None:
             plan.initiation_status = PrepPlanInitiationStatus.failed.value
             plan.initiation_error = "User not found."
+            await session.commit()
+            return
+
+        if is_plan_execution_locked(user, plan):
+            plan.initiation_status = PrepPlanInitiationStatus.failed.value
+            plan.initiation_error = "Plan access expired. Upgrade to Pro."
             await session.commit()
             return
 
@@ -849,9 +896,10 @@ async def initiate_plan(
     clerk_subject: str,
     plan_id: uuid.UUID,
 ) -> dict[str, Any]:
+    user = await require_user_for_clerk(db, clerk_subject)
     await enqueue_initiate_plan(db, clerk_subject=clerk_subject, plan_id=plan_id)
     await run_initiate_plan_pipeline(plan_id, clerk_subject)
-    return await _build_plan_response(db, plan_id)
+    return await _build_plan_response(db, plan_id, user=user)
 
 
 async def generate_plan_day_modules(
@@ -878,7 +926,9 @@ async def generate_plan_day_modules(
             detail="Plan must be initiated before generating day modules.",
         )
     if day_row.modules_status == PlanDayModulesStatus.ready.value:
-        return await _build_plan_response(db, plan.id)
+        return await _build_plan_response(db, plan.id, user=user)
+
+    assert_plan_execution_access(user, plan)
 
     resume = await require_resume_readable(db, plan.resume_id, clerk_subject)
     summary_text = await build_resume_summary(db, resume=resume, resume_id=plan.resume_id)
@@ -893,7 +943,7 @@ async def generate_plan_day_modules(
         resume=resume,
         resume_summary=summary_text,
     )
-    return await _build_plan_response(db, plan.id)
+    return await _build_plan_response(db, plan.id, user=user)
 
 
 async def _rollup_plan_completion_after_module_change(
@@ -966,6 +1016,9 @@ async def complete_plan_module(
     if row is None or row.plan_day.plan.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
 
+    plan = row.plan_day.plan
+    assert_plan_execution_access(user, plan)
+
     new_val = not row.completed if completed is None else completed
     row.completed = new_val
     row.completed_at = datetime.now(UTC) if new_val else None
@@ -976,7 +1029,7 @@ async def complete_plan_module(
 
     plan_id = plan.id
     await db.commit()
-    return await _build_plan_response(db, plan_id)
+    return await _build_plan_response(db, plan_id, user=user)
 
 
 async def link_plan_module_quiz(
@@ -995,10 +1048,12 @@ async def link_plan_module_quiz(
     if row is None or row.plan_day.plan.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
 
+    assert_plan_execution_access(user, row.plan_day.plan)
+
     row.quiz_session_id = session_id
     plan_id = row.plan_day.plan_id
     await db.commit()
-    return await _build_plan_response(db, plan_id)
+    return await _build_plan_response(db, plan_id, user=user)
 
 
 async def complete_plan_day(
@@ -1016,6 +1071,8 @@ async def complete_plan_day(
     if row is None or row.plan.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Day not found")
 
+    assert_plan_execution_access(user, row.plan)
+
     row.completed = True
     plan = row.plan
     day_rows = await _plan_days_for_plan(db, plan.id)
@@ -1023,7 +1080,7 @@ async def complete_plan_day(
         plan.status = PrepPlanStatus.completed.value
     plan_id = plan.id
     await db.commit()
-    return await _build_plan_response(db, plan_id)
+    return await _build_plan_response(db, plan_id, user=user)
 
 
 async def link_plan_day_quiz(
@@ -1042,10 +1099,12 @@ async def link_plan_day_quiz(
     if row is None or row.plan.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Day not found")
 
+    assert_plan_execution_access(user, row.plan)
+
     row.quiz_session_id = session_id
     plan_id = row.plan_id
     await db.commit()
-    return await _build_plan_response(db, plan_id)
+    return await _build_plan_response(db, plan_id, user=user)
 
 
 async def abandon_plan(

@@ -31,7 +31,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const headline =
     data?.one_liner ??
     data?.headline ??
-    (score !== null ? `Resume Score ${dims.total}/100` : "Am I Cooked?");
+    (score !== null ? `Resume Score ${dims.total}/100` : "Get Uncooked");
   const role = data?.target_role ?? data?.role ?? "Target role";
 
   return new ImageResponse(
@@ -51,7 +51,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: "#ffa116", letterSpacing: "0.08em" }}>
-            AM I COOKED?
+            GET UNCOOKED
           </div>
           {data?.degraded ? (
             <div

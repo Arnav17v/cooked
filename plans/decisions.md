@@ -106,7 +106,21 @@ Format:
 
 ---
 
-### D-005: Tone calibration
+### D-021: Freemium gates + Pro subscription ($20/mo)
+
+**Date**: 2026-06-03
+**Status**: Accepted (supersedes D-004 one-time purchase for this iteration)
+
+- **Context**: Need recurring revenue to cover LLM costs; Western market positioning at $20/mo Pro tier.
+- **Decision**:
+  - **Free:** 2 stored resumes, **1 prep plan** (non-abandoned), no In-Depth Analysis, 3 completed quizzes per resume (sessions after deploy date), 48h prep-plan player access from anchor date.
+  - **Pro (`users.plan = "pro"`):** unlimited resumes, unlimited prep plans, unlimited quizzes, in-depth unlocked, plan never expires.
+  - **Enforcement:** server-side `402` before LLM/mutations; redact locked plan module content on GET; UI paywalls are UX only.
+  - **Billing this pass:** `GET /me/entitlements` live; Stripe subscription stubs return `501`.
+  - **Launch:** set `ENTITLEMENTS_DEPLOY_AT` / `QUIZ_CAP_ENFORCED_FROM` to deploy timestamp; grandfather pre-deploy plans with 48h from deploy.
+- **Consequences**: `purchases` table + `users.pro_unlocked_at` for future Stripe audit; multi-resume uploads (no delete-all on upload).
+- **Next phase:** Stripe Checkout + webhook → set `users.plan = pro`.
+
 
 **Date**: 2026-05-11
 **Status**: Accepted

@@ -190,7 +190,7 @@ export function SeminarDetailView({ seminar }: Props) {
 
       <footer className="landing-bottom-bar">
         <span>
-          Am I Cooked? · <Link href="/seminar">All seminars</Link>
+          Get Uncooked · <Link href="/seminar">All seminars</Link>
         </span>
         <span>{seminar.title}</span>
         <span className="landing-bottom-accent">{"// live seminar"}</span>

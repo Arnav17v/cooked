@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { LandingCustomCursor } from "@/components/landing/landing-custom-cursor";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { SeminarListView } from "@/components/seminar/seminar-list-view";
 import { getPublicSeminarSessions } from "@/lib/api";
@@ -8,7 +7,7 @@ import { getPublicSeminarSessions } from "@/lib/api";
 import "../landing-v3.css";
 
 export const metadata: Metadata = {
-  title: "Seminars | Am I Cooked?",
+  title: "Seminars | Get Uncooked",
   description: "Live small-batch sessions with real engineers.",
 };
 
@@ -24,7 +23,6 @@ export default async function SeminarPage() {
 
   return (
     <div className="landing-v3">
-      <LandingCustomCursor />
       <LandingNav />
       <SeminarListView sessions={upcoming.length > 0 ? upcoming : sessions} />
     </div>

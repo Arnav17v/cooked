@@ -2,7 +2,7 @@
 
 ## Product
 
-**Am I Cooked?** — an AI-powered interview-prep web app that starts from a user's resume, scores it across interview-relevant dimensions, and turns the gaps into targeted prep.
+**Get Uncooked** ([getuncooked.pro](https://getuncooked.pro)) — an AI-powered interview-prep web app that starts from a user's resume, scores it across interview-relevant dimensions, and turns the gaps into targeted prep.
 
 The hook: a user pastes/uploads their resume, picks a target role, and gets a multi-dimensional **Resume Score**, **AI Insights** with suggested rewrites or prep actions, an **AI In-Depth Review**, and 10–15 personalized interview questions pulled directly from their resume. See [D-019](./decisions.md#d-019-interview-prep-first-resume-score-terminology-diagnostic-score-report).
 
@@ -50,7 +50,7 @@ See [D-008](./decisions.md#d-008-v1-ships-on-a-completely-free-llm-v2-upgrades-a
 - Teal HQ, Careerflow (resume side)
 - LeetCode-style platforms (skill drilling)
 
-The framing ("Am I Cooked?") is fresh. The serious underneath is **table stakes**, so quality of the AI output and accuracy of feedback are the only durable moats.
+The framing ("Get Uncooked") is fresh. The serious underneath is **table stakes**, so quality of the AI output and accuracy of feedback are the only durable moats.
 
 ## Non-goals (explicit)
 

@@ -1,6 +1,6 @@
 # /plans — Project Knowledge Base
 
-Persistent shared context for all future AI agents and human developers working on **Am I Cooked?**.
+Persistent shared context for all future AI agents and human developers working on **Get Uncooked** ([getuncooked.pro](https://getuncooked.pro)).
 
 Treat this folder as **living documentation**. Before editing the codebase, read the relevant file(s) here. After making meaningful changes, update them.
 

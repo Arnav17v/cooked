@@ -52,7 +52,7 @@ export function buildShareCaption(opts: {
   const score = clampCookedScore(opts.score);
   const heat = (opts.heatLabel ?? "Cooked").trim();
   const line = opts.headline?.trim();
-  const parts = [`My Resume Score: ${score}/100 (${heat}) on Am I Cooked?`];
+  const parts = [`My Resume Score: ${score}/100 (${heat}) on Get Uncooked`];
   if (line) parts.push(`"${line}"`);
   parts.push(`See yours: ${opts.shareUrl}`);
   return parts.join(" ");

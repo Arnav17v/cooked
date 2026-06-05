@@ -88,7 +88,7 @@ export function LandingNav() {
     <>
       <nav className="landing-nav">
         <Link href="/" className="landing-nav-logo" onClick={closeMenu}>
-          <span>{"//"}</span> am i cooked?
+          <span>{"//"}</span> get uncooked
         </Link>
 
         <Suspense fallback={<NavLinksFallback />}>

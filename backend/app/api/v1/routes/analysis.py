@@ -14,6 +14,7 @@ from app.api.deps_auth import optional_clerk_subject
 from app.db.session import get_session
 from app.models.analysis import Analysis
 from app.models.resume import Resume
+from app.models.user import User
 from app.schemas.interview_quiz_scores import normalize_interview_quiz_scores
 from app.services.llm.errors import RecoverableLLMError
 from app.services.resume.indepth_analyzer import generate_indepth_analysis, persist_indepth
@@ -24,6 +25,7 @@ from app.services.resume.score_dimensions import (
     total_from_dimensions,
 )
 from app.services.users.access import require_resume_readable
+from app.services.users.entitlements import UPGRADE_URL, assert_can_generate_indepth, is_pro
 
 router = APIRouter(prefix="/resume", tags=["analysis"])
 
@@ -81,7 +83,10 @@ async def get_indepth(
     session: AsyncSession = Depends(get_session),  # noqa: B008
     clerk_subject: str | None = Depends(optional_clerk_subject),
 ) -> dict[str, object]:
-    await require_resume_readable(session, resume_id, clerk_subject)
+    resume = await require_resume_readable(session, resume_id, clerk_subject)
+    owner = await session.get(User, resume.user_id)
+    if not is_pro(owner):
+        return {"status": "locked", "upgrade_url": UPGRADE_URL}
     row, _ = await _latest_done_with_resume(session, resume_id)
     if row is None:
         raise HTTPException(
@@ -115,10 +120,13 @@ async def post_indepth(
             detail="Analysis not complete yet",
         )
 
+    owner = await session.get(User, resume.user_id)
     want_regenerate = regenerate or bool(body and body.regenerate)
     if analysis.indepth_analysis and not want_regenerate:
+        assert_can_generate_indepth(owner)
         return _indepth_response(analysis)
 
+    assert_can_generate_indepth(owner)
     jd = body.job_description if body else None
     try:
         out, degraded = await generate_indepth_analysis(

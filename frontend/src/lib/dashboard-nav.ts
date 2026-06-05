@@ -1,9 +1,9 @@
 import type { ResultTabId } from "@/components/roast/roast-shared";
 
 export const DASHBOARD_NAV: { id: ResultTabId; label: string }[] = [
-  { id: "score", label: "Resume Score" },
-  { id: "insights", label: "AI Insights" },
-  { id: "review", label: "In-Depth Analysis" },
+  { id: "score", label: "Score" },
+  { id: "insights", label: "Insight" },
+  { id: "review", label: "Analysis" },
   { id: "questions", label: "Practice" },
   { id: "notes", label: "Notes" },
 ];

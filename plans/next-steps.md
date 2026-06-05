@@ -53,7 +53,7 @@ What goes on the card, minimum:
 - Heat label (Easy / Medium / Hard tinted)
 - The target role
 - A one-line damning headline (the LLM's harshest red flag, in one sentence)
-- Brand mark + `amicooked.app` (or whatever the domain ends up being)
+- Brand mark + `getuncooked.pro`
 
 ## 4. (Optional) Deploy the scaffold
 

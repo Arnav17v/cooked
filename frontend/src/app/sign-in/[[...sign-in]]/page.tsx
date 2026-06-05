@@ -11,7 +11,7 @@ export default function SignInPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-lc-orange text-black">
               <Flame className="h-4 w-4" strokeWidth={2.5} />
             </span>
-            <span className="text-[15px]">am i cooked</span>
+            <span className="text-[15px]">get uncooked</span>
           </Link>
           <Link
             href="/sign-up"

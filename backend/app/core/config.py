@@ -6,10 +6,13 @@ in dev and the process environment in prod (Render).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from functools import lru_cache
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_ENTITLEMENTS_DEPLOY_AT = datetime(2026, 6, 3, tzinfo=UTC)
 
 
 class Settings(BaseSettings):
@@ -98,6 +101,23 @@ class Settings(BaseSettings):
             return s if s else None
         return v
 
+    @field_validator("quiz_cap_enforced_from", "entitlements_deploy_at", mode="before")
+    @classmethod
+    def parse_entitlements_datetime(cls, v: object) -> datetime:
+        if isinstance(v, datetime):
+            if v.tzinfo is None:
+                return v.replace(tzinfo=UTC)
+            return v.astimezone(UTC)
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return _DEFAULT_ENTITLEMENTS_DEPLOY_AT
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            return dt.astimezone(UTC)
+        return _DEFAULT_ENTITLEMENTS_DEPLOY_AT
+
     @field_validator("dev", mode="before")
     @classmethod
     def parse_dev_flag(cls, v: object) -> bool:
@@ -123,8 +143,21 @@ class Settings(BaseSettings):
 
     #: Roasts per user per day when ``dev`` is false (unlimited when ``dev`` is true).
     daily_analysis_cap: int = 2
-    #: Completed quizzes per user per day when ``dev`` is false.
+    #: Completed quizzes per user per day when ``dev`` is false (legacy; free tier uses per-resume cap).
     daily_quiz_cap: int = 2
+
+    #: Freemium caps — Pro users bypass via ``users.plan == "pro"``.
+    free_max_resumes: int = Field(default=2, ge=1, le=50)
+    free_max_quizzes_per_resume: int = Field(default=3, ge=1, le=100)
+    free_plan_access_hours: int = Field(default=48, ge=1, le=720)
+    free_max_plans: int = Field(default=1, ge=1, le=50)
+    #: Only sessions created at/after this instant count toward the per-resume quiz cap.
+    quiz_cap_enforced_from: datetime = Field(default=_DEFAULT_ENTITLEMENTS_DEPLOY_AT)
+    #: Plans created before this get 48h access anchored here (grandfathering at deploy).
+    entitlements_deploy_at: datetime = Field(default=_DEFAULT_ENTITLEMENTS_DEPLOY_AT)
+    pro_monthly_price_cents: int = Field(default=2000, ge=0)
+    payment_provider: str = "tbd"
+
     resume_word_cap: int = 4000
     min_roast_words: int = 30
     #: Single-call roast JSON (score + flags + questions) needs headroom; 1500 truncates mid-JSON.

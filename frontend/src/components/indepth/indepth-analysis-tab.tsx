@@ -1,14 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { PaywallModal } from "@/components/billing/paywall-modal";
 import { InDepthHirePill } from "@/components/indepth/indepth-hire-pill";
 import { InDepthRadarChart } from "@/components/indepth/indepth-radar-chart";
 import { InDepthSections } from "@/components/indepth/indepth-sections";
 import {
   fetchInDepthAnalysis,
   generateInDepthAnalysis,
+  PaymentRequiredError,
   type InDepthAnalysis,
   type InDepthGetResponse,
 } from "@/lib/api";
@@ -26,13 +29,14 @@ type Props = {
 
 export function InDepthAnalysisTab({ resumeId, analysisId }: Props) {
   const { isSignedIn, getToken } = useAuth();
-  const [status, setStatus] = useState<"idle" | "loading" | "generating" | "ready" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "generating" | "ready" | "error" | "locked"
+  >("idle");
   const [data, setData] = useState<InDepthAnalysis | null>(null);
   const [degraded, setDegraded] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [paywall, setPaywall] = useState<PaymentRequiredError | null>(null);
   const [progressIdx, setProgressIdx] = useState(0);
-  const [jdText, setJdText] = useState("");
-  const [showJd, setShowJd] = useState(false);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const bearer = useCallback(async () => {
@@ -55,6 +59,11 @@ export function InDepthAnalysisTab({ resumeId, analysisId }: Props) {
       const token = await bearer();
       const auth = token ? { token } : undefined;
       const res = await fetchInDepthAnalysis(resumeId, auth);
+      if (res.status === "locked") {
+        setData(null);
+        setStatus("locked");
+        return;
+      }
       if (res.status === "ready") {
         applyReady(res);
       } else {
@@ -104,13 +113,35 @@ export function InDepthAnalysisTab({ resumeId, analysisId }: Props) {
       const auth = token ? { token } : undefined;
       const res = await generateInDepthAnalysis(resumeId, analysisId, auth, {
         regenerate,
-        jobDescription: jdText.trim() || undefined,
       });
       applyReady(res);
     } catch (e) {
+      if (e instanceof PaymentRequiredError) {
+        setPaywall(e);
+        setStatus(data ? "ready" : "locked");
+        return;
+      }
       setErr(e instanceof Error ? e.message : "Generation failed");
       setStatus(data ? "ready" : "idle");
     }
+  }
+
+  if (status === "locked") {
+    return (
+      <>
+        <div className="indepth-locked-panel">
+          <h3>In-Depth Analysis is Pro</h3>
+          <p>Hiring-manager lens, interview forecast, competitive gaps, and a 30-day plan.</p>
+          <Link href="/upgrade">Upgrade to Pro — $20/month</Link>
+        </div>
+        <PaywallModal
+          open={paywall !== null}
+          onClose={() => setPaywall(null)}
+          error={paywall}
+          code="indepth_locked"
+        />
+      </>
+    );
   }
 
   if (status === "loading") {
@@ -127,22 +158,6 @@ export function InDepthAnalysisTab({ resumeId, analysisId }: Props) {
           and a ranked 30-day plan. Not more flags; a different lens entirely.
         </p>
         <p className="indepth-muted">Takes about 30 seconds once you generate.</p>
-        {showJd ? (
-          <label className="indepth-jd-field">
-            <span className="plan-field-label">Job description (optional)</span>
-            <textarea
-              className="plan-textarea"
-              rows={5}
-              value={jdText}
-              onChange={(e) => setJdText(e.target.value)}
-              placeholder="Paste a JD for sharper positioning…"
-            />
-          </label>
-        ) : (
-          <button type="button" className="plan-link-btn" onClick={() => setShowJd(true)}>
-            + Add job description
-          </button>
-        )}
         {err ? (
           <p className="indepth-error" role="alert">
             {err}

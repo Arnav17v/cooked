@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 
-import { LandingCustomCursor } from "@/components/landing/landing-custom-cursor";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { RoastUpload } from "@/components/roast/roast-upload";
 
@@ -9,7 +8,6 @@ import "../landing-v3.css";
 export default function RoastPage() {
   return (
     <div className="landing-v3 overflow-x-clip max-w-full bg-lv-black text-lv-cream">
-      <LandingCustomCursor />
       <LandingNav />
 
       <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-12">
