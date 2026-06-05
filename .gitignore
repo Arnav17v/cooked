@@ -28,6 +28,12 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 
+# --- Remotion video workspace ---
+video/node_modules/
+video/out/
+video/dist/
+video/.cache/
+
 # --- Python / FastAPI (backend/) ---
 backend/__pycache__/
 backend/**/__pycache__/

@@ -6,6 +6,13 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` cancelled 
 
 ---
 
+## Developer tooling
+
+- [x] **Create Remotion demo video workspace.** Done 2026-06-05. `video/` contains the Remotion source for a 54s vertical Get Uncooked demo; rendered output lives in ignored `video/out/`.
+- [x] **Add project-local `create-video` Codex skill.** Done 2026-06-05. Skill lives in `.codex/skills/create-video/` and documents safe use of Remotion's `npx create-video@latest` generator from this repo.
+
+---
+
 ## P0 — v1 Build Order
 
 > The 8-step path to a v1 that meets [D-010](./decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share). Each step is a vertical slice — finish it end-to-end before moving on.

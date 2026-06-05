@@ -6,6 +6,11 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-06-05
+
+- **video — demo reel:** scaffolded a Remotion `video/` workspace and rendered a 54s vertical Get Uncooked demo MP4 for Reels/TikTok (D-023).
+- **agents — create-video skill:** added a project-local Codex skill for safely using Remotion's `npx create-video@latest` generator from the Cooked workspace (D-022).
+
 ## 2026-06-03
 
 - **frontend — dashboard/plan:** fix fetch loops spamming `GET /me/roasts` and `/me/entitlements` (stable Clerk bearer + plan `entitlements` dep cycle).

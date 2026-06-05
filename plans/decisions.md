@@ -11,6 +11,35 @@ Format:
 
 ---
 
+### D-023: Remotion workspace for marketing demo videos
+
+**Date**: 2026-06-05
+**Status**: Accepted
+
+- **Context**: Short-form product videos need repeatable editing/rendering without coupling campaign assets to the production Next.js app.
+- **Decision**:
+  - Keep Remotion demo-video source in a separate `video/` workspace.
+  - Use `npx create-video@latest --yes --blank video` as the scaffold path.
+  - Keep rendered videos and preview frames in `video/out/`, ignored by Git.
+  - Do not import production app code into the video workspace unless there is a clear reason; compose marketing demos from stable copy/assets or explicitly captured footage.
+- **Consequences**:
+  - Marketing/demo videos are reproducible from source while not increasing the production frontend bundle.
+  - Rendered MP4s remain local artifacts unless explicitly moved into tracked assets or distribution storage.
+
+### D-022: Project-local Codex skills
+
+**Date**: 2026-06-05
+**Status**: Accepted
+
+- **Context**: Some development workflows are useful for this repo but should not be global defaults for every Codex workspace.
+- **Decision**:
+  - Store repo-specific Codex skills under `.codex/skills/`.
+  - Keep skills lean: `SKILL.md` plus only the references/scripts/assets needed for the workflow.
+  - Do not use project-local skills to bypass product guardrails in `plans/` or `.cursor/rules/`.
+- **Consequences**:
+  - Future agents can discover workspace-specific workflows without changing app runtime code.
+  - Hidden skill files are part of the repo knowledge base and should be updated with the same care as `plans/`.
+
 ### D-020: In-Depth Analysis — on-demand, separate from roast bundle
 
 **Date**: 2026-06-03

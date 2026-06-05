@@ -1,0 +1,3 @@
+display_name: Create Video
+short_description: Use Remotion create-video safely from this repo.
+default_prompt: Use the create-video skill to scaffold or work with a Remotion video project in this workspace.
