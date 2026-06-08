@@ -1,7 +1,9 @@
 "use client";
 
+import { useAuth, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
+import { buildCheckoutUrl, isCheckoutConfigured, proPriceLabel } from "@/lib/billing";
 import type { PaymentRequiredError } from "@/lib/api";
 
 type Props = {
@@ -38,11 +40,20 @@ function copyForCode(
 }
 
 export function PaywallModal({ open, onClose, error, code, message, usage }: Props) {
+  const { isSignedIn, userId } = useAuth();
+  const { user } = useUser();
+
   if (!open) return null;
 
   const resolvedCode = error?.code ?? code;
   const resolvedUsage = error?.usage ?? usage;
   const body = copyForCode(resolvedCode, error?.message ?? message, resolvedUsage);
+  const checkoutUrl = buildCheckoutUrl({
+    clerkSubject: isSignedIn ? userId : null,
+    email: user?.primaryEmailAddress?.emailAddress ?? null,
+  });
+  const checkoutReady = isCheckoutConfigured() && Boolean(checkoutUrl);
+  const priceLabel = proPriceLabel();
 
   return (
     <div className="paywall-modal-root" role="presentation">
@@ -54,9 +65,21 @@ export function PaywallModal({ open, onClose, error, code, message, usage }: Pro
         </h2>
         <p className="paywall-modal-body">{body}</p>
         <div className="paywall-modal-actions">
-          <Link href="/upgrade" className="paywall-modal-cta" onClick={onClose}>
-            Upgrade to Pro — $20/month
-          </Link>
+          {checkoutReady && checkoutUrl ? (
+            <a
+              href={checkoutUrl}
+              className="paywall-modal-cta"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+            >
+              Upgrade to Pro — {priceLabel}
+            </a>
+          ) : (
+            <Link href="/upgrade" className="paywall-modal-cta" onClick={onClose}>
+              Upgrade to Pro — {priceLabel}
+            </Link>
+          )}
           <button type="button" className="paywall-modal-dismiss" onClick={onClose}>
             Not now
           </button>

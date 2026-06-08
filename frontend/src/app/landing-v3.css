@@ -149,7 +149,28 @@ html.landing-cursor-click .landing-cur-dot {
 }
 
 .landing-v3 .landing-nav-logo span {
-  color: var(--lv-rust);
+  color: black;
+}
+
+.landing-v3 .landing-nav-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 7px;
+  padding: 2px 6px 2px 5px;
+  border-radius: 3px;
+  background: #e8531a;
+  color: #000;
+  font-family: var(--font-jetbrains), "DM Mono", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .landing-v3 .landing-nav-desktop {
@@ -7121,14 +7142,41 @@ html.landing-cursor-click .landing-cur-dot {
 }
 
 .landing-v3 .upgrade-panel-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   min-height: 44px;
   border: none;
+  border-radius: 8px;
   background: rgba(245, 240, 232, 0.12);
   color: rgba(245, 240, 232, 0.45);
   font-size: 13px;
   font-weight: 600;
+  text-decoration: none;
   cursor: not-allowed;
+}
+
+.landing-v3 .upgrade-panel-cta--active {
+  background: var(--lv-rust);
+  color: var(--lv-cream);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.landing-v3 .upgrade-panel-cta--active:hover {
+  background: #e05a28;
+}
+
+.landing-v3 .upgrade-panel-cta--pro {
+  background: rgba(72, 160, 120, 0.15);
+  color: #7fd4a8;
+  border: 1px solid rgba(127, 212, 168, 0.4);
+  cursor: default;
+  font-size: 14px;
+  letter-spacing: 0.02em;
 }
 
 .landing-v3 .upgrade-panel-note {

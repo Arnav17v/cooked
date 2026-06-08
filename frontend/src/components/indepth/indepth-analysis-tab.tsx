@@ -132,7 +132,7 @@ export function InDepthAnalysisTab({ resumeId, analysisId }: Props) {
         <div className="indepth-locked-panel">
           <h3>In-Depth Analysis is Pro</h3>
           <p>Hiring-manager lens, interview forecast, competitive gaps, and a 30-day plan.</p>
-          <Link href="/upgrade">Upgrade to Pro — $20/month</Link>
+          <Link href="/upgrade">Upgrade to Pro — $10/month</Link>
         </div>
         <PaywallModal
           open={paywall !== null}

@@ -240,7 +240,7 @@ export function PlanExecution({
           <div className="indepth-locked-panel">
             <h3>Plan access expired</h3>
             <p>Your 48-hour free preview ended. Upgrade to Pro to keep using your prep plan.</p>
-            <Link href="/upgrade">Upgrade to Pro — $20/month</Link>
+            <Link href="/upgrade">Upgrade to Pro — $10/month</Link>
           </div>
         </div>
       ) : null}

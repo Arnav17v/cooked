@@ -155,8 +155,10 @@ class Settings(BaseSettings):
     quiz_cap_enforced_from: datetime = Field(default=_DEFAULT_ENTITLEMENTS_DEPLOY_AT)
     #: Plans created before this get 48h access anchored here (grandfathering at deploy).
     entitlements_deploy_at: datetime = Field(default=_DEFAULT_ENTITLEMENTS_DEPLOY_AT)
-    pro_monthly_price_cents: int = Field(default=2000, ge=0)
-    payment_provider: str = "tbd"
+    pro_monthly_price_cents: int = Field(default=1000, ge=0)
+    payment_provider: str = "lemonsqueezy"
+    lemon_squeezy_checkout_url: str | None = None
+    lemon_squeezy_webhook_secret: str | None = None
 
     resume_word_cap: int = 4000
     min_roast_words: int = 30

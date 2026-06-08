@@ -7,6 +7,8 @@ import { Suspense, useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { LandingNavLinks } from "@/components/landing/landing-nav-links";
+import { ProBadge } from "@/components/billing/pro-badge";
+
 
 const MOBILE_NAV_MQ = "(max-width: 768px)";
 
@@ -89,6 +91,7 @@ export function LandingNav() {
       <nav className="landing-nav">
         <Link href="/" className="landing-nav-logo" onClick={closeMenu}>
           <span>{"//"}</span> get uncooked
+          <ProBadge />
         </Link>
 
         <Suspense fallback={<NavLinksFallback />}>

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { ArrowRight, Flame } from "lucide-react";
 
+import { ProBadge } from "@/components/billing/pro-badge";
+
+
 export function MarketingNav() {
   const { isSignedIn, isLoaded } = useAuth();
 
@@ -15,6 +18,7 @@ export function MarketingNav() {
             <Flame className="h-4 w-4" strokeWidth={2.5} />
           </span>
           <span className="text-[15px] text-lc-text">get uncooked</span>
+          <ProBadge />
         </Link>
 
         <div className="hidden items-center gap-1 text-[13px] text-lc-muted md:flex">
