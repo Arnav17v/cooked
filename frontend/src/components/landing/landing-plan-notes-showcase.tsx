@@ -79,9 +79,6 @@ export function LandingPlanNotesShowcase() {
                 }`}
                 onClick={() => setActiveId(note.id)}
               >
-                <span className="plan-curriculum-icon plan-curriculum-icon--notes" aria-hidden>
-                  N
-                </span>
                 <span className="landing-plan-notes-item-text">
                   <span className="landing-plan-notes-item-title">{note.title}</span>
                   <span className="landing-plan-notes-item-bullet">&ldquo;{note.bullet}&rdquo;</span>

@@ -10,11 +10,12 @@ import {
   Award,
   Menu,
   X,
-  Zap,  // for insights
-  DollarSign,  // for pricing
-  LogOut  // for logout
+  Zap,       // for insights
+  DollarSign, // for pricing
+  LogOut      // for logout
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { AnimatePresence, motion, useDragControls } from "motion/react";
 
 import { buildDashboardHref, buildPlanHref, dashboardTabFromSearch } from "@/lib/dashboard-nav";
 
@@ -27,34 +28,43 @@ interface DockItem {
 }
 
 const DOCK_ITEMS: DockItem[] = [
-  { href: null, label: "Plan", icon: LayoutDashboard }, // Will be built dynamically
-  { href: null, label: "Notes", icon: FileText }, // Will be built dynamically
+  { href: null, label: "Plan", icon: LayoutDashboard },
+  { href: null, label: "Notes", icon: FileText },
   { href: null, label: "Menu", icon: Menu, isCenter: true },
-  { href: null, label: "Practice", icon: Target }, // Will be built dynamically
-  { href: null, label: "Score", icon: Award }, // Will be built dynamically
+  { href: null, label: "Practice", icon: Target },
+  { href: null, label: "Score", icon: Award },
 ] as const;
 
 // Panel items - only items NOT already in the main dock
 const PANEL_ITEMS = [
   { id: "insights", label: "Insights", icon: Zap },
-  { id: "review", label: "Analysis", icon: LayoutDashboard },
+  { id: "review",   label: "Analysis", icon: LayoutDashboard },
   { href: "/pricing", label: "Pricing", icon: DollarSign },
 ] as const;
 
+const EASE_DEFAULT = [0.16, 1, 0.3, 1] as const;
+
 export function FloatingDock() {
-  const pathname = usePathname();
+  const pathname    = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router      = useRouter();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted]       = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const dragControls = useDragControls();
 
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setIsMenuOpen(false); }, [pathname]);
+
+  const closeMenu = useCallback(() => setIsMenuOpen(false), []);
+
+  const onDragEnd = useCallback(
+    (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
+      if (info.offset.y > 72 || info.velocity.y > 420) closeMenu();
+    },
+    [closeMenu],
+  );
 
   if (!mounted) {
     return <div className="landing-dock" aria-hidden />;
@@ -62,59 +72,55 @@ export function FloatingDock() {
 
   // Get resumeId from search params
   const resumeId = searchParams.get("resume")?.trim() || null;
-  
+
   // Get active tab from search params (only for dashboard)
-  const activeTab = pathname === "/dashboard" ? dashboardTabFromSearch(searchParams.get("tab")) : null;
-  
+  const activeTab = pathname === "/dashboard"
+    ? dashboardTabFromSearch(searchParams.get("tab"))
+    : null;
+
   // Determine if plan is active
   const planActive = pathname === "/plan" || pathname.startsWith("/prep");
 
   // Build dynamic hrefs for dock items
   const dockItemsWithHrefs: DockItem[] = [
-    { 
-      href: buildPlanHref(resumeId), 
-      label: "Plan", 
+    {
+      href: buildPlanHref(resumeId),
+      label: "Plan",
       icon: LayoutDashboard,
-      isActive: planActive
+      isActive: planActive,
     },
-    { 
-      href: buildDashboardHref(resumeId, "notes"), 
-      label: "Notes", 
+    {
+      href: buildDashboardHref(resumeId, "notes"),
+      label: "Notes",
       icon: FileText,
-      isActive: pathname === "/notes" || (pathname === "/dashboard" && activeTab === "notes")
+      isActive:
+        pathname === "/notes" ||
+        (pathname === "/dashboard" && activeTab === "notes"),
     },
-    { 
-      href: null, 
-      label: "Menu", 
-      icon: Menu, 
-      isCenter: true 
-    },
-    { 
-      href: buildDashboardHref(resumeId, "questions"), 
-      label: "Practice", 
+    { href: null, label: "Menu", icon: Menu, isCenter: true },
+    {
+      href: buildDashboardHref(resumeId, "questions"),
+      label: "Practice",
       icon: Target,
-      isActive: pathname === "/interview" || (pathname === "/dashboard" && activeTab === "questions")
+      isActive:
+        pathname === "/interview" ||
+        (pathname === "/dashboard" && activeTab === "questions"),
     },
-    { 
-      href: buildDashboardHref(resumeId, "score"), 
-      label: "Score", 
+    {
+      href: buildDashboardHref(resumeId, "score"),
+      label: "Score",
       icon: Award,
-      isActive: pathname === "/dashboard" && activeTab === "score" || 
-               (pathname === "/dashboard" && !activeTab) || // Default tab is score
-               pathname === "/roast" // Fallback to roast page
-    }
+      isActive:
+        (pathname === "/dashboard" && activeTab === "score") ||
+        (pathname === "/dashboard" && !activeTab) ||
+        pathname === "/roast",
+    },
   ];
 
   // Build panel items with hrefs
-  const panelItemsWithHrefs = PANEL_ITEMS.map(item => {
-    if ("href" in item) {
-      return item;
-    } else {
-      return {
-        ...item,
-        href: buildDashboardHref(resumeId, item.id as any)
-      };
-    }
+  const panelItemsWithHrefs = PANEL_ITEMS.map((item) => {
+    if ("href" in item) return item;
+    return { ...item, href: buildDashboardHref(resumeId, item.id as any) };
   });
 
   const handleCenterClick = (e: React.MouseEvent) => {
@@ -123,16 +129,12 @@ export function FloatingDock() {
   };
 
   const handleItemClick = (href: string) => {
-    setIsMenuOpen(false);
+    closeMenu();
     router.push(href);
   };
 
   return (
-    <nav
-      className="landing-dock"
-      role="navigation"
-      aria-label="Main navigation"
-    >
+    <nav className="landing-dock" role="navigation" aria-label="Main navigation">
       <ul className="landing-dock-list">
         {dockItemsWithHrefs.map((item) => (
           <li key={item.label} className="landing-dock-item">
@@ -146,7 +148,9 @@ export function FloatingDock() {
                 aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               >
                 <span className="landing-dock-center-inner">
-                  {isMenuOpen ? <X className="h-5 w-5" strokeWidth={2.5} /> : <Menu className="h-5 w-5" strokeWidth={2.5} />}
+                  {isMenuOpen
+                    ? <X className="h-5 w-5" strokeWidth={2.5} />
+                    : <Menu className="h-5 w-5" strokeWidth={2.5} />}
                 </span>
               </button>
             ) : (
@@ -169,74 +173,110 @@ export function FloatingDock() {
         ))}
       </ul>
 
-      {/* Expanded menu panel - styled like notes drawer */}
-      {isMenuOpen && (
-        <div
-          id="dock-menu-panel"
-          className="landing-dock-panel"
-          role="menu"
-          aria-label="Navigation menu"
-        >
-          <div className="landing-dock-panel-backdrop" onClick={() => setIsMenuOpen(false)} />
-          <div className="landing-dock-panel-content">
-            {/* Drawer handle */}
-            <div className="landing-dock-panel-handle-wrap" aria-hidden="true">
-              <div className="landing-dock-panel-handle" />
-            </div>
-            <header className="landing-dock-panel-header">
-              <div>
-                <p className="landing-dock-panel-eyebrow">{"// menu"}</p>
-                <h2 className="landing-dock-panel-title">Navigation</h2>
-              </div>
-              <button
-                type="button"
-                className="landing-dock-panel-close"
-                onClick={() => setIsMenuOpen(false)}
-                aria-label="Close menu"
+      {/* Animated bottom-sheet menu panel */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            {/* Scrim — tap outside to close */}
+            <motion.button
+              key="dock-scrim"
+              type="button"
+              aria-label="Close menu"
+              className="landing-dock-panel-backdrop"
+              style={{ position: "fixed", inset: 0, zIndex: 1099, border: "none", padding: 0, cursor: "pointer" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22, ease: EASE_DEFAULT }}
+              onClick={closeMenu}
+            />
+
+            {/* Sheet */}
+            <motion.div
+              key="dock-panel"
+              id="dock-menu-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
+              className="landing-dock-panel-content"
+              style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 1100 }}
+              drag="y"
+              dragControls={dragControls}
+              dragListener={false}
+              dragConstraints={{ top: 0 }}
+              dragElastic={{ top: 0, bottom: 0.5 }}
+              onDragEnd={onDragEnd}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.38, ease: EASE_DEFAULT }}
+            >
+              {/* Drag handle */}
+              <div
+                className="landing-dock-panel-handle-wrap"
+                aria-hidden="true"
+                onPointerDown={(e) => dragControls.start(e)}
               >
-                <X className="h-5 w-5" strokeWidth={2.5} />
-              </button>
-            </header>
-            <ul className="landing-dock-panel-list" role="list">
-              {panelItemsWithHrefs.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    className={`landing-dock-panel-link ${pathname === item.href ? "landing-dock-panel-link--active" : ""}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleItemClick(item.href);
+                <div className="landing-dock-panel-handle" />
+              </div>
+
+              <header className="landing-dock-panel-header">
+                <div>
+                  <p className="landing-dock-panel-eyebrow">{"// menu"}</p>
+                  <h2 className="landing-dock-panel-title">Navigation</h2>
+                </div>
+                <button
+                  type="button"
+                  className="landing-dock-panel-close"
+                  onClick={closeMenu}
+                  aria-label="Close menu"
+                >
+                  <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+              </header>
+
+              <ul className="landing-dock-panel-list" role="list">
+                {panelItemsWithHrefs.map((item) => (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      className={`landing-dock-panel-link ${
+                        pathname === item.href ? "landing-dock-panel-link--active" : ""
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleItemClick(item.href);
+                      }}
+                      role="menuitem"
+                    >
+                      <span className="landing-dock-panel-icon" aria-hidden>
+                        <item.icon className="h-5 w-5" strokeWidth={2} />
+                      </span>
+                      <span className="landing-dock-panel-label">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
+
+                {/* Logout */}
+                <li>
+                  <button
+                    className="landing-dock-panel-link logout-item"
+                    onClick={() => {
+                      closeMenu();
+                      router.push("/sign-in");
                     }}
-                    role="menuitem"
                   >
                     <span className="landing-dock-panel-icon" aria-hidden>
-                      <item.icon className="h-5 w-5" strokeWidth={2} />
+                      <LogOut className="h-5 w-5" strokeWidth={2} />
                     </span>
-                    <span className="landing-dock-panel-label">{item.label}</span>
-                  </Link>
+                    <span className="landing-dock-panel-label">Logout</span>
+                  </button>
                 </li>
-              ))}
-              {/* Logout item */}
-              <li>
-                <button
-                  className="landing-dock-panel-link logout-item"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setIsMenuOpen(false);
-                    // Redirect to sign-in for logout (in a real app, use Clerk's signOut)
-                    router.push("/sign-in");
-                  }}
-                >
-                  <span className="landing-dock-panel-icon" aria-hidden>
-                    <LogOut className="h-5 w-5" strokeWidth={2} />
-                  </span>
-                  <span className="landing-dock-panel-label">Logout</span>
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
+              </ul>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

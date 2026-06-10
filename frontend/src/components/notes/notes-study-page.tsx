@@ -419,6 +419,7 @@ export function NotesStudyPage({
   }, [activeSection]);
 
   const drawerDragControls = useDragControls();
+  const curriculumDragControls = useDragControls();
 
   const onDrawerDragEnd = useCallback(
     (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
@@ -427,6 +428,15 @@ export function NotesStudyPage({
       }
     },
     [closeSectionPanel],
+  );
+
+  const onCurriculumDragEnd = useCallback(
+    (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
+      if (info.offset.y > 72 || info.velocity.y > 420) {
+        setCurriculumOpen(false);
+      }
+    },
+    [],
   );
 
   const readHighlightFromStorage = useCallback(() => {
@@ -823,8 +833,6 @@ export function NotesStudyPage({
   ) : null;
 
   if (embedded) {
-    const curriculumClass = curriculumOpen ? " plan-curriculum--drawer-open" : "";
-    const shellClass = curriculumOpen ? " plan-coursera-shell--curriculum-open" : "";
     const hasPrev = activeSectionIndex > 0;
     const hasNext =
       activeSectionIndex >= 0 && activeSectionIndex < sortedSections.length - 1;
@@ -853,19 +861,11 @@ export function NotesStudyPage({
           ) : null}
         </div>
 
-        <div className={`plan-execution-wrap plan-coursera-shell${shellClass}`}>
+        <div className="plan-execution-wrap plan-coursera-shell">
           <div className="plan-coursera-split">
-            {curriculumOpen ? (
-              <button
-                type="button"
-                className="plan-curriculum-backdrop"
-                aria-label="Close sections"
-                onClick={() => setCurriculumOpen(false)}
-              />
-            ) : null}
-
+            {/* Desktop: static sidebar (unchanged) */}
             <aside
-              className={`plan-curriculum${curriculumClass}`}
+              className="plan-curriculum"
               aria-label="Resume note sections"
             >
               <div className="plan-curriculum-header">
@@ -885,12 +885,7 @@ export function NotesStudyPage({
                           }`}
                           onClick={() => selectSection(s.section_id)}
                         >
-                          <span
-                            className="plan-curriculum-icon plan-curriculum-icon--notes"
-                            aria-hidden
-                          >
-                            N
-                          </span>
+                          
                           <span className="plan-curriculum-item-title">{s.title}</span>
                           {s.weak_indicator ? (
                             <span className="plan-curriculum-weak-tag">weak</span>
@@ -905,6 +900,105 @@ export function NotesStudyPage({
                 </ul>
               </nav>
             </aside>
+
+            {/* Mobile: bottom-sheet drawer portal */}
+            {portalReady
+              ? createPortal(
+                  <AnimatePresence>
+                    {curriculumOpen ? (
+                      <>
+                        {/* Scrim */}
+                        <motion.button
+                          key="curriculum-scrim"
+                          type="button"
+                          aria-label="Close sections"
+                          className="notes-curriculum-drawer-scrim"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.22, ease: EASE_DEFAULT }}
+                          onClick={() => setCurriculumOpen(false)}
+                        />
+                        {/* Sheet */}
+                        <motion.div
+                          key="curriculum-sheet"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="Resume note sections"
+                          className="notes-curriculum-drawer-sheet"
+                          drag="y"
+                          dragControls={curriculumDragControls}
+                          dragListener={false}
+                          dragConstraints={{ top: 0 }}
+                          dragElastic={{ top: 0, bottom: 0.5 }}
+                          onDragEnd={onCurriculumDragEnd}
+                          initial={{ y: "100%" }}
+                          animate={{ y: 0 }}
+                          exit={{ y: "100%" }}
+                          transition={{ duration: 0.38, ease: EASE_DEFAULT }}
+                        >
+                          {/* Drag handle */}
+                          <div
+                            className="notes-curriculum-drawer-handle-wrap"
+                            aria-hidden
+                            onPointerDown={(e) => curriculumDragControls.start(e)}
+                          >
+                            <div className="notes-curriculum-drawer-handle" />
+                          </div>
+                          {/* Header */}
+                          <div className="notes-curriculum-drawer-header">
+                            <div className="min-w-0 flex-1">
+                              <p className="notes-curriculum-drawer-eyebrow">{"// sections"}</p>
+                              <p className="notes-curriculum-drawer-title">{roleLabel}</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="notes-curriculum-drawer-close"
+                              onClick={() => setCurriculumOpen(false)}
+                              aria-label="Close sections"
+                            >
+                              <X className="h-5 w-5" strokeWidth={2} />
+                            </button>
+                          </div>
+                          {/* Section list */}
+                          <nav className="notes-curriculum-drawer-body" aria-label="Sections">
+                            <ul className="plan-curriculum-items">
+                              {sortedSections.map((s) => {
+                                const isActive = activeSectionId === s.section_id;
+                                return (
+                                  <li key={s.section_id}>
+                                    <button
+                                      type="button"
+                                      className={`plan-curriculum-item${
+                                        isActive ? " plan-curriculum-item--active" : ""
+                                      }${
+                                        highlightSectionId === s.section_id
+                                          ? " ring-1 ring-inset ring-lc-orange/35"
+                                          : ""
+                                      }`}
+                                      onClick={() => {
+                                        selectSection(s.section_id);
+                                        setCurriculumOpen(false);
+                                      }}
+                                    >
+                                      
+                                      <span className="plan-curriculum-item-title">{s.title}</span>
+                                      {s.weak_indicator ? (
+                                        <span className="plan-curriculum-weak-tag">weak</span>
+                                      ) : null}
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </nav>
+                        </motion.div>
+                      </>
+                    ) : null}
+                  </AnimatePresence>,
+                  document.body,
+                )
+              : null}
 
             <div className="plan-lesson-main">
               <div className="plan-mobile-chrome">

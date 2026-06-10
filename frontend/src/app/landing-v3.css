@@ -2123,7 +2123,7 @@ html.landing-cursor-click .landing-cur-dot {
 .landing-notes-drawer-scrim {
   position: fixed;
   inset: 0;
-  z-index: 199;
+  z-index: 1100;
   border: none;
   padding: 0;
   cursor: pointer;
@@ -2135,7 +2135,7 @@ html.landing-cursor-click .landing-cur-dot {
   position: fixed;
   bottom: 0;
   left: 50%;
-  z-index: 200;
+  z-index: 1101;
   display: flex;
   height: min(92dvh, calc(100dvh - 0.5rem));
   width: 100%;
@@ -4768,6 +4768,162 @@ html.landing-cursor-click .landing-cur-dot {
     transform: translateX(0);
   }
 
+  /* ---- Notes curriculum bottom-sheet drawer (mobile only) ---- */
+
+  /* Scrim covers the full viewport behind the sheet */
+  .notes-curriculum-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: rgba(8, 7, 5, 0.72);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  /* Sheet itself: bottom-anchored, full-width, max 70dvh tall */
+  .notes-curriculum-drawer-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1101;
+    display: flex;
+    flex-direction: column;
+    max-height: 70dvh;
+    background: #161410;
+    border: 1px solid rgba(212, 77, 31, 0.3);
+    border-top: 2px solid #d44d1f;
+    border-bottom: none;
+    border-radius: 20px 20px 0 0;
+    box-shadow:
+      0 -16px 48px rgba(0, 0, 0, 0.65),
+      0 -4px 12px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+
+  /* Drag handle */
+  .notes-curriculum-drawer-handle-wrap {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: center;
+    padding: 12px 0 6px;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .notes-curriculum-drawer-handle-wrap:active {
+    cursor: grabbing;
+  }
+
+  .notes-curriculum-drawer-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(212, 77, 31, 0.5);
+    border-radius: 2px;
+  }
+
+  /* Header row */
+  .notes-curriculum-drawer-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px 14px;
+    border-bottom: 1px solid rgba(240, 232, 216, 0.08);
+    background: rgba(212, 77, 31, 0.05);
+  }
+
+  .notes-curriculum-drawer-eyebrow {
+    font-family: var(--font-jetbrains), "DM Mono", monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #d44d1f;
+    margin: 0 0 2px;
+  }
+
+  .notes-curriculum-drawer-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f0e8d8;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notes-curriculum-drawer-close {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: #a09080;
+    background: transparent;
+    border: 1px solid rgba(240, 232, 216, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .notes-curriculum-drawer-close:hover {
+    color: #f0e8d8;
+    background: #d44d1f;
+    border-color: #d44d1f;
+  }
+
+  /* Scrollable section list */
+  .notes-curriculum-drawer-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 0 max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Style section items inside the curriculum drawer */
+  .notes-curriculum-drawer-body .plan-curriculum-item {
+    padding-left: 20px;
+    min-height: 52px;
+    border-left-width: 3px;
+    color: #a09080;
+  }
+
+  .notes-curriculum-drawer-body .plan-curriculum-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: #f0e8d8;
+  }
+
+  .notes-curriculum-drawer-body .plan-curriculum-item--active {
+    border-left-color: #d44d1f;
+    background: rgba(212, 77, 31, 0.1);
+    color: #f0e8d8;
+  }
+
+  .notes-curriculum-drawer-body .plan-curriculum-item-title {
+    color: inherit;
+  }
+
+  .notes-curriculum-drawer-body .plan-curriculum-icon {
+    background: rgba(255, 255, 255, 0.06);
+    color: #d44d1f;
+  }
+
+  .notes-curriculum-drawer-body .plan-curriculum-weak-tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #e8b86a;
+  }
+
+
+
   .landing-v3 .plan-lesson-main {
     max-height: none;
     overflow: visible;
@@ -7394,69 +7550,35 @@ html.landing-cursor-click .landing-cur-dot {
   }
   
   /* Expanded menu panel */
-  .landing-dock-panel {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    animation: landing-dock-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  @keyframes landing-dock-panel-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
+  /* .landing-dock-panel wrapper removed — motion handles position + animation */
   
   .landing-dock-panel-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(8, 7, 5, 0.7);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(8, 7, 5, 0.72);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
   
   .landing-dock-panel-content {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 400px;
-    margin: 20px;
     background: #161410;
     border: 1px solid rgba(212, 77, 31, 0.3);
     border-top: 2px solid #d44d1f;
-    border-radius: 24px;
+    border-bottom: none;
+    border-radius: 20px 20px 0 0;
     box-shadow:
-      0 24px 48px rgba(0, 0, 0, 0.7),
-      0 8px 16px rgba(0, 0, 0, 0.4),
-      0 0 0 1px rgba(212, 77, 31, 0.08);
+      0 -16px 48px rgba(0, 0, 0, 0.65),
+      0 -4px 12px rgba(0, 0, 0, 0.3);
     overflow: hidden;
-    animation: landing-dock-panel-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  @keyframes landing-dock-panel-slide-up {
-    from {
-      transform: translateY(40px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
   }
   
   .landing-dock-panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid rgba(240, 232, 216, 0.1);
-    background: rgba(212, 77, 31, 0.06);
+    padding: 8px 20px 14px;
+    border-bottom: 1px solid rgba(240, 232, 216, 0.08);
+    background: rgba(212, 77, 31, 0.05);
   }
   
   .landing-dock-panel-title {
@@ -7492,14 +7614,21 @@ html.landing-cursor-click .landing-cur-dot {
 
   .landing-dock-panel-handle-wrap {
     display: flex;
+    flex-shrink: 0;
     justify-content: center;
-    padding: 12px 0 0;
+    padding: 12px 0 6px;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .landing-dock-panel-handle-wrap:active {
+    cursor: grabbing;
   }
 
   .landing-dock-panel-handle {
-    width: 36px;
+    width: 40px;
     height: 4px;
-    background: rgba(212, 77, 31, 0.4);
+    background: rgba(212, 77, 31, 0.5);
     border-radius: 2px;
   }
 
@@ -7514,7 +7643,7 @@ html.landing-cursor-click .landing-cur-dot {
   }
 
   .landing-dock-panel-list {
-    padding: 12px 8px;
+    padding: 8px 0;
     margin: 0;
     list-style: none;
   }
@@ -7524,23 +7653,34 @@ html.landing-cursor-click .landing-cur-dot {
     align-items: center;
     gap: 16px;
     width: 100%;
-    padding: 16px 20px;
+    padding: 14px 20px;
     text-decoration: none;
     color: #a09080;
     background: transparent;
     border: none;
-    border-radius: 12px;
-    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
 
   .landing-dock-panel-link:hover {
     color: #f0e8d8;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.04);
   }
 
   .landing-dock-panel-link--active {
     color: #d44d1f;
     background: rgba(212, 77, 31, 0.1);
+    border-left-color: #d44d1f;
+  }
+
+  .landing-dock-panel-link.logout-item {
+    color: rgba(200, 100, 90, 0.85);
+  }
+
+  .landing-dock-panel-link.logout-item:hover {
+    color: #e87a6a;
+    background: rgba(200, 80, 70, 0.08);
   }
   
   .landing-dock-panel-icon {
@@ -7552,6 +7692,7 @@ html.landing-cursor-click .landing-cur-dot {
     height: 40px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
+    color: inherit;
   }
 
   .landing-dock-panel-link:hover .landing-dock-panel-icon {
@@ -7562,13 +7703,17 @@ html.landing-cursor-click .landing-cur-dot {
     background: rgba(212, 77, 31, 0.15);
     color: #d44d1f;
   }
+
+  .landing-dock-panel-link.logout-item .landing-dock-panel-icon {
+    background: rgba(200, 80, 70, 0.1);
+    color: rgba(200, 100, 90, 0.85);
+  }
   
   .landing-dock-panel-label {
     font-family: var(--font-jetbrains), "DM Mono", monospace;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.04em;
-    text-transform: capitalize;
     color: inherit;
   }
   
