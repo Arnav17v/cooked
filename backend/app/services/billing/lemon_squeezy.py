@@ -27,6 +27,16 @@ _UNLOCK_EVENTS = frozenset(
     }
 )
 
+# Events that should revoke Pro access
+_LOCK_EVENTS = frozenset(
+    {
+        "subscription_cancelled",
+        "subscription_expired",
+        "subscription_payment_failed",
+        "subscription_paused",
+    }
+)
+
 
 def verify_signature(payload: bytes, signature: str | None, secret: str) -> bool:
     if not signature or not secret:
@@ -101,35 +111,48 @@ async def handle_webhook(session: AsyncSession, payload: dict[str, Any]) -> dict
         if isinstance(raw, str):
             event_name = raw.strip()
 
-    if event_name not in _UNLOCK_EVENTS:
-        return {"status": "ignored", "event": event_name or "unknown"}
+    if event_name in _UNLOCK_EVENTS:
+        user = await _resolve_user(session, payload)
+        if user is None:
+            log.warning("lemon webhook: no user for event=%s", event_name)
+            return {"status": "user_not_found", "event": event_name}
 
-    user = await _resolve_user(session, payload)
-    if user is None:
-        log.warning("lemon webhook: no user for event=%s", event_name)
-        return {"status": "user_not_found", "event": event_name}
+        settings = get_settings()
+        now = datetime.now(UTC)
+        user.plan = "pro"
+        if user.pro_unlocked_at is None:
+            user.pro_unlocked_at = now
 
-    settings = get_settings()
-    now = datetime.now(UTC)
-    user.plan = "pro"
-    if user.pro_unlocked_at is None:
-        user.pro_unlocked_at = now
+        order_id, payment_id = _provider_ids(payload)
+        purchase = Purchase(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            provider="lemonsqueezy",
+            provider_order_id=order_id,
+            provider_payment_id=payment_id,
+            amount_cents=settings.pro_monthly_price_cents,
+            currency="usd",
+            product_sku="pro_monthly",
+            status="paid",
+            paid_at=now,
+        )
+        session.add(purchase)
+        await session.commit()
 
-    order_id, payment_id = _provider_ids(payload)
-    purchase = Purchase(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        provider="lemonsqueezy",
-        provider_order_id=order_id,
-        provider_payment_id=payment_id,
-        amount_cents=settings.pro_monthly_price_cents,
-        currency="usd",
-        product_sku="pro_monthly",
-        status="paid",
-        paid_at=now,
-    )
-    session.add(purchase)
-    await session.commit()
+        log.info("lemon webhook: unlocked pro for user=%s event=%s", user.id, event_name)
+        return {"status": "unlocked", "event": event_name, "user_id": str(user.id)}
 
-    log.info("lemon webhook: unlocked pro for user=%s event=%s", user.id, event_name)
-    return {"status": "unlocked", "event": event_name, "user_id": str(user.id)}
+    if event_name in _LOCK_EVENTS:
+        user = await _resolve_user(session, payload)
+        if user is None:
+            log.warning("lemon webhook: no user for lock event=%s", event_name)
+            return {"status": "user_not_found", "event": event_name}
+
+        user.plan = "free"
+        user.pro_unlocked_at = None
+        await session.commit()
+
+        log.info("lemon webhook: downgraded to free for user=%s event=%s", user.id, event_name)
+        return {"status": "downgraded", "event": event_name, "user_id": str(user.id)}
+
+    return {"status": "ignored", "event": event_name or "unknown"}
