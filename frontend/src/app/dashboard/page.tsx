@@ -10,7 +10,6 @@ export default function DashboardPage() {
   return (
     <div className="landing-v3 landing-dash-app">
       <LandingNav />
-
       <div className="landing-page landing-dash-page">
         <Suspense fallback={<DashboardSkeleton />}>
           <RoastDashboard />

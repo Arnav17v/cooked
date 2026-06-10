@@ -1127,26 +1127,9 @@ html.landing-cursor-click .landing-cur-dot {
   }
 
   .landing-v3 .landing-nav-menu-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    color: var(--lv-cream);
-    background: transparent;
-    border: 1px solid var(--lv-rule);
-    transition:
-      color 0.15s,
-      border-color 0.15s,
-      background 0.15s;
+    display: none;
   }
 
-  .landing-v3 .landing-nav-menu-btn:hover {
-    color: var(--lv-cream);
-    border-color: var(--lv-cream-dim);
-    background: var(--lv-surface);
-  }
 
   .landing-nav-portal .landing-nav-scrim {
     display: block;
@@ -7259,3 +7242,390 @@ html.landing-cursor-click .landing-cur-dot {
   color: rgba(245, 240, 232, 0.62);
 }
 
+
+
+/* =========================================
+   Floating Dock (Mobile Only, < 768px)
+   ========================================= */
+
+   .landing-dock {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: none; /* Hidden by default, shown on mobile via media query */
+  }
+  
+  @media (max-width: 767px) {
+    .landing-dock {
+      display: block;
+    }
+  }
+  
+  .landing-dock-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+  
+  .landing-dock-item {
+    flex-shrink: 0;
+  }
+  
+  .landing-dock-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    padding: 8px 4px;
+    text-decoration: none;
+    color: var(--lv-cream-dim);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      transform 0.2s ease;
+  }
+  
+  .landing-dock-link:hover {
+    color: var(--lv-cream);
+    transform: translateY(-4px);
+  }
+  
+  .landing-dock-link--active {
+    color: var(--lv-rust);
+  }
+  
+  .landing-dock-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  
+  .landing-dock-label {
+    font-family: var(--font-jetbrains), "DM Mono", monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  
+  .landing-dock-center {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin: 0 8px;
+    padding: 0;
+    background: #d44d1f;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 0 20px rgba(212, 77, 31, 0.55),
+      0 0 40px rgba(212, 77, 31, 0.28),
+      0 8px 16px rgba(0, 0, 0, 0.35);
+    transition:
+      transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.3s ease;
+  }
+  
+  .landing-dock-center:hover {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 28px rgba(212, 77, 31, 0.65),
+      0 0 56px rgba(212, 77, 31, 0.35),
+      0 12px 24px rgba(0, 0, 0, 0.4);
+  }
+  
+  .landing-dock-center:active {
+    transform: scale(0.96);
+  }
+  
+  .landing-dock-center--open {
+    transform: scale(1.12);
+    box-shadow:
+      0 0 32px rgba(212, 77, 31, 0.75),
+      0 0 64px rgba(212, 77, 31, 0.4),
+      0 16px 32px rgba(0, 0, 0, 0.5);
+    background: #b83d14;
+  }
+  
+  .landing-dock-center-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #fff;
+  }
+  
+  /* Glassmorphism background for the dock bar */
+  .landing-dock-list::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% + 40px);
+    height: 72px;
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 40px;
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      0 4px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  /* Expanded menu panel */
+  .landing-dock-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: landing-dock-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  @keyframes landing-dock-panel-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .landing-dock-panel-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 7, 5, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  
+  .landing-dock-panel-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 400px;
+    margin: 20px;
+    background: #161410;
+    border: 1px solid rgba(212, 77, 31, 0.3);
+    border-top: 2px solid #d44d1f;
+    border-radius: 24px;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.7),
+      0 8px 16px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(212, 77, 31, 0.08);
+    overflow: hidden;
+    animation: landing-dock-panel-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  @keyframes landing-dock-panel-slide-up {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .landing-dock-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(240, 232, 216, 0.1);
+    background: rgba(212, 77, 31, 0.06);
+  }
+  
+  .landing-dock-panel-title {
+    font-family: var(--font-jetbrains), "DM Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #f0e8d8;
+  }
+  
+  .landing-dock-panel-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: #a09080;
+    background: transparent;
+    border: 1px solid rgba(240, 232, 216, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .landing-dock-panel-close:hover {
+    color: #f0e8d8;
+    background: #d44d1f;
+    border-color: #d44d1f;
+  }
+  
+
+  .landing-dock-panel-handle-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0 0;
+  }
+
+  .landing-dock-panel-handle {
+    width: 36px;
+    height: 4px;
+    background: rgba(212, 77, 31, 0.4);
+    border-radius: 2px;
+  }
+
+  .landing-dock-panel-eyebrow {
+    font-family: var(--font-jetbrains), "DM Mono", monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #d44d1f;
+    margin: 0 0 4px;
+  }
+
+  .landing-dock-panel-list {
+    padding: 12px 8px;
+    margin: 0;
+    list-style: none;
+  }
+  
+  .landing-dock-panel-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 16px 20px;
+    text-decoration: none;
+    color: #a09080;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .landing-dock-panel-link:hover {
+    color: #f0e8d8;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .landing-dock-panel-link--active {
+    color: #d44d1f;
+    background: rgba(212, 77, 31, 0.1);
+  }
+  
+  .landing-dock-panel-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
+
+  .landing-dock-panel-link:hover .landing-dock-panel-icon {
+    background: rgba(255, 255, 255, 0.09);
+  }
+
+  .landing-dock-panel-link--active .landing-dock-panel-icon {
+    background: rgba(212, 77, 31, 0.15);
+    color: #d44d1f;
+  }
+  
+  .landing-dock-panel-label {
+    font-family: var(--font-jetbrains), "DM Mono", monospace;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: capitalize;
+    color: inherit;
+  }
+  
+  /* =========================================
+     Main body padding for mobile dock
+     ========================================= */
+  
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: 120px !important;
+    }
+  }
+  
+  /* =========================================
+     Terminal-style brand label with blinking cursor
+     ========================================= */
+  
+  .landing-v3 .landing-nav-logo .landing-nav-logo-terminal {
+    font-family: var(--font-jetbrains), "DM Mono", monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--lv-cream);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+  }
+  
+  .landing-nav-logo-terminal-text {
+    position: relative;
+  }
+  
+  .landing-nav-logo-terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    margin-left: 2px;
+    background: var(--lv-rust);
+    animation: landing-terminal-blink 1s step-end infinite;
+    vertical-align: middle;
+  }
+  
+  @keyframes landing-terminal-blink {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+  
+  /* Override black color for nav logo text spans */
+  .landing-v3 .landing-nav-logo .landing-nav-logo-terminal-text,
+  .landing-v3 .landing-nav-logo .landing-nav-logo-terminal-cursor {
+    color: var(--lv-cream);
+  }
+  /* =========================================\n Orange color scheme for the floating dock\n ========================================= */
+
+  

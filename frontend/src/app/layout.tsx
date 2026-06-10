@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import dynamic from "next/dynamic";
+import { FloatingDockProvider } from "@/components/landing/floating-dock-provider";
 
 import { SITE_URL } from "@/lib/site-url";
 
@@ -15,6 +16,7 @@ const NotesUpdatedToastHost = dynamic(() =>
 const LlmDevToastHost = dynamic(() =>
   import("@/components/dev/llm-dev-toast-host").then((m) => m.LlmDevToastHost),
 );
+
 
 const inter = Inter({
   subsets: ["latin"],
@@ -53,6 +55,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-lc-bg font-sans antialiased">
         <ClerkProvider>
           {children}
+          <FloatingDockProvider />
           <NotesUpdatedToastHost />
           <LlmDevToastHost />
           <Analytics />

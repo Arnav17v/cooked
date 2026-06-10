@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
 import { LandingNav } from "@/components/landing/landing-nav";
-import { PlanClient } from "@/components/plan/plan-client";
 import { DashboardSkeleton } from "@/components/roast/dashboard-skeleton";
+import { PlanClient } from "@/components/plan/plan-client";
 
 import "../landing-v3.css";
 

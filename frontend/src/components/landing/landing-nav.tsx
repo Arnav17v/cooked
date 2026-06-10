@@ -90,7 +90,10 @@ export function LandingNav() {
     <>
       <nav className="landing-nav">
         <Link href="/" className="landing-nav-logo" onClick={closeMenu}>
-          <span>{"//"}</span> get uncooked
+          <span className="landing-nav-logo-terminal">
+            <span className="landing-nav-logo-terminal-text">./get_uncooked</span>
+            <span className="landing-nav-logo-terminal-cursor" aria-hidden="true"></span>
+          </span>
           <ProBadge />
         </Link>
 
