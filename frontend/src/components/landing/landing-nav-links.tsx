@@ -35,6 +35,12 @@ export function LandingNavLinks({ onNavigate, className = "" }: Props) {
   if (!isSignedIn) {
     return (
       <div className={className}>
+        <a href="#how" className="landing-nav-link" onClick={onNavigate}>
+          How it works
+        </a>
+        <a href="#sample" className="landing-nav-link" onClick={onNavigate}>
+          Sample score
+        </a>
         <Link href="/sign-in" className="landing-nav-link" onClick={onNavigate}>
           Log in
         </Link>

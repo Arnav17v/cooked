@@ -60,9 +60,26 @@ export const FEATURES: LandingFeature[] = [
 ];
 
 export const STEPS = [
-  { n: "01", title: "Paste your JD" },
-  { n: "02", title: "Upload resume" },
-  { n: "03", title: "Get your plan" },
+  {
+    n: "01",
+    title: "Upload resume",
+    body: "Paste text or add a PDF. The diagnostic starts from the actual bullets.",
+  },
+  {
+    n: "02",
+    title: "Pick a target",
+    body: "Choose the role you want so the score can judge interview fit.",
+  },
+  {
+    n: "03",
+    title: "Read the score",
+    body: "See ATS, Content, Writing, and Job Match with specific AI Insights.",
+  },
+  {
+    n: "04",
+    title: "Start prep",
+    body: "Turn gaps into questions, notes, quizzes, and a day-by-day plan.",
+  },
 ];
 
 export type LandingStat = {
@@ -79,7 +96,7 @@ export const STATS: LandingStat[] = [
     valueAccent: "dimensions",
     value: "4 dimensions",
     label: "Resume Score",
-    desc: "ATS, Content, Writing, Job Match — not just one number",
+    desc: "ATS, Content, Writing, Job Match. Not just one number",
   },
   {
     valueLead: "Day",
@@ -100,10 +117,10 @@ export const STATS: LandingStat[] = [
 export const HERO = {
   eyebrow: "AI Interview Prep",
   lines: [
-    "The best platform to crack your interview",
-    "and get the job.",
+    "Prep for your next interview",
+    "using your own resume.",
   ],
-  sub: "Score your resume, read AI Insights, then follow a day-by-day prep plan for the role you want.",
+  sub: "Get a multi-dimensional Resume Score and AI Insights. Then, practice custom questions built directly from your bullet points.",
 };
 
 export const FOOTER_CTA = {
@@ -125,11 +142,11 @@ export const SECTIONS = {
   proofTitle: "Your day-by-day",
   proofTitleBreak: "interview plan.",
   proofSub:
-    "Paste the JD and resume — each day opens notes, tasks, and quizzes tied to your gaps and target role.",
+    "Paste the JD and resume. Each day opens notes, tasks, and quizzes tied to your gaps and target role.",
   planNotesEyebrow: "Resume-specific notes",
   planNotesTitle: "Notes built from your bullets",
   planNotesSub:
-    "Every note starts with a line from your resume and your JD—talking points, rewrites, and interview traps for that story, not generic prep.",
+    "Every note starts with a line from your resume and your JD: talking points, rewrites, and interview traps for that story, not generic prep.",
   scoreEyebrow: "Sample diagnostic",
   scoreTitle: "Resume Score",
   scoreRoast:
@@ -141,7 +158,7 @@ export const META = {
     "Free interview prep",
     "account required",
     "Resume Score included",
-    "──────────────",
+    "--------------",
     "Built for",
     "real interviews.",
   ],

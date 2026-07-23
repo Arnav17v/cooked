@@ -1,12 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { animate } from "animejs";
+import { useReducedMotion } from "motion/react";
 
+import { LandingFeatures } from "@/components/landing/landing-features";
 import { LandingFooterCta } from "@/components/landing/landing-footer-cta";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingHowTimeline } from "@/components/landing/landing-how-timeline";
 import { LandingPrepPreview } from "@/components/landing/landing-prep-preview";
 import { LandingReveal } from "@/components/landing/landing-reveal";
+import { LandingTrustFaq } from "@/components/landing/landing-trust-faq";
 import {
   FOOTER_CTA,
   MARQUEE_ITEMS,
@@ -17,6 +20,27 @@ import { siteHostLabel } from "@/lib/site-url";
 
 export function LandingHome() {
   const marqueeDoubled = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
+  const reduce = useReducedMotion();
+
+  function highlightMarqueeItem(item: HTMLElement) {
+    if (reduce) return;
+    animate(item, {
+      scale: 1.05,
+      color: "#ffa116",
+      duration: 180,
+      ease: "outQuad",
+    });
+  }
+
+  function resetMarqueeItem(item: HTMLElement) {
+    if (reduce) return;
+    animate(item, {
+      scale: 1,
+      color: "#b3b3b3",
+      duration: 240,
+      ease: "outQuad",
+    });
+  }
 
   return (
     <>
@@ -27,13 +51,20 @@ export function LandingHome() {
       <div className="landing-marquee-wrap" aria-hidden>
         <div className="landing-marquee-track">
           {marqueeDoubled.map((label, i) => (
-            <span key={`${label}-${i}`} className="landing-marquee-item">
+            <span
+              key={`${label}-${i}`}
+              className="landing-marquee-item"
+              onMouseEnter={(event) => highlightMarqueeItem(event.currentTarget)}
+              onMouseLeave={(event) => resetMarqueeItem(event.currentTarget)}
+            >
               <span className="landing-marquee-dot" />
               {label}
             </span>
           ))}
         </div>
       </div>
+
+      <LandingFeatures />
 
       <LandingPrepPreview />
 
@@ -48,14 +79,13 @@ export function LandingHome() {
                 {SECTIONS.howTitleBreak}
               </h2>
             </div>
-            <Link href="/roast" className="landing-btn-ghost">
-              Score my resume
-            </Link>
           </LandingReveal>
 
           <LandingHowTimeline />
         </section>
       </div>
+
+      <LandingTrustFaq />
 
       <div className="landing-page">
         <LandingReveal>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView, useReducedMotion } from "motion/react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   DIMENSION_LABELS,
@@ -20,6 +20,39 @@ type Props = {
 };
 
 const BAR_EASE = [0.25, 1, 0.5, 1] as const;
+
+function AnimatedScore({
+  value,
+  animate,
+  duration = 800,
+  delay = 0,
+}: {
+  value: number;
+  animate: boolean;
+  duration?: number;
+  delay?: number;
+}) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!animate) return;
+    let startTimestamp: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      setCount(Math.floor(progress * value));
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+    const timeoutId = setTimeout(() => {
+      window.requestAnimationFrame(step);
+    }, delay);
+    return () => clearTimeout(timeoutId);
+  }, [value, animate, duration, delay]);
+
+  return <>{animate ? count : value}</>;
+}
 
 export function ScoreBreakdown({
   dimensions,
@@ -42,7 +75,7 @@ export function ScoreBreakdown({
             className="font-mono text-3xl font-semibold tabular-nums leading-none sm:text-4xl"
             style={{ color: totalColor }}
           >
-            {dimensions.total}
+            <AnimatedScore value={dimensions.total} animate={animateBars} duration={1000} />
           </p>
           <p className="font-mono text-[13px] text-lc-muted">/ {dimensions.total_max}</p>
           {heatLabel ? (
@@ -65,7 +98,7 @@ export function ScoreBreakdown({
               <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
                 <span className="font-medium text-lc-text">{DIMENSION_LABELS[key]}</span>
                 <span className="font-mono tabular-nums" style={{ color: barColor }}>
-                  {entry.score}/{entry.max}
+                  <AnimatedScore value={entry.score} animate={animateBars} duration={800} delay={idx * 100} />/{entry.max}
                 </span>
               </div>
               <div
