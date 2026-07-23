@@ -1,4 +1,4 @@
-/* Scoped landing v3 — editorial rust/cream theme (from cooked-landing-v3.html) */
+/* Scoped landing v3 - editorial rust/cream theme (from cooked-landing-v3.html) */
 
 /* Custom cursor (enabled via data-landing-cursor on <html>) */
 html[data-landing-cursor] .landing-v3,
@@ -97,17 +97,18 @@ html.landing-cursor-click .landing-cur-dot {
 }
 
 .landing-v3 {
-  --lv-black: #080705;
-  --lv-offblack: #111009;
-  --lv-surface: #161410;
-  --lv-card: #1c1916;
-  --lv-rust: #d44d1f;
-  --lv-rust-dim: #8a3210;
-  --lv-rust-glow: rgba(212, 77, 31, 0.12);
-  --lv-cream: #f0e8d8;
-  --lv-cream-dim: #a09080;
-  --lv-rule: rgba(240, 232, 216, 0.1);
-  --lv-rule-strong: rgba(240, 232, 216, 0.2);
+  --lv-black: #1a1a1a;
+  --lv-offblack: #0f0f0f;
+  --lv-surface: #282828;
+  --lv-card: #303030;
+  --lv-rust: #ffa116;
+  --lv-rust-dim: #ffb13a;
+  --lv-rust-glow: rgba(255, 161, 22, 0.12);
+  --lv-cream: #eff2f6;
+  --lv-cream-dim: #b3b3b3;
+  --lv-rule: rgba(255, 255, 255, 0.08);
+  --lv-rule-strong: rgba(255, 255, 255, 0.2);
+  --font-playfair: var(--font-inter) !important;
 
   background: var(--lv-black);
   color: var(--lv-cream);
@@ -453,41 +454,23 @@ html.landing-cursor-click .landing-cur-dot {
 .landing-v3 .landing-btn-primary {
   font-family: var(--font-jetbrains), "DM Mono", monospace;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--lv-black);
-  background: var(--lv-cream);
+  background: var(--lv-rust);
   padding: 16px 36px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  transition: color 0.2s;
-  position: relative;
-  overflow: hidden;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
 }
 
-.landing-v3 .landing-btn-primary::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--lv-rust);
-  transform: translateX(-101%);
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.landing-v3 .landing-btn-primary:hover::before {
-  transform: translateX(0);
-}
-
-.landing-v3 .landing-btn-primary span {
-  position: relative;
-  z-index: 1;
-}
-
-.landing-v3 .landing-btn-primary:hover span {
-  color: var(--lv-cream);
+.landing-v3 .landing-btn-primary:hover {
+  background: var(--lv-rust-dim);
+  color: var(--lv-black);
 }
 
 .landing-v3 .landing-btn-ghost {
@@ -577,6 +560,7 @@ html.landing-cursor-click .landing-cur-dot {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  transform-origin: center;
 }
 
 .landing-v3 .landing-marquee-dot {
@@ -5418,7 +5402,7 @@ html.landing-cursor-click .landing-cur-dot {
   border: 1px solid var(--lv-rule);
   border-radius: 18px;
   background:
-    radial-gradient(circle at 12% 12%, rgba(212, 77, 31, 0.14), transparent 34%),
+    radial-gradient(circle at 12% 12%, rgba(255, 161, 22, 0.14), transparent 34%),
     linear-gradient(150deg, rgba(22, 20, 16, 0.98), rgba(8, 7, 5, 0.98));
   box-shadow:
     0 28px 80px rgba(0, 0, 0, 0.48),
@@ -5492,6 +5476,39 @@ html.landing-cursor-click .landing-cur-dot {
 .landing-v3 .landing-hero-resume-mini {
   min-height: 240px;
   padding: 14px;
+}
+
+.landing-v3 .hero-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: 2px;
+  pointer-events: none;
+  background: #00b8a3;
+  box-shadow: 0 0 8px rgba(0, 184, 163, 0.9);
+  animation: hero-scan 2.8s ease-in-out infinite;
+  animation-delay: 0.9s;
+}
+
+@keyframes hero-scan {
+  0% {
+    top: -2px;
+    opacity: 0;
+  }
+
+  5% {
+    opacity: 1;
+  }
+
+  92% {
+    opacity: 0.8;
+  }
+
+  100% {
+    top: calc(100% + 2px);
+    opacity: 0;
+  }
 }
 
 .landing-v3 .landing-hero-resume-header,
@@ -5599,7 +5616,7 @@ html.landing-cursor-click .landing-cur-dot {
   gap: 10px;
   border-radius: 12px;
   background: var(--lv-rust);
-  color: var(--lv-cream);
+  color: var(--lv-black);
   padding: 12px 14px;
 }
 
