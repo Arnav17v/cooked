@@ -145,3 +145,7 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 - shadcn/ui initialized (`button.tsx`, `card.tsx` only).
 - First-pass landing page in the original beige/savage palette (since superseded — see 2026-05-11).
 - Original `ResumeRoastDemo` with regex heuristics (still in place; UI restyled).
+
+## 2026-09-10 — Repository presentation
+
+- Updated root README for the implemented interview-prep architecture and corrected backend first-run migration instructions; no runtime behavior changed.
