@@ -142,3 +142,7 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` cancelled 
 6. Update this file (`[~]` while working, `[x]` when done).
 7. Add a one-line entry in [`changelog.md`](./changelog.md).
 8. If the change sets a precedent (new pattern, library choice, schema), add an ADR entry in [`decisions.md`](./decisions.md).
+
+## Repository presentation
+
+- [x] Refresh public README for the implemented interview-prep system and correct backend first-run instructions (2026-09-10).
