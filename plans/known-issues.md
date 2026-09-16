@@ -2,6 +2,14 @@
 
 Living list. Add new entries as discovered. Mark resolved items with `[resolved YYYY-MM-DD]` and move them to `changelog.md` if substantive.
 
+## AI review follow-ups — 2026-09-16
+
+- **Prompt caching is unverified.** Adapters preserve stable system prefixes, but do not record cache-hit usage or configure explicit caches. Do not treat stable prompt text as proof of quota savings.
+- **Grounding remains weaker than schema validation.** Required source fields alone do not establish that questions and rewrites are supported by the resume; question normalization can reduce the final count. Add a small synthetic evaluation corpus before claiming improved model quality.
+- **Recovery and progress:** `BackgroundTasks` can be lost on restart; pending/processing analyses need reconciliation. The single-call pipeline's flagging/questions stages are cosmetic, not independently streamed generation milestones.
+- **Provider reporting:** Google model-chain fallback does not set `LLMResult.degraded` or persist the actual model ID; current metadata records only the vendor. Model availability and free-tier account access need deployment verification.
+- **Verification limits:** full frontend lint currently fails on an existing explicit `any` in `floating-dock.tsx`; backend full lint has unrelated existing violations. Router/admission checks used mocks, not live models or a concurrent Postgres workload.
+
 ## Code-level
 
 - **Backend does not exist yet.** All of v1 is currently a Next.js frontend with regex heuristics. Scaffolding the FastAPI service is Step 0 in [tasks.md](./tasks.md#step-0--pre-work-do-once-before-step-1).

@@ -7791,3 +7791,51 @@ html.landing-cursor-click .landing-cur-dot {
   /* =========================================\n Orange color scheme for the floating dock\n ========================================= */
 
   
+
+/* Resume-first landing: one readable example, with quiet supporting chrome. */
+.landing-home--prep .landing-page { max-width: 1280px; padding-inline: 48px; }
+.landing-home--prep .landing-nav { padding-block: 20px; background: var(--lv-offblack); }
+.landing-home--prep .landing-nav-logo-terminal-cursor { animation: none; }
+.landing-home--prep .prep-hero {
+  display: grid; grid-template-columns: 1.05fr 1fr; align-items: center;
+  gap: 64px; padding: 88px 0 76px;
+}
+.prep-hero-copy h1 { margin: 0; font-size: clamp(40px, 4.6vw, 64px); font-weight: 600; letter-spacing: -0.055em; line-height: 1.08; }
+.prep-hero-description { max-width: 470px; margin: 26px 0 30px; font-size: 16px; line-height: 1.8; color: var(--lv-cream-dim); }
+.prep-hero-path { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 42px; font-size: 11px; color: var(--lv-cream-dim); }
+.prep-hero-path span:nth-child(even) { color: var(--lv-rule-strong); }
+.prep-example { min-width: 0; border: 1px solid var(--lv-rule-strong); border-radius: 12px; background: var(--lv-offblack); overflow: hidden; }
+.prep-example-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--lv-rule); }
+.prep-example-roles { display: flex; gap: 6px; padding: 20px 24px 0; }
+.prep-example-roles button { padding: 6px 12px; border: 1px solid transparent; border-radius: 5px; color: var(--lv-cream-dim); font-size: 12px; font-weight: 500; }
+.prep-example-roles button:hover { color: var(--lv-cream); }
+.prep-example-roles button.is-selected { border-color: var(--lv-rule-strong); background: var(--lv-surface); color: var(--lv-cream); }
+.prep-example-roles button:focus-visible { outline: 2px solid var(--lv-rust); outline-offset: 3px; }
+.prep-example-source { margin: 20px 24px 0; padding: 18px; border: 1px solid var(--lv-rule); border-radius: 6px; }
+.prep-example-source blockquote { font-size: 15px; font-weight: 400; line-height: 1.7; }
+.prep-example-insight { display: flex; align-items: flex-start; gap: 12px; margin: 18px 30px; font-size: 12px; line-height: 1.6; color: var(--lv-cream-dim); }
+.prep-example-insight svg { margin-top: 2px; }
+.prep-example-question { padding: 24px; background: var(--lv-surface); border-top: 1px solid var(--lv-rule); }
+.prep-example-question h2 { min-height: 112px; font-size: 21px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.5; }
+.prep-example-footnote { padding: 12px 24px; color: var(--lv-cream-dim); font-size: 11px; }
+.landing-home--prep .prep-hero .landing-hero-actions { gap: 10px; flex-wrap: wrap; }
+.landing-home--prep .prep-hero .landing-btn-primary { background: var(--lv-rust); color: black; border-radius: 6px; padding: 13px 18px; font-size: 13px; letter-spacing: 0; text-transform: none; }
+.landing-home--prep .prep-hero .landing-btn-ghost { border-radius: 6px; font-size: 13px; letter-spacing: 0; text-transform: none; }
+@media (max-width: 960px) {
+  .landing-home--prep .prep-hero { gap: 32px; }
+  .landing-home--prep .landing-page { padding-inline: 28px; }
+}
+@media (max-width: 720px) {
+  .landing-home--prep .landing-page { padding-inline: 20px; }
+  .landing-home--prep .prep-hero { grid-template-columns: 1fr; gap: 36px; padding: 44px 0; }
+  .prep-hero-copy h1 { font-size: clamp(38px, 9.7vw, 56px); }
+  .prep-hero-description { margin: 22px 0 24px; font-size: 15px; }
+  .prep-hero-path { margin-top: 26px; gap: 8px; font-size: 10px; }
+  .prep-example-header, .prep-example-question { padding: 20px; }
+  .prep-example-source { margin-inline: 18px; }
+  .prep-example-roles { padding-inline: 18px; }
+  .prep-example-question h2 { font-size: 20px; }
+}
+
+.landing-home--prep .landing-nav-cta { background: var(--lv-rust); color: black; border-color: var(--lv-rust); border-radius: 5px; }
+.landing-home--prep .landing-nav-link, .landing-home--prep .landing-nav-cta { text-transform: none; letter-spacing: 0; font-family: var(--font-inter), sans-serif; font-size: 12px; }

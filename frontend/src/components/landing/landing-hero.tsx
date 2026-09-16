@@ -1,325 +1,80 @@
 "use client";
 
-import { createTimeline } from "animejs";
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef } from "react";
-
+import { useState } from "react";
+import { ArrowDown, FileText, MessageSquare, Check } from "lucide-react";
 import { LandingHeroActions } from "@/components/landing/landing-hero-actions";
-import { HERO } from "@/lib/landing-content";
-import {
-  heroLine,
-  landingTransition,
-  mergeReducedMotion,
-  staggerContainer,
-} from "@/lib/landing-motion";
-import {
-  DIMENSION_LABELS,
-  DIMENSION_ORDER,
-  SAMPLE_SCORE_DIMENSIONS,
-  dimensionPct,
-} from "@/lib/score-dimensions";
 
-const HERO_INSIGHTS = [
-  "Add metrics to your strongest project bullets.",
-  "Prep system-design follow-ups on payments work.",
-  "Sharpen the story for backend ownership.",
-];
-
-const DIMS = DIMENSION_ORDER.map((key) => ({
-  key,
-  label: DIMENSION_LABELS[key],
-  score: SAMPLE_SCORE_DIMENSIONS[key].score,
-  max: SAMPLE_SCORE_DIMENSIONS[key].max,
-  pct: dimensionPct(SAMPLE_SCORE_DIMENSIONS[key]),
-}));
-
-function barColor(pct: number) {
-  if (pct >= 80) return "#00b8a3";
-  if (pct >= 55) return "#ffc01e";
-  return "#ef4743";
-}
-
-function revealHero(el: HTMLElement) {
-  el.style.opacity = "1";
-  el.style.transform = "none";
-
-  el.querySelectorAll<HTMLElement>(".hero-score-counter").forEach((counter) => {
-    counter.textContent = counter.dataset.target ?? counter.textContent;
-  });
-
-  el.querySelectorAll<HTMLElement>(".hero-bar-fill").forEach((fill) => {
-    fill.style.transform = `scaleX(${fill.dataset.fill ?? "1"})`;
-    fill.style.transformOrigin = "left center";
-  });
-
-  el.querySelectorAll<HTMLElement>(".hero-insight-item").forEach((item) => {
-    item.style.opacity = "1";
-    item.style.transform = "none";
-  });
-
-  const planStrip = el.querySelector<HTMLElement>(".landing-hero-plan-strip");
-  if (planStrip) {
-    planStrip.style.opacity = "1";
-    planStrip.style.transform = "none";
-  }
-}
+const examples = {
+  Backend: {
+    bullet: "Built a payments service with Node.js, PostgreSQL, and Redis.",
+    insight: "The stack is clear. Your decisions and their impact are missing.",
+    question: "A payment webhook arrives twice. How does your service prevent a customer from being charged twice?",
+    focus: ["Idempotency", "Database constraints", "Failure recovery"],
+  },
+  Frontend: {
+    bullet: "Developed a React dashboard with real-time analytics and interactive charts.",
+    insight: "You describe the interface. Be ready to explain how it holds up under load.",
+    question: "Your dashboard receives hundreds of updates a second. How would you keep the charts responsive without dropping data?",
+    focus: ["Render performance", "Update batching", "State management"],
+  },
+} as const;
 
 export function LandingHero() {
-  const reduce = useReducedMotion();
-  const diagnosticRef = useRef<HTMLElement>(null);
-  const hasFired = useRef(false);
-
-  useEffect(() => {
-    const el = diagnosticRef.current;
-    if (!el) return;
-
-    if (reduce) {
-      revealHero(el);
-      hasFired.current = true;
-      return;
-    }
-
-    if (hasFired.current) return;
-    hasFired.current = true;
-
-    const card = el;
-    card.style.opacity = "0";
-    card.style.transform = "translateX(40px)";
-
-    const counters = el.querySelectorAll<HTMLElement>(".hero-score-counter");
-    const fills = el.querySelectorAll<HTMLElement>(".hero-bar-fill");
-    const insightItems = el.querySelectorAll<HTMLElement>(".hero-insight-item");
-    const planStrip = el.querySelector<HTMLElement>(".landing-hero-plan-strip");
-
-    counters.forEach((counter) => {
-      counter.textContent = "0";
-    });
-    fills.forEach((f) => {
-      f.style.transform = "scaleX(0)";
-      f.style.transformOrigin = "left center";
-    });
-    insightItems.forEach((i) => {
-      i.style.opacity = "0";
-      i.style.transform = "translateX(-10px)";
-    });
-    if (planStrip) {
-      planStrip.style.opacity = "0";
-      planStrip.style.transform = "translateY(12px)";
-    }
-
-    const tl = createTimeline({ defaults: { ease: "outExpo" } });
-
-    tl.add(card, {
-      opacity: [0, 1],
-      x: [40, 0],
-      duration: 500,
-    }, 600);
-
-    DIMS.forEach((dim, idx) => {
-      const fill = fills[idx];
-      const counter = counters[idx];
-      if (!fill || !counter) return;
-      const target = dim.score;
-      const fillScale = dim.pct / 100;
-
-      tl.add(fill, {
-        scaleX: [0, fillScale],
-        duration: 700,
-        ease: "outExpo",
-      }, 1000 + idx * 80);
-
-      const count = { value: 0 };
-      tl.add(count, {
-        value: target,
-        duration: 750,
-        ease: "outExpo",
-        onUpdate: () => {
-          counter.textContent = String(Math.round(count.value));
-        },
-      }, 1000 + idx * 80);
-    });
-
-    insightItems.forEach((item, idx) => {
-      tl.add(item, {
-        opacity: [0, 1],
-        x: [-10, 0],
-        duration: 380,
-        ease: "outQuad",
-      }, 1850 + idx * 100);
-    });
-
-    if (planStrip) {
-      tl.add(planStrip, {
-        opacity: [0, 1],
-        y: [12, 0],
-        duration: 420,
-      }, 2400);
-    }
-
-    const badge = el.querySelector<HTMLElement>(".landing-hero-report-pill");
-    if (badge) {
-      tl.add(badge, {
-        boxShadow: [
-          "0 0 0 0 rgba(0,184,163,0)",
-          "0 0 0 3px rgba(0,184,163,0.5), 0 0 20px rgba(0,184,163,0.25)",
-        ],
-        alternate: true,
-        duration: 520,
-        loop: 2,
-        ease: "inOutSine",
-      }, 2900);
-    }
-
-    tl.play();
-
-    return () => { tl.pause(); };
-  }, [reduce]);
+  const [role, setRole] = useState<keyof typeof examples>("Backend");
+  const example = examples[role];
 
   return (
-    <section className="landing-hero landing-hero--prep">
-      <div className="landing-hero-grain" aria-hidden />
-      <div className="landing-hero-bg-num" aria-hidden>
-        47
+    <section className="prep-hero">
+      <div className="prep-hero-copy">
+        <p className="mb-6 flex items-center gap-2 text-sm text-lc-muted">
+          <span className="h-1.5 w-1.5 rounded-full bg-lc-orange" aria-hidden />
+          Your resume is the starting point
+        </p>
+        <h1>Own the story.<br />Ace the follow-up.</h1>
+        <p className="prep-hero-description">
+          You wrote the bullet. Now get ready to defend it. Turn your resume into
+          focused interview questions, useful feedback, and a plan for what to practice next.
+        </p>
+        <LandingHeroActions />
+        <p className="mt-5 text-xs text-lc-dim">PDF or pasted text. Choose your target role. Start with your Resume Score.</p>
+        <div className="prep-hero-path" aria-label="Your preparation workflow">
+          <span>Resume Score</span><span aria-hidden>/</span>
+          <span>AI Insights</span><span aria-hidden>/</span><span>Interview practice</span>
+        </div>
       </div>
 
-      <motion.div
-        className="landing-hero-inner"
-        initial="hidden"
-        animate="visible"
-        variants={mergeReducedMotion(reduce, staggerContainer)}
-      >
-        <motion.p className="landing-hero-eyebrow" variants={mergeReducedMotion(reduce, heroLine)}>
-          {HERO.eyebrow}
-        </motion.p>
-
-        <h1 className="landing-hero-headline">
-          <motion.span className="line1" variants={mergeReducedMotion(reduce, heroLine)}>
-            {HERO.lines[0]}
-          </motion.span>
-          <motion.span className="line2" variants={mergeReducedMotion(reduce, heroLine)}>
-            {HERO.lines[1]}
-          </motion.span>
-        </h1>
-
-        <motion.p
-          className="landing-hero-sub"
-          variants={mergeReducedMotion(reduce, heroLine)}
-          transition={landingTransition(0.55)}
-        >
-          {HERO.sub}
-        </motion.p>
-
-        <motion.div variants={mergeReducedMotion(reduce, heroLine)}>
-          <LandingHeroActions />
-        </motion.div>
-      </motion.div>
-
-      <aside
-        ref={diagnosticRef}
-        className="landing-hero-diagnostic"
-        aria-label="Sample Resume Score report"
-        style={{ opacity: 0 }}
-      >
-        <div className="landing-hero-report-top">
-          <div>
-            <p className="landing-hero-report-kicker">sample report</p>
-            <h2 className="landing-hero-report-title">Resume Score</h2>
-          </div>
-          <span className="landing-hero-report-pill">
-            {SAMPLE_SCORE_DIMENSIONS.total} / {SAMPLE_SCORE_DIMENSIONS.total_max}
-          </span>
+      <aside className="prep-example" aria-label="Illustrative resume to interview example">
+        <div className="prep-example-header">
+          <span className="text-sm font-medium text-lc-text">From bullet to interview</span>
+          <span className="text-xs text-lc-dim">Sample</span>
         </div>
-
-        <div className="landing-hero-report-grid">
-          <div className="landing-hero-resume-mini relative overflow-hidden" aria-hidden>
-            <ScanLine />
-            <div className="landing-hero-resume-header">
-              <span /><span /><span />
-            </div>
-            <div className="landing-hero-resume-name" />
-            <div className="landing-hero-resume-role" />
-            <div className="landing-hero-resume-section">
-              <i /><b /><b /><b />
-            </div>
-            <div className="landing-hero-resume-section landing-hero-resume-section--short">
-              <i /><b /><b />
+        <div className="prep-example-roles" aria-label="Choose a sample role">
+          {(Object.keys(examples) as Array<keyof typeof examples>).map((item) => (
+            <button key={item} type="button" aria-pressed={role === item}
+              onClick={() => setRole(item)} className={role === item ? "is-selected" : ""}>
+              {item}
+            </button>
+          ))}
+        </div>
+        <div aria-live="polite" aria-atomic="true">
+          <div className="prep-example-source">
+            <p className="mb-3 flex items-center gap-2 text-xs text-lc-muted"><FileText size={14} aria-hidden /> On your resume</p>
+            <blockquote>“{example.bullet}”</blockquote>
+          </div>
+          <div className="prep-example-insight">
+            <ArrowDown size={16} className="shrink-0 text-lc-orange" aria-hidden />
+            <p>{example.insight}</p>
+          </div>
+          <div className="prep-example-question">
+            <p className="mb-4 flex items-center gap-2 text-xs text-lc-orange"><MessageSquare size={14} aria-hidden /> Be ready for this</p>
+            <h2>{example.question}</h2>
+            <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2">
+              {example.focus.map((focus) => <span key={focus} className="flex items-center gap-1.5 text-xs text-lc-muted"><Check size={12} aria-hidden />{focus}</span>)}
             </div>
           </div>
-
-          <div className="landing-hero-score-mini">
-            <p className="font-mono text-[9px] uppercase tracking-wider text-lc-dim mb-2">
-              Resume Score
-            </p>
-            <ul className="space-y-2">
-              {DIMS.map((dim) => {
-                const color = barColor(dim.pct);
-                return (
-                  <li key={dim.key}>
-                    <div className="flex items-center justify-between text-[10px] mb-0.5">
-                      <span className="text-lc-text font-medium">{dim.label}</span>
-                      <span className="font-mono tabular-nums" style={{ color }}>
-                        <span className="hero-score-counter" data-target={dim.score}>
-                          0
-                        </span>
-                        /{dim.max}
-                      </span>
-                    </div>
-                    <div
-                      className="w-full rounded-full overflow-hidden"
-                      style={{ height: "3px", background: "rgba(255,255,255,0.08)" }}
-                    >
-                      <div
-                        className="hero-bar-fill h-full rounded-full"
-                        data-fill={dim.pct / 100}
-                        style={{
-                          background: color,
-                          transform: "scaleX(0)",
-                          transformOrigin: "left center",
-                          width: "100%",
-                        }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
         </div>
-
-        <div className="landing-hero-insights">
-          <p className="landing-hero-report-kicker">AI Insights</p>
-          <ul>
-            {HERO_INSIGHTS.map((insight) => (
-              <li key={insight} className="hero-insight-item" style={{ opacity: 0 }}>
-                {insight}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div
-          className="landing-hero-plan-strip"
-          style={{ opacity: 0 }}
-        >
-          <span>Next</span>
-          <strong>Turn gaps into a day-by-day prep plan</strong>
-        </div>
+        <p className="prep-example-footnote">Practice the decisions behind your work.</p>
       </aside>
-
-      <div className="landing-hero-rail" aria-hidden>
-        <span className="landing-hero-rail-label">Today</span>
-        <span className="landing-hero-rail-line" />
-        <span className="landing-hero-rail-dot landing-hero-rail-dot--active" />
-        <span className="landing-hero-rail-dot" />
-        <span className="landing-hero-rail-dot" />
-        <span className="landing-hero-rail-label landing-hero-rail-label--end">Interview</span>
-      </div>
     </section>
-  );
-}
-
-function ScanLine() {
-  return (
-    <div className="hero-scan-line" aria-hidden />
   );
 }

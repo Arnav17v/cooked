@@ -35,11 +35,23 @@
 | Rate limiting | `slowapi` + DB-enforced daily cap | 3 analyses/user/day. |
 | Auth | Clerk JWT verification | Added at step 6 in the build order. |
 
-## Current state (still Phase 0)
+## AI review — 2026-09-16
 
-- Frontend exists; backend does not exist yet.
-- `ResumeRoastDemo` still runs **local regex heuristics** — no real LLM, no DB, no backend.
-- v1 build order (8 steps) is defined in [tasks.md](./tasks.md#p0--unblock-phase-1-v1-mvp).
+The implemented product has a Next.js frontend and FastAPI backend, persisted analyses, and resume-driven practice. Some older sections below describe the original target architecture rather than the current implementation.
+
+The resume analysis pipeline makes one combined model call for score, insights, review, and questions. This avoids multiplying free-tier requests. Keep that boundary and the central task router; the highest-value improvements are reliable admission, bounded latency, and output validation rather than adding agent frameworks or a vector database.
+
+Implemented in D-024:
+
+- Reserve daily quota with a user-row lock before scheduling analysis; completion no longer increments it again.
+- Bound each vendor's complete retry/model chain with a configurable deadline (60 seconds by default).
+- Validate the caller's response schema within the router, so invalid output triggers cross-vendor failover.
+- Use Groq Llama's supported JSON-object mode and put schema instructions in the stable system prefix. See [Groq structured-output documentation](https://console.groq.com/docs/structured-outputs).
+- Preserve cancellation, failover `degraded` reporting, and the existing unavailable result when both vendors fail.
+
+Verification: mocked provider checks cover success, schema failure, timeout, exhaustion, cancellation, JSON mode, and token truncation. Mocked admission checks cover the Postgres `FOR UPDATE` query, reservation, and cap rejection. These do not establish live model quality, provider latency, or real concurrent database behavior.
+
+Remaining gaps: stable system prefixes alone do not demonstrate prompt-cache hits; model availability/free-tier access must be checked against the deployment's account; schema validity does not prove question grounding; Google in-vendor model fallback is not reflected in `LLMResult.degraded`; SSE flagging/questions stages are cosmetic after the combined call; process restarts can strand in-process background jobs. Track these in `known-issues.md`.
 
 ## Repo layout (target, v1)
 

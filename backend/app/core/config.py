@@ -123,7 +123,7 @@ class Settings(BaseSettings):
     def parse_dev_flag(cls, v: object) -> bool:
         if isinstance(v, bool):
             return v
-        if isinstance(v, (int, float)):
+        if isinstance(v, int | float):
             return int(v) == 1
         if isinstance(v, str):
             return v.strip().lower() in ("1", "true", "yes", "on")
@@ -163,6 +163,8 @@ class Settings(BaseSettings):
     resume_word_cap: int = 4000
     min_roast_words: int = 30
     #: Single-call roast JSON (score + flags + questions) needs headroom; 1500 truncates mid-JSON.
+    # Per vendor, including internal model retries; total router wait is at most twice this.
+    llm_provider_timeout_seconds: float = Field(default=60.0, gt=0, le=300)
     llm_max_output_tokens: int = 4096
     llm_interview_max_output_tokens: int = Field(default=5000, ge=512, le=8192)
     llm_resume_text_token_soft_limit: int = 1500

@@ -116,6 +116,9 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` cancelled 
 
 ## P3 — Quality + polish
 
+- [x] **2026-09-16 — Resume-first landing and AI architecture review** (Steps 2, 3–5, 7): interactive role examples, simplified feature layout, provider deadlines and schema failover, Groq JSON compatibility, locked quota reservation before background work. TypeScript and changed-file lint pass; full-repo lint has pre-existing failures. Mocked failure/admission checks passed; live model quality and DB concurrency remain unverified.
+
+
 - [ ] Extract `DifficultyPill` to `src/components/ui/difficulty-pill.tsx` once a third file needs it (currently duplicated in `page.tsx` and `resume-roast-demo.tsx`).
 - [ ] Audit landing page for unused lucide imports.
 - [ ] Add `metadata` (OG/Twitter tags) in `app/layout.tsx`.

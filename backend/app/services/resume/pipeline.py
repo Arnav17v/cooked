@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date
 
 from sqlalchemy import delete
 
@@ -163,12 +162,6 @@ async def run_analysis_pipeline(analysis_id: uuid.UUID) -> None:
             analysis.status = "done"
             analysis.pipeline_stage = None
             analysis.failure_reason = None
-
-            today = date.today()
-            if user.last_analysis_date != today:
-                user.analyses_today = 0
-                user.last_analysis_date = today
-            user.analyses_today += 1
 
             await session.commit()
         except Exception:

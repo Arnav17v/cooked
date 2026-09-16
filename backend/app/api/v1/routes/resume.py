@@ -25,12 +25,16 @@ from starlette.responses import Response, StreamingResponse
 
 from app.api.deps_auth import optional_clerk_subject
 from app.core.config import get_settings
-from app.core.storage import delete_object_key, download_object_bytes, r2_configured, upload_resume_pdf
+from app.core.storage import (
+    delete_object_key,
+    download_object_bytes,
+    r2_configured,
+    upload_resume_pdf,
+)
 from app.db.session import SessionFactory, get_session
 from app.models.analysis import Analysis
 from app.models.resume import Resume
 from app.models.user import User
-from app.schemas.interview_quiz_scores import normalize_interview_quiz_scores
 from app.services.llm.dev_trace import clear_llm_dev_trace, drain_llm_dev_events
 from app.services.resume.experience_level import normalize_experience_level
 from app.services.resume.parser import ParsedResume, parse_pdf, parse_text, validate_min_words
@@ -241,7 +245,11 @@ async def enqueue_analysis_for_resume(
 
     await assert_resume_owned_if_authenticated(session, resume, clerk_subject)
 
-    user = await session.get(User, resume.user_id)
+    # Serialize admission for this user and refresh any identity-map copy.
+    user = await session.scalar(
+        select(User).where(User.id == resume.user_id).with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
 
@@ -250,7 +258,7 @@ async def enqueue_analysis_for_resume(
     if not settings.unlimited_daily_roasts and user.analyses_today >= settings.daily_analysis_cap:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Daily roast limit reached ({settings.daily_analysis_cap} per day) — try again tomorrow.",
+            detail=f"Daily analysis limit reached ({settings.daily_analysis_cap} per day) — try again tomorrow.",
         )
 
     if not (resume.raw_text or "").strip():
@@ -277,6 +285,7 @@ async def enqueue_analysis_for_resume(
         prompt_version=settings.prompt_version,
         status="pending",
     )
+    user.analyses_today += 1
     session.add(analysis)
     await prune_analyses_for_user(session, user.id)
     await session.commit()
