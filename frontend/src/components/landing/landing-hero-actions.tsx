@@ -64,11 +64,8 @@ export function LandingHeroActions() {
         <span>{primaryLabel}</span>
         <ArrowRight className="h-3.5 w-3.5" aria-hidden strokeWidth={2} />
       </LandingMagneticLink>
-      <LandingMagneticLink href="/roast" className="landing-btn-ghost">
-        Score my resume
-      </LandingMagneticLink>
       <LandingMagneticLink href="/#sample" className="landing-btn-ghost">
-        See sample score
+        See sample prep
       </LandingMagneticLink>
     </div>
   );

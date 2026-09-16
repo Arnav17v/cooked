@@ -6,10 +6,11 @@ On 429 / 5xx / timeout the router fails over to the other vendor.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
 from app.services.llm import gemini, groq
@@ -144,21 +145,32 @@ class LLMRouter:
         settings = get_settings()
         pv = settings.prompt_version
         if provider == "gemini":
-            data = await gemini.generate_json(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                max_output_tokens=max_output_tokens,
-                task=task,
-                response_schema=response_schema,
-            )
+            generate = gemini.generate_json
         elif provider == "groq":
-            data = await groq.generate_json(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                max_output_tokens=max_output_tokens,
-                task=task,
-                response_schema=response_schema,
-            )
+            generate = groq.generate_json
         else:
             raise RecoverableLLMError(f"unknown provider {provider!r}")
+        try:
+            # This budget includes the adapter's model chain, backoff and SDK retries.
+            # Each vendor gets its own budget so the backup always has time to run.
+            async with asyncio.timeout(settings.llm_provider_timeout_seconds):
+                data = await generate(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    max_output_tokens=max_output_tokens,
+                    task=task,
+                    response_schema=response_schema,
+                )
+        except TimeoutError as e:
+            raise RecoverableLLMError(f"{provider} exceeded its response deadline") from e
+
+        if response_schema is not None:
+            try:
+                response_schema.model_validate(data)
+            except ValidationError as e:
+                # Do not log validation inputs: they may contain private resume text.
+                raise RecoverableLLMError(
+                    f"{provider} returned invalid {response_schema.__name__}: "
+                    f"{e.error_count()} validation error(s)"
+                ) from e
         return LLMResult(content=data, provider=provider, prompt_version=pv, degraded=False)

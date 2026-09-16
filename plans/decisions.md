@@ -11,6 +11,18 @@ Format:
 
 ---
 
+### D-024: Bounded, validated AI failover and quota reservation
+
+**Date**: 2026-09-16
+**Status**: Accepted
+
+- **Context**: Google model retries could delay cross-vendor failover for minutes. Parsed but schema-invalid output bypassed failover. Groq Llama 3.3 was incorrectly requested with native `json_schema`. Concurrent requests could pass a cap incremented only after completion.
+- **Decision**: Keep the existing task router and free-tier providers. Bound each vendor chain with `LLM_PROVIDER_TIMEOUT_SECONDS` (60 seconds by default; at most two budgets per router call). Validate requested Pydantic schemas before accepting a provider result; validation failures use the existing failover path. For Groq, send JSON-object mode with the schema in the stable system prefix and disable hidden SDK retries. Reject token-truncated output.
+- **Quota**: Lock and refresh the user row, reserve one analysis in the same transaction as the pending analysis, then schedule work. Remove completion-time charging. Failed admitted attempts consume the allowance because they can consume provider quota; validation failures before admission do not. Existing dev bypass remains.
+- **Consequences**: No new services, paid models, dependencies, or schema changes. Strict schema validation can reject payloads that downstream salvage previously tolerated. The timeout is an upper bound for provider work, not a promise of 60-second user latency. In-process jobs still need restart recovery in future work.
+
+---
+
 ### D-023: Remotion workspace for marketing demo videos
 
 **Date**: 2026-06-05

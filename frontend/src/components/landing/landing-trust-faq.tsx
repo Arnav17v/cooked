@@ -215,10 +215,10 @@ export function LandingTrustFaq() {
             <LandingReveal delay={0.1}>
               <div className="bg-lc-surface border border-lc-border rounded-lg p-5 h-full">
                 <Shield className="w-6 h-6 text-lc-orange mb-4" />
-                <h4 className="font-semibold text-lc-text text-[14px] mb-2">Gemini Processing</h4>
+                <h4 className="font-semibold text-lc-text text-[14px] mb-2">AI processing</h4>
                 <p className="text-lc-muted text-[12px] leading-relaxed">
-                  Your resume text is parsed and evaluated via Google Generative Language API.
-                  No data is used to train public LLM models.
+                  Your resume text is sent to Google or Groq to generate your review and practice
+                  material. Each provider’s data policies apply.
                 </p>
               </div>
             </LandingReveal>
@@ -226,10 +226,10 @@ export function LandingTrustFaq() {
             <LandingReveal delay={0.2}>
               <div className="bg-lc-surface border border-lc-border rounded-lg p-5 h-full">
                 <Lock className="w-6 h-6 text-lc-orange mb-4" />
-                <h4 className="font-semibold text-lc-text text-[14px] mb-2">Retention Control</h4>
+                <h4 className="font-semibold text-lc-text text-[14px] mb-2">Resume storage</h4>
                 <p className="text-lc-muted text-[12px] leading-relaxed">
-                  We save your diagnostic analysis and score report, but you can opt to scrub your
-                  raw resume text from our database at any time.
+                  Your resume and report are stored for continued practice. Uploading a new resume
+                  replaces the previous resume for your account.
                 </p>
               </div>
             </LandingReveal>

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -28,7 +29,7 @@ def get_groq_client() -> AsyncGroq:
         settings = get_settings()
         if not settings.groq_api_key:
             raise RecoverableLLMError("GROQ_API_KEY is not set")
-        _client = AsyncGroq(api_key=settings.groq_api_key)
+        _client = AsyncGroq(api_key=settings.groq_api_key, max_retries=0)
     return _client
 
 
@@ -46,15 +47,14 @@ async def generate_json(
     model = resolve_groq_model(settings)
     cap = max_output_tokens if max_output_tokens is not None else settings.llm_max_output_tokens
 
-    response_format: dict[str, object] = {"type": "json_object"}
-    if response_schema:
-        response_format = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": response_schema.__name__,
-                "schema": response_schema.model_json_schema(),
-            },
-        }
+    # Llama 3.3 supports JSON object mode, not native JSON Schema outputs.
+    # Keep the schema in the stable system prefix; the router validates locally.
+    response_format = {"type": "json_object"}
+    system_prompt += "\nReturn a single valid JSON object."
+    if response_schema is not None:
+        system_prompt += "\nFollow this JSON schema:\n" + json.dumps(
+            response_schema.model_json_schema(), sort_keys=True
+        )
 
     try:
         chat = await client.chat.completions.create(
@@ -75,6 +75,10 @@ async def generate_json(
     except Exception as e:
         raise RecoverableLLMError(str(e)) from e
 
+    if not chat.choices:
+        raise RecoverableLLMError("empty Groq choices")
+    if chat.choices[0].finish_reason == "length":
+        raise RecoverableLLMError("Groq response exceeded output token limit")
     raw = (chat.choices[0].message.content or "").strip()
     if not raw:
         raise RecoverableLLMError("empty Groq response")

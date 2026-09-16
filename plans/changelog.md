@@ -6,6 +6,12 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-09-16
+
+- **UI:** rebuilt the landing hero around an interactive resume-to-interview example, simplified the feature section and CTA hierarchy, removed the marquee and decorative hero timelines, and corrected sample navigation and provider/storage copy; checked desktop and 375px.
+- **AI reliability:** bounded each provider attempt (including retries) with `LLM_PROVIDER_TIMEOUT_SECONDS`, validated response schemas inside failover, corrected Groq Llama JSON mode, and rejected truncated Groq completions.
+- **Quota:** reserve daily analysis allowance under a Postgres user-row lock before background work; remove the completion-time increment. Failed admitted attempts consume allowance. No schema change.
+
 ## 2026-06-05
 
 - **video — demo reel:** scaffolded a Remotion `video/` workspace and rendered a 54s vertical Get Uncooked demo MP4 for Reels/TikTok (D-023).
