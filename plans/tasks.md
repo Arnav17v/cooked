@@ -116,6 +116,11 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` cancelled 
 
 ## P3 — Quality + polish
 
+- [x] **2026-09-17 — Quiz setup polish:** stable three-column length picker, native radio keyboard support, consistent start CTA, and readable history rows.
+
+- [x] **2026-09-17 — Notes reading layout:** reclaim mobile space, quiet section navigation, readable prose measure, and smaller notes dock; responsive synthetic layout checks at 375px and desktop. Authenticated save/navigation flows retain their existing handlers.
+
+
 - [x] **2026-09-16 — Resume-first landing and AI architecture review** (Steps 2, 3–5, 7): interactive role examples, simplified feature layout, provider deadlines and schema failover, Groq JSON compatibility, locked quota reservation before background work. TypeScript and changed-file lint pass; full-repo lint has pre-existing failures. Mocked failure/admission checks passed; live model quality and DB concurrency remain unverified.
 
 

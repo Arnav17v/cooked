@@ -40,24 +40,24 @@ export function QuizImprovementChart({ scores }: Props) {
   return (
     <div className="rounded-xl border border-lc-border bg-lc-header/50 p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 className="font-mono text-[11px] font-semibold uppercase tracking-wide text-lc-dim">
+        <h4 className="text-[14px] font-semibold text-lc-text">
           Quiz score trend
         </h4>
         {n >= 2 ? (
           <span
-            className={`font-mono text-[11px] tabular-nums ${
+            className={`text-[12px] tabular-nums ${
               delta > 0 ? "text-lc-easy" : delta < 0 ? "text-lc-hard" : "text-lc-muted"
             }`}
           >
             {delta > 0 ? "+" : ""}
-            {delta} vs first attempt
+            {delta} points since first attempt
           </span>
         ) : (
           <span className="font-mono text-[11px] text-lc-dim">1 attempt</span>
         )}
       </div>
       <p className="mt-1 text-[12px] text-lc-muted">
-        Saved on this resume (last 5 finished mock quizzes).
+        Your completed quizzes on this resume.
         {truncated ? ` Chart shows the most recent ${maxPlot} attempts.` : ""}
       </p>
 
@@ -107,15 +107,15 @@ export function QuizImprovementChart({ scores }: Props) {
         ))}
       </svg>
 
-      <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto font-mono text-[10px] text-lc-dim">
+      <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-[12px] text-lc-muted">
         {scores
           .map((s, i) => ({ s, i }))
           .reverse()
           .map(({ s, i }) => (
-            <li key={`${s.at}-${i}`} className="flex justify-between gap-3 border-l border-lc-border pl-2">
-              <span className="shrink-0 text-lc-muted">#{i + 1}</span>
+            <li key={`${s.at}-${i}`} className="grid grid-cols-[4.5rem_3rem_1fr] items-center gap-2 border-t border-lc-divider py-2">
+              <span className="shrink-0 text-lc-muted">Attempt {i + 1}</span>
               <span className="shrink-0 text-lc-orange tabular-nums">{s.final_score}</span>
-              <span className="min-w-0 truncate text-right">{new Date(s.at).toLocaleString()}</span>
+              <span className="min-w-0 truncate text-right">{new Date(s.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
             </li>
           ))}
       </ul>

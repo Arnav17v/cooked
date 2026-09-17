@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, List, X } from "lucide-react";
 import { AnimatePresence, motion, useDragControls } from "motion/react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
@@ -1008,9 +1008,11 @@ export function NotesStudyPage({
                   aria-expanded={curriculumOpen}
                   onClick={() => setCurriculumOpen((open) => !open)}
                 >
+                  <List size={16} aria-hidden />
                   Sections
                 </button>
                 <span className="plan-mobile-chrome-title">{mobileSectionLabel}</span>
+                <span className="notes-section-position">{activeSectionIndex + 1} / {sortedSections.length}</span>
               </div>
 
               <div className="plan-lesson-panel">
@@ -1056,7 +1058,7 @@ export function NotesStudyPage({
                       </div>
                     </header>
 
-                    <div className="plan-lesson-body">
+                    <div className={`plan-lesson-body${panelEditing ? "" : " notes-reading-body"}`}>
                       {panelEditing ? (
                         <>
                           <NotesRichEditor
@@ -1194,9 +1196,9 @@ export function NotesStudyPage({
           <button
             type="button"
             onClick={() => startQuizFromNotes()}
-            className="mt-4 inline-flex h-10 items-center rounded-lg border border-lc-orange/50 bg-lc-orange/10 px-5 text-[13px] font-semibold text-lc-orange transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orange/20"
+            className="quiz-start-button mt-4"
           >
-            quiz me on this
+            Start practice quiz
           </button>
         </div>
 

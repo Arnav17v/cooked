@@ -6,6 +6,12 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-09-17
+
+- **Quiz setup:** equal-width native radio choices, sentence-case labels, explicit selected/focus/disabled states, question-count CTA, and clearer score-history rows. Verified mobile selection and arrow-key behavior with a temporary fixture; no live quiz started.
+
+- **Notes reading UI (Steps 4–5 / P3):** remove the empty mobile header and diagnostic sidebar in the notes tab, widen the reading surface, simplify Sections/saves/edit controls, improve prose spacing, and shrink the mobile dock with safe-area clearance. Desktop and 375px layout checked using a temporary synthetic fixture; authenticated editing and section changes not exercised. Preview fixture removed and server stopped.
+
 ## 2026-09-16
 
 - **UI:** rebuilt the landing hero around an interactive resume-to-interview example, simplified the feature section and CTA hierarchy, removed the marquee and decorative hero timelines, and corrected sample navigation and provider/storage copy; checked desktop and 375px.

@@ -461,7 +461,7 @@ export function RoastDashboard() {
   const resumeLine2 = currentRoast?.target_role?.trim() || liveScore?.role?.trim() || "—";
 
   return (
-    <div className="landing-dash-root flex min-h-[calc(100vh-4rem)] flex-col lg:flex-row">
+    <div className={`landing-dash-root flex min-h-[calc(100vh-4rem)] flex-col lg:flex-row${resultTab === "notes" ? " landing-dash-root--notes" : ""}`}>
       {/* Mobile top */}
       <div className="landing-dash-mobile-bar lg:hidden">
         {displayScore !== null ? (
@@ -536,7 +536,7 @@ export function RoastDashboard() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden">
         {isSignedIn && myRoasts.length > 0 ? (
-          <details className="mx-4 mt-4 rounded-lg border border-lc-border bg-lc-surface/80 lg:mx-8 lg:mt-6 [&_summary::-webkit-details-marker]:hidden">
+          <details className="landing-dash-saves mx-4 mt-4 rounded-lg border border-lc-border bg-lc-surface/80 lg:mx-8 lg:mt-6 [&_summary::-webkit-details-marker]:hidden">
             <summary className="cursor-pointer list-none px-4 py-3 font-mono text-[12px] uppercase tracking-wide text-lc-muted hover:text-lc-text">
               Your saves ({myRoasts.length})
             </summary>
@@ -696,11 +696,15 @@ export function RoastDashboard() {
                     </div>
                   ) : null}
 
-                  <div className="space-y-4">
+                  <div className="quiz-session-setup">
+                    <div>
+                      <h3 className="text-lg font-semibold tracking-tight text-lc-text">Practice your interview</h3>
+                      <p className="mt-1 text-[13px] leading-6 text-lc-muted">Choose how many questions you want to work through.</p>
+                    </div>
                     {quizScores.length === 0 ? (
                       <>
                         <p className="font-mono text-[10px] uppercase tracking-wide text-lc-dim">
-                          {"// haven't tried the quiz yet"}
+                          {"Your first practice session"}
                         </p>
                         <p className="text-[13px] text-lc-muted">
                           Start a practice quiz — questions are generated when you run it.
@@ -723,9 +727,9 @@ export function RoastDashboard() {
                       type="button"
                       disabled={quizStarting}
                       onClick={() => void startQuizFromRoast()}
-                      className="flex h-11 w-full items-center justify-center rounded-lg bg-lc-orange text-[14px] font-semibold text-black transition-transform duration-100 ease-out hover:-translate-y-px hover:bg-lc-orangeHover disabled:cursor-not-allowed disabled:opacity-50"
+                      className="quiz-start-button"
                     >
-                      {quizStarting ? "Starting…" : "quiz me on this"}
+                      {quizStarting ? "Starting quiz…" : `Start ${quizCountForLength(quizLength)}-question quiz`}
                     </button>
                     {quizErr ? (
                       <p className="text-[12px] text-lc-hard" role="alert">
