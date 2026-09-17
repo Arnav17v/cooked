@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { QUIZ_LENGTH_OPTIONS, type QuizLengthId } from "@/lib/quiz-length";
 
 type QuizLengthPickerProps = {
@@ -10,32 +11,28 @@ type QuizLengthPickerProps = {
 };
 
 export function QuizLengthPicker({ value, onChange, disabled, className = "" }: QuizLengthPickerProps) {
+  const groupId = useId();
   return (
-    <div className={className}>
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-lc-dim">{"// quiz length"}</p>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Quiz length">
-        {QUIZ_LENGTH_OPTIONS.map((opt) => {
-          const active = value === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              disabled={disabled}
-              onClick={() => onChange(opt.id)}
-              className={`inline-flex min-w-[5.5rem] flex-col items-center rounded-lg border px-3 py-2 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                active
-                  ? "border-lc-orange/60 bg-lc-orange/15 text-lc-text"
-                  : "border-lc-border bg-lc-elevated text-lc-muted hover:border-lc-orange/35 hover:text-lc-text"
-              }`}
-            >
-              <span className="text-[13px] font-semibold">{opt.label}</span>
-              <span className="mt-0.5 text-[10px] text-lc-dim">{opt.detail}</span>
-            </button>
-          );
-        })}
+    <fieldset disabled={disabled} className={`min-w-0 ${className}`}>
+      <legend className="mb-3 text-[14px] font-medium text-lc-text">Quiz length</legend>
+      <div className="grid grid-cols-3 gap-2">
+        {QUIZ_LENGTH_OPTIONS.map((opt) => (
+          <label key={opt.id} className="relative min-w-0 cursor-pointer">
+            <input
+              type="radio"
+              name={groupId}
+              value={opt.id}
+              checked={value === opt.id}
+              onChange={() => onChange(opt.id)}
+              className="peer sr-only"
+            />
+            <span className="quiz-length-option flex min-h-[76px] flex-col items-center justify-center rounded-lg border border-lc-border bg-lc-surface px-1.5 py-3 text-center text-lc-muted transition-colors hover:border-lc-muted peer-checked:border-lc-orange peer-checked:bg-lc-orange/10 peer-checked:text-lc-text peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-lc-orange peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
+              <span className="text-[14px] font-semibold leading-5">{opt.label}</span>
+              <span className="mt-1 text-[11px] leading-4 text-lc-muted">{opt.detail}</span>
+            </span>
+          </label>
+        ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
