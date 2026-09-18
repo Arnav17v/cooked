@@ -168,11 +168,14 @@ export const NotesRichEditor = forwardRef<
   {
     value: string;
     onBlurCommitted: (html: string) => void;
+    onDraftChange?: (html: string) => void;
     /** `drawer` uses a taller scroll area for bottom-sheet layouts. */
     variant?: "inline" | "drawer";
   }
->(function NotesRichEditor({ value, onBlurCommitted, variant = "inline" }, ref) {
+>(function NotesRichEditor({ value, onBlurCommitted, onDraftChange, variant = "inline" }, ref) {
   const [, setToolbarTick] = useState(0);
+  const onDraftRef = useRef(onDraftChange);
+  onDraftRef.current = onDraftChange;
   const onBlurRef = useRef(onBlurCommitted);
   onBlurRef.current = onBlurCommitted;
 
@@ -209,6 +212,7 @@ export const NotesRichEditor = forwardRef<
         class: editorBodyClass,
       },
     },
+    onUpdate: ({ editor: ed }) => onDraftRef.current?.(sanitizeNotesHtml(ed.getHTML())),
     onBlur: ({ editor: ed }) => {
       onBlurRef.current(sanitizeNotesHtml(ed.getHTML()));
     },

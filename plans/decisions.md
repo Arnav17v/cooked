@@ -11,6 +11,18 @@ Format:
 
 ---
 
+### D-025: Prep navigation and recoverable reading workflow
+
+**Date**: 2026-09-18
+**Status**: Accepted
+
+- **Decision:** Primary navigation is Plan, Notes, Practice, Report. Resume Score, AI Insights, and In-Depth Review remain addressable report subviews. Mobile account controls use a small overflow menu.
+- Quizzes open in the current tab; return paths accept only local dashboard/plan destinations. Feedback links use supplied note section IDs. Keep unfinished question seeds in session storage until submission alongside existing answer drafts.
+- Notes remember section/scroll in session storage and text size locally. Edits are serialized per section, recoverable in session storage, and visibly report saving/saved/failure with retry. Browser storage is best-effort, not a server backup.
+- Score interpretation explains dimension caps and the existing /100 display; this UI change does not alter the scoring formula.
+
+---
+
 ### D-024: Bounded, validated AI failover and quota reservation
 
 **Date**: 2026-09-16

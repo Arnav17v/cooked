@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import type { QuizHistorySessionItem } from "@/lib/api";
-import { openQuizResultsInNewTab } from "@/lib/open-quiz-results-tab";
 import { scoreHeatColor } from "@/components/score/ScoreCard";
 import { normalizeHeatLabel } from "@/components/roast/roast-shared";
 
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function QuizHistoryList({ sessions, loading }: Props) {
+  const router = useRouter();
   if (loading) {
     return (
       <div className="space-y-3">
@@ -52,9 +54,7 @@ export function QuizHistoryList({ sessions, loading }: Props) {
 
   function openSession(sessionId: string, hasFull: boolean) {
     if (!hasFull || typeof window === "undefined") return;
-    openQuizResultsInNewTab(window.location.origin, sessionId, (path) => {
-      window.location.assign(path);
-    });
+    router.push(`/quiz/results/${encodeURIComponent(sessionId)}`);
   }
 
   return (

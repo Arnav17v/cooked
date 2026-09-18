@@ -6,6 +6,10 @@ Format: `YYYY-MM-DD — area: short description (#ref)`
 
 ---
 
+## 2026-09-18
+
+- **Prep UX (Steps 4–5 / P3):** unify Plan / Notes / Practice / Report navigation, replace the oversized dock menu with account overflow, group report tools, keep quizzes in-tab with safe source returns, put setup before history, add feedback-to-note links and score explanations, and preserve note position/text size/drafts with explicit save/retry status. Synthetic 375px and desktop checks cover editing, failed-save recovery, successful retry, section restoration, and text sizing; live authenticated API flows remain unverified. Frontend lint, TypeScript, and production build pass; seven safe-return/navigation checks pass. Backend retains 34 existing Ruff findings. Preview fixture removed and server stopped. See D-025.
+
 ## 2026-09-17
 
 - **Quiz setup:** equal-width native radio choices, sentence-case labels, explicit selected/focus/disabled states, question-count CTA, and clearer score-history rows. Verified mobile selection and arrow-key behavior with a temporary fixture; no live quiz started.

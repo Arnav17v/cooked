@@ -128,6 +128,13 @@ export function ScoreBreakdown({
           );
         })}
       </ul>
+      {!compact ? (
+        <details className="rounded-lg border border-lc-border p-3 text-xs leading-6 text-lc-muted">
+          <summary className="cursor-pointer font-medium text-lc-text">How to read this score</summary>
+          <p className="mt-2">ATS covers parsing and structure; Content covers evidence and impact; Writing covers clarity; Job Match covers relevance to your target role.</p>
+          <p className="mt-2">The displayed dimensions allow {DIMENSION_ORDER.reduce((sum, key) => sum + dimensions[key].max, 0)} points in total. The report displays the total against {dimensions.total_max}; it is a diagnostic for improving your resume, not a hiring probability.</p>
+        </details>
+      ) : null}
     </div>
   );
 }

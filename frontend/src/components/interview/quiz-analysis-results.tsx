@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { buildDashboardHref } from "@/lib/dashboard-nav";
+
 import type { InterviewFirstQuestion, InterviewPerAnswerFeedback } from "@/lib/api";
 
 import { QuizPrimaryButton } from "@/components/interview/quiz-ui";
@@ -77,6 +80,8 @@ export type QuizAnalysisResultsProps = {
   questions: InterviewFirstQuestion[];
   answers: string[];
   submitError?: string | null;
+  resumeId?: string;
+  backLabel?: string;
   onBackToDashboard: () => void;
   onBackToPlan?: () => void;
   backToPlanLabel?: string;
@@ -90,6 +95,8 @@ export function QuizAnalysisResults({
   questions,
   answers,
   submitError,
+  resumeId,
+  backLabel = "Back to practice",
   onBackToDashboard,
   onBackToPlan,
   backToPlanLabel = "Back to plan",
@@ -97,6 +104,9 @@ export function QuizAnalysisResults({
   const score = Math.min(100, Math.max(0, Math.round(finalScore)));
   const hero = performanceHeadline(score);
   const badge = sessionBadge(sessionId);
+  const nextIndex = reportRows.findIndex((row) => row.signal === "red");
+  const focusIndex = nextIndex >= 0 ? nextIndex : reportRows.findIndex((row) => row.signal === "yellow");
+
 
   return (
     <div className="relative text-lv-cream">
@@ -115,11 +125,17 @@ export function QuizAnalysisResults({
           <span className="border-b-[6px] border-[#ff4d00] pb-0.5">{hero.highlight}</span>
         </h1>
         <p className="mt-5 max-w-xl text-[13px] leading-relaxed text-lv-cream-dim sm:text-sm sm:leading-7">
-          Answer each question in your own words. You get a brutally honest score, red flags, and
-          per-answer breakdown based on your resume claims.
+          Review what worked, choose one answer to improve, and return to your notes before practicing again.
         </p>
       </header>
 
+      {focusIndex >= 0 ? (
+        <section className="my-6 rounded-lg border border-lv-rule bg-lv-surface p-5" aria-label="Next practice step">
+          <h2 className="text-base font-semibold">Your next step</h2>
+          <p className="mt-2 text-sm leading-6 text-lv-cream-dim">Rework answer {focusIndex + 1} using its feedback, then say it aloud in your own words.</p>
+          <a className="mt-3 inline-block text-sm text-lv-rust underline underline-offset-4" href={`#answer-${focusIndex + 1}`}>Review this answer →</a>
+        </section>
+      ) : null}
       {/* Score band */}
       <section className="relative z-10 border-b border-lv-rule py-10 md:py-12">
 <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
@@ -194,6 +210,7 @@ export function QuizAnalysisResults({
             return (
               <article
                 key={`analysis-q-${idx + 1}`}
+                id={`answer-${idx + 1}`}
                 className="grid gap-8 border-t border-lv-rule pt-12 first:border-t-0 first:pt-0 lg:grid-cols-[4.5rem_1fr_minmax(240px,300px)] lg:gap-x-10"
               >
                 <div className="flex flex-row gap-6 lg:flex-col lg:gap-4">
@@ -254,6 +271,11 @@ export function QuizAnalysisResults({
                     >
                       {row.analysis?.trim() || "No critique returned for this answer."}
                     </p>
+                    {resumeId && q?.source_note_section_id ? (
+                      <Link className="mt-4 inline-block text-sm text-lv-rust underline underline-offset-4" href={`${buildDashboardHref(resumeId, "notes")}&section=${encodeURIComponent(q.source_note_section_id)}`}>
+                        Review the related note →
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               </article>
@@ -270,7 +292,7 @@ export function QuizAnalysisResults({
 
       <div className="flex flex-wrap items-center gap-4">
         <QuizPrimaryButton onClick={onBackToDashboard} className="min-w-[220px]">
-          Back to dashboard
+          {backLabel}
         </QuizPrimaryButton>
         {onBackToPlan ? (
           <button
