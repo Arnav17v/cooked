@@ -116,6 +116,8 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` cancelled 
 
 ## P3 — Quality + polish
 
+- [x] **2026-09-18 — Prep workspace UX:** consistent four-destination navigation, report subnavigation, same-tab quiz handoff and source returns, actionable feedback links, note reading continuity and recoverable edits, and transparent score interpretation (D-025).
+
 - [x] **2026-09-17 — Quiz setup polish:** stable three-column length picker, native radio keyboard support, consistent start CTA, and readable history rows.
 
 - [x] **2026-09-17 — Notes reading layout:** reclaim mobile space, quiet section navigation, readable prose measure, and smaller notes dock; responsive synthetic layout checks at 375px and desktop. Authenticated save/navigation flows retain their existing handlers.

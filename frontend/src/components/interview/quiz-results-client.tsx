@@ -1,5 +1,7 @@
 "use client";
 
+import { quizReturnHref } from "@/lib/dashboard-nav";
+
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -95,11 +97,9 @@ export function QuizResultsClient({ sessionId }: Props) {
 
   const headline =
     payload.one_liner?.trim() ||
-    "Technically solid in places, but gaps show when you go deeper on fundamentals.";
+    "Review your answers and feedback below.";
 
   const meta = readQuizSessionMeta(sessionId);
-  const planReturn =
-    meta?.origin === "plan" && meta.return_to?.trim() ? meta.return_to.trim() : null;
 
   return (
     <QuizAnalysisResults
@@ -109,9 +109,9 @@ export function QuizResultsClient({ sessionId }: Props) {
       reportRows={reportRows}
       questions={questions}
       answers={answers}
-      onBackToDashboard={() => router.push("/dashboard")}
-      onBackToPlan={planReturn ? () => router.push(planReturn) : undefined}
-      backToPlanLabel="Back to plan"
+      resumeId={payload.resume_id}
+        backLabel={meta?.origin === "plan" ? "Back to plan" : meta?.origin === "notes" ? "Back to notes" : "Back to practice"}
+        onBackToDashboard={() => router.push(quizReturnHref(meta?.return_to, payload.resume_id))}
     />
   );
 }

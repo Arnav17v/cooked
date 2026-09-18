@@ -2,11 +2,11 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, List, X } from "lucide-react";
 import { AnimatePresence, motion, useDragControls } from "motion/react";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject } from "react";
 
 import { QuizLengthPicker } from "@/components/interview/quiz-length-picker";
 import { LONG_RUN_TIME_HINT } from "@/components/ui/pipeline-progress";
@@ -29,7 +29,7 @@ import {
   type NotesGetResponse,
 } from "@/lib/api";
 import { QUIZ_START_HANDOFF_KEY, type QuizStartHandoff } from "@/lib/interview-quiz-start-handoff";
-import { openQuizStartInNewTab } from "@/lib/open-quiz-start-tab";
+import { buildDashboardHref } from "@/lib/dashboard-nav";
 import { showNotesUpdatedToast } from "@/lib/notes-updated-toast";
 import {
   contentLooksLikeNotesHtml,
@@ -266,6 +266,25 @@ export function NotesStudyPage({
   skipScoreFetch = false,
 }: NotesStudyPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedSection = searchParams.get("section");
+  const [textSize, setTextSize] = useState(17);
+  const [saveStates, setSaveStates] = useState<Record<string, "draft" | "saving" | "saved" | "error">>({});
+  const pendingDrafts = useRef<Record<string, string>>({});
+  const saveQueue = useRef<Record<string, Promise<void>>>({});
+  const restoredSection = useRef<string | null>(null);
+  useEffect(() => {
+    try {
+      const size = Number(localStorage.getItem("notes_text_size"));
+      if ([16, 17, 19].includes(size)) setTextSize(size);
+      const recovered = JSON.parse(sessionStorage.getItem(`notes_drafts_${resumeId}`) || "{}");
+      if (recovered && typeof recovered === "object") {
+        pendingDrafts.current = Object.fromEntries(Object.entries(recovered).filter((entry) => typeof entry[1] === "string")) as Record<string, string>;
+        setSaveStates(Object.fromEntries(Object.keys(pendingDrafts.current).map((id) => [id, "error"])));
+      }
+    } catch { /* Reading remains available without browser storage. */ }
+  }, [resumeId]);
+
   const { isSignedIn, getToken } = useAuth();
 
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -332,6 +351,7 @@ export function NotesStudyPage({
   }, [panelEditing]);
 
   const selectSection = useCallback((sectionId: string) => {
+    if (panelEditingRef.current) panelEditorRef.current?.commit();
     setActiveSectionId(sectionId);
     setPanelEditing(false);
     setCurriculumOpen(false);
@@ -347,9 +367,28 @@ export function NotesStudyPage({
 
   useEffect(() => {
     if (!embedded || !sortedSections.length) return;
-    if (activeSectionId && sortedSections.some((s) => s.section_id === activeSectionId)) return;
-    setActiveSectionId(sortedSections[0].section_id);
-  }, [embedded, sortedSections, activeSectionId]);
+    const selectionKey = `${resumeId}:${requestedSection || ""}`;
+    if (restoredSection.current === selectionKey && sortedSections.some((section) => section.section_id === activeSectionId)) return;
+    let previous: string | null = null;
+    try { previous = sessionStorage.getItem(`notes_section_${resumeId}`); } catch { /* Optional continuity. */ }
+    const preferred = [requestedSection, previous].find((id) => sortedSections.some((section) => section.section_id === id));
+    setActiveSectionId(preferred || sortedSections[0].section_id);
+    restoredSection.current = selectionKey;
+  }, [embedded, sortedSections, requestedSection, resumeId, activeSectionId]);
+
+  useEffect(() => {
+    if (!embedded || !activeSectionId) return;
+    const key = `notes_scroll_${resumeId}_${activeSectionId}`;
+    let frame = 0;
+    try {
+      sessionStorage.setItem(`notes_section_${resumeId}`, activeSectionId);
+      const y = Number(sessionStorage.getItem(key) || 0);
+      frame = requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "instant" }));
+    } catch { /* Optional continuity. */ }
+    const savePosition = () => { try { sessionStorage.setItem(key, String(window.scrollY)); } catch { /* Optional continuity. */ } };
+    window.addEventListener("scroll", savePosition, { passive: true });
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", savePosition); };
+  }, [embedded, activeSectionId, resumeId]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 769px)");
@@ -376,9 +415,9 @@ export function NotesStudyPage({
       }
       return;
     }
-    if (!highlightSectionId) return;
+    if (!highlightSectionId || requestedSection) return;
     selectSection(highlightSectionId);
-  }, [notesTabActive, highlightSectionId, selectSection, closeSectionPanel, embedded]);
+  }, [notesTabActive, highlightSectionId, selectSection, closeSectionPanel, embedded, requestedSection]);
 
   useEffect(() => {
     if (embedded || !activeSectionId) return;
@@ -504,7 +543,7 @@ export function NotesStudyPage({
       setNotes(n);
       const nd: Record<string, string> = {};
       for (const s of n.sections) nd[s.section_id] = s.content;
-      setDrafts(nd);
+      setDrafts({ ...nd, ...pendingDrafts.current });
       writeNotesSessionCache(resumeId, n, opts?.roleLabel);
     },
     [resumeId],
@@ -668,21 +707,38 @@ export function NotesStudyPage({
     return () => window.clearInterval(id);
   }, [emptyGenerating]);
 
-  const flushPatch = useCallback(
-    async (sectionId: string, content: string) => {
+  const preserveDraft = useCallback((sectionId: string, content: string) => {
+    pendingDrafts.current[sectionId] = content;
+    try { sessionStorage.setItem(`notes_drafts_${resumeId}`, JSON.stringify(pendingDrafts.current)); } catch { /* Saving still works without storage. */ }
+  }, [resumeId]);
+
+  const flushPatch = useCallback((sectionId: string, content: string) => {
+    preserveDraft(sectionId, content);
+    setSaveStates((states) => ({ ...states, [sectionId]: "saving" }));
+    const queued = (saveQueue.current[sectionId] || Promise.resolve()).then(async () => {
       try {
         const token = await bearer();
         await patchNotesSection(sectionId, content, token ? { token } : undefined);
+        if (pendingDrafts.current[sectionId] !== content) return;
+        delete pendingDrafts.current[sectionId];
+        try { sessionStorage.setItem(`notes_drafts_${resumeId}`, JSON.stringify(pendingDrafts.current)); } catch { /* Optional recovery. */ }
+        const current = notesRef.current;
+        if (current) {
+          const updated = { ...current, sections: current.sections.map((section) => section.section_id === sectionId ? { ...section, content } : section) };
+          notesRef.current = updated;
+          writeNotesSessionCache(resumeId, updated);
+          setNotes(updated);
+        }
+        setSaveStates((states) => ({ ...states, [sectionId]: "saved" }));
         setPulseSaveSectionId(sectionId);
-        window.setTimeout(() => {
-          setPulseSaveSectionId((s) => (s === sectionId ? null : s));
-        }, 320);
+        window.setTimeout(() => setPulseSaveSectionId((id) => id === sectionId ? null : id), 320);
       } catch {
-        /* non-blocking */
+        if (pendingDrafts.current[sectionId] === content) setSaveStates((states) => ({ ...states, [sectionId]: "error" }));
       }
-    },
-    [bearer],
-  );
+    });
+    saveQueue.current[sectionId] = queued;
+    return queued;
+  }, [bearer, preserveDraft, resumeId]);
 
   const onDraftChange = (sectionId: string, value: string) => {
     setDrafts((d) => ({ ...d, [sectionId]: value }));
@@ -748,6 +804,8 @@ export function NotesStudyPage({
     const role = roleLabel.trim() || "Software Engineer";
     const handoff: QuizStartHandoff = {
       resumeId,
+      origin: "notes",
+      return_to: `${buildDashboardHref(resumeId, "notes")}${activeSectionId ? `&section=${encodeURIComponent(activeSectionId)}` : ""}`,
       role,
       hard_mode: false,
       question_count: quizCountForLength(quizLength),
@@ -757,8 +815,33 @@ export function NotesStudyPage({
     } catch {
       return;
     }
-    openQuizStartInNewTab(window.location.origin, (path) => router.push(path));
+    router.push("/quiz/start");
   }
+
+  const saveLabels = { draft: "Unsaved changes", saving: "Saving…", saved: "Saved", error: "Changes not saved" };
+  const readerTools = activeSection ? (
+    <div className="notes-reader-tools">
+      <label>
+        Text size
+        <select value={textSize} onChange={(event) => {
+          const size = Number(event.target.value);
+          setTextSize(size);
+          try { localStorage.setItem("notes_text_size", String(size)); } catch { /* Optional preference. */ }
+        }}>
+          <option value={16}>Small</option>
+          <option value={17}>Default</option>
+          <option value={19}>Large</option>
+        </select>
+      </label>
+      <span role="status">{saveLabels[saveStates[activeSection.section_id]] || ""}</span>
+      {saveStates[activeSection.section_id] === "error" ? (
+        <button type="button" className="text-lc-orange underline"
+          onClick={() => void flushPatch(activeSection.section_id, pendingDrafts.current[activeSection.section_id] ?? activeDraft)}>
+          Retry save
+        </button>
+      ) : null}
+    </div>
+  ) : null;
 
   if (loadErr && !notes && !initialLoading) {
     return (
@@ -838,7 +921,7 @@ export function NotesStudyPage({
       activeSectionIndex >= 0 && activeSectionIndex < sortedSections.length - 1;
 
     return (
-      <div className="notes-page notes-page--player">
+      <div className="notes-page notes-page--player" style={{ "--notes-font-size": `${textSize}px` } as CSSProperties}>
         <div className="plan-execution-header">
           <h1 className="plan-execution-title">
             <span className="plan-execution-title-primary">Interview prep notes</span>
@@ -1042,7 +1125,8 @@ export function NotesStudyPage({
                           <button
                             type="button"
                             className="plan-secondary-btn"
-                            onClick={() => panelEditorRef.current?.commit()}
+                            onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => panelEditorRef.current?.commit()}
                           >
                             Done
                           </button>
@@ -1056,6 +1140,7 @@ export function NotesStudyPage({
                           </button>
                         )}
                       </div>
+                      {readerTools}
                     </header>
 
                     <div className={`plan-lesson-body${panelEditing ? "" : " notes-reading-body"}`}>
@@ -1066,9 +1151,10 @@ export function NotesStudyPage({
                             variant="drawer"
                             value={activeDraft}
                             onBlurCommitted={onPanelBlurCommitted}
+                            onDraftChange={(html) => { if (activeSectionId) { preserveDraft(activeSectionId, html); setSaveStates((states) => ({ ...states, [activeSectionId]: "draft" })); } }}
                           />
                           <p className="notes-lesson-edit-hint">
-                            {"// tap Done or leave the editor to save"}
+                            {"Tap Done or leave the editor to save."}
                           </p>
                         </>
                       ) : (
@@ -1264,6 +1350,7 @@ export function NotesStudyPage({
                   {panelEditing ? (
                     <button
                       type="button"
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => panelEditorRef.current?.commit()}
                       className="landing-notes-drawer-done"
                     >
@@ -1279,7 +1366,8 @@ export function NotesStudyPage({
                     </button>
                   )}
                 </header>
-                <div className="landing-notes-drawer-body">
+                <div className="landing-notes-drawer-body" style={{ "--notes-font-size": `${textSize}px` } as CSSProperties}>
+                  {readerTools}
                   {panelEditing ? (
                     <div>
                       <NotesRichEditor
@@ -1287,13 +1375,14 @@ export function NotesStudyPage({
                         variant="drawer"
                         value={activeDraft}
                         onBlurCommitted={onPanelBlurCommitted}
+                            onDraftChange={(html) => { if (activeSectionId) { preserveDraft(activeSectionId, html); setSaveStates((states) => ({ ...states, [activeSectionId]: "draft" })); } }}
                       />
                       <p className="landing-notes-drawer-hint">
-                        {"// tap Done or leave the editor to save"}
+                        {"Tap Done or leave the editor to save."}
                       </p>
                     </div>
                   ) : (
-                    <NotesSectionReadPanel content={activeDraft} />
+                    <div className="notes-reading-body"><NotesSectionReadPanel content={activeDraft} /></div>
                   )}
                 </div>
                   </motion.div>

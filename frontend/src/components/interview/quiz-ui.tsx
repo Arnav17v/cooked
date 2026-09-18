@@ -113,13 +113,9 @@ export function QuizPrimaryButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`group relative inline-flex w-full items-center justify-center overflow-hidden bg-lv-cream px-5 py-3.5 font-jetbrains text-xs font-medium uppercase tracking-widest text-lv-black transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto ${className}`}
+      className={`prep-button w-full sm:w-auto ${className}`}
     >
-      <span
-        aria-hidden
-        className="absolute inset-0 -translate-x-full bg-lv-rust transition-transform duration-300 ease-lv group-hover:translate-x-0"
-      />
-      <span className="relative z-10 transition-colors group-hover:text-lv-cream">{children}</span>
+      {children}
     </button>
   );
 }

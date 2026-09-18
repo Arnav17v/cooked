@@ -1,6 +1,8 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import Link from "next/link";
+import { quizReturnHref } from "@/lib/dashboard-nav";
 import { Briefcase } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -59,7 +61,7 @@ export function QuizStartClient() {
     const raw = window.localStorage.getItem(QUIZ_START_HANDOFF_KEY);
     if (!raw?.trim()) {
       setPhase("error");
-      setErrorMsg("No quiz start context — open this from your roast dashboard.");
+      setErrorMsg("No quiz start context — open this from your resume dashboard.");
       return;
     }
 
@@ -199,7 +201,7 @@ export function QuizStartClient() {
         detail={
           jobDescription.trim()
             ? "Tailoring questions to your job description and resume. Do not close this tab."
-            : "Reading your roast and generating interview prompts. Do not close this tab."
+            : "Reading your resume and generating interview prompts. Do not close this tab."
         }
       />
     );
@@ -214,7 +216,8 @@ export function QuizStartClient() {
 
   return (
     <div className="space-y-6">
-      <QuizEditorPane filename="session_config.json" icon={<Briefcase className="h-3.5 w-3.5 shrink-0 text-lv-rust" strokeWidth={2} />}>
+      <Link className="inline-block text-sm text-lv-cream-dim hover:text-lv-cream" href={quizReturnHref(handoff.return_to, handoff.resumeId)}>← Back to {handoff.origin === "plan" ? "plan" : handoff.origin === "notes" ? "notes" : "practice"}</Link>
+      <QuizEditorPane filename="Practice session" icon={<Briefcase className="h-3.5 w-3.5 shrink-0 text-lv-rust" strokeWidth={2} />}>
         <QuizMetaGrid>
           <QuizMetaRow label="Target role" value={handoff.role} />
           <QuizMetaRow label="Quiz length" value={quizLengthLabel(questionCount)} />
@@ -223,11 +226,11 @@ export function QuizStartClient() {
       </QuizEditorPane>
 
       <QuizEditorPane
-        filename={hasJd ? "job_description.txt" : "job_description.txt (optional)"}
+        filename={hasJd ? "Job description" : "Job description (optional)"}
         footer={
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-sm text-[11px] leading-relaxed text-lv-cream/45">
-              JD is stored for this quiz only — not saved to your roast. Leave blank for the standard quiz.
+              JD is stored for this quiz only — not saved to your resume. Leave blank for the standard quiz.
             </p>
             <QuizPrimaryButton onClick={() => void onStartInterview()} className="shrink-0 sm:min-w-[240px]">
               {hasJd ? "Start job-targeted interview" : "Start interview"}
@@ -244,7 +247,7 @@ export function QuizStartClient() {
           hint={
             jdWordCount > 0
               ? `${jdWordCount} words — questions will lean on this JD plus your resume.`
-              : "Optional. Same roast can prep for Razorpay, Zepto, Groww — paste a different JD each time."
+              : "Optional. Same resume can prep for Razorpay, Zepto, Groww — paste a different JD each time."
           }
         />
       </QuizEditorPane>

@@ -1830,53 +1830,6 @@ html.landing-cursor-click .landing-cur-dot {
   animation: landing-skeleton-pulse 1.4s ease-in-out infinite;
 }
 
-/* Map legacy lc-* utilities inside dashboard to landing tokens */
-.landing-dash-app .border-lc-border,
-.landing-dash-app .border-lc-divider {
-  border-color: var(--lv-rule) !important;
-}
-
-.landing-dash-app .bg-lc-surface,
-.landing-dash-app .bg-lc-elevated,
-.landing-dash-app .bg-\[\#1d1d1d\] {
-  background: var(--lv-surface) !important;
-}
-
-.landing-dash-app .text-lc-text {
-  color: var(--lv-cream) !important;
-}
-
-.landing-dash-app .text-lc-muted,
-.landing-dash-app .text-lc-dim {
-  color: var(--lv-cream-dim) !important;
-}
-
-.landing-dash-app .text-lc-orange {
-  color: var(--lv-rust) !important;
-}
-
-.landing-dash-app .bg-lc-orange {
-  background: var(--lv-cream) !important;
-  color: var(--lv-black) !important;
-}
-
-.landing-dash-app .hover\:bg-lc-orangeHover:hover {
-  background: var(--lv-rust) !important;
-  color: var(--lv-cream) !important;
-}
-
-.landing-dash-app button[class*="bg-lc-orange"] {
-  font-family: var(--font-jetbrains), "DM Mono", monospace;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-
-.landing-dash-app [class*="border-l-lc-orange"],
-.landing-dash-app .border-l-\[\#EF4444\] {
-  border-left-color: var(--lv-rust) !important;
-}
-
 /* Dashboard mobile header */
 .landing-dash-mobile-bar {
   border-bottom: 1px solid var(--lv-rule);
@@ -7738,11 +7691,7 @@ html.landing-cursor-click .landing-cur-dot {
      Main body padding for mobile dock
      ========================================= */
   
-  @media (max-width: 767px) {
-    body {
-      padding-bottom: 120px !important;
-    }
-  }
+
   
   /* =========================================
      Terminal-style brand label with blinking cursor
@@ -7938,4 +7887,27 @@ html.landing-cursor-click .landing-cur-dot {
   border-color: var(--lv-rust) !important;
   background: var(--lv-rust-glow) !important;
   color: var(--lv-cream) !important;
+}
+
+/* Shared prep navigation and controls: explicit component styles, no utility remapping. */
+.prep-navigation { display: none; min-height: 0; }
+.report-navigation { display: flex; gap: 4px; max-width: 740px; margin: 0 auto 24px; padding: 4px; border-bottom: 1px solid var(--lv-rule); }
+.report-navigation a { flex: 1; padding: 12px 6px; color: var(--lv-cream-dim); text-align: center; font-size: 13px; border-radius: 6px; }
+.report-navigation a[aria-current="page"] { color: var(--lv-cream); background: var(--lv-surface); box-shadow: inset 0 -2px var(--lv-rust); }
+.prep-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 20px; border-radius: 8px; background: var(--lv-rust); color: #171717; font-family: var(--font-inter), sans-serif; font-size: 14px; font-weight: 600; transition: background 150ms; }
+.prep-button:hover { background: var(--lv-rust-dim); }
+.prep-button:disabled { opacity: .45; cursor: not-allowed; }
+.prep-button:focus-visible, .prep-navigation a:focus-visible, .report-navigation a:focus-visible { outline: 2px solid var(--lv-rust); outline-offset: 3px; }
+.notes-reader-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; color: var(--lv-cream-dim); font-size: 12px; }
+.notes-reader-tools select { margin-left: 8px; padding: 6px; border: 1px solid var(--lv-rule); border-radius: 6px; background: var(--lv-surface); color: var(--lv-cream); }
+.landing-v3 .notes-reading-body > div, .landing-v3 .notes-reading-body .notes-rich-html, .landing-v3 .notes-reading-body p, .landing-v3 .notes-reading-body li { font-size: var(--notes-font-size, 17px); line-height: 1.8; }
+@media (max-width: 768px) {
+  .prep-navigation { position: fixed; z-index: 1000; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 4px; padding: 6px 12px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--lv-rule); background: #171717; }
+  .prep-navigation nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); flex: 1; }
+  .prep-navigation nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-height: 48px; color: var(--lv-cream-dim); font-size: 11px; border-radius: 8px; }
+  .prep-navigation nav a[aria-current="page"] { color: var(--lv-rust); background: rgba(255, 77, 0, .07); }
+  .prep-navigation .landing-nav-user-dropdown { top: auto; bottom: calc(100% + 16px); right: 0; }
+  .prep-navigation .landing-nav-user-btn { min-width: 40px; min-height: 44px; }
+  body:has(.prep-navigation) { padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+  .report-navigation a { font-size: 12px; }
 }

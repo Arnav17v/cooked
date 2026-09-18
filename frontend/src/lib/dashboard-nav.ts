@@ -33,3 +33,25 @@ export function buildPlanHref(resumeId: string | null | undefined): string {
   if (resumeId) return `/plan?resume=${encodeURIComponent(resumeId)}`;
   return "/plan";
 }
+
+/** The same four destinations on desktop and mobile. Report keeps its own subnavigation. */
+export function prepNavigation(resumeId: string | null, pathname: string, tab: ResultTabId | null) {
+  return [
+    { label: "Plan", href: buildPlanHref(resumeId), active: pathname === "/plan" || pathname.startsWith("/prep") },
+    { label: "Notes", href: buildDashboardHref(resumeId, "notes"), active: pathname === "/notes" || tab === "notes" },
+    { label: "Practice", href: buildDashboardHref(resumeId, "questions"), active: pathname.startsWith("/quiz") || pathname === "/interview" || tab === "questions" },
+    { label: "Report", href: buildDashboardHref(resumeId), active: pathname === "/roast" || (tab !== null && ["score", "insights", "review"].includes(tab)) },
+  ];
+}
+
+export function quizReturnHref(returnTo: string | undefined, resumeId?: string): string {
+  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+    try {
+      const url = new URL(returnTo, "https://local.invalid");
+      if (url.origin === "https://local.invalid" && ["/dashboard", "/plan"].includes(url.pathname)) {
+        return url.pathname + url.search;
+      }
+    } catch { /* Use the known practice destination. */ }
+  }
+  return buildDashboardHref(resumeId, "questions");
+}

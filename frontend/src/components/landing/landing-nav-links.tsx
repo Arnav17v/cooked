@@ -6,9 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import { LandingNavUserMenu } from "@/components/landing/landing-nav-user-menu";
 import {
-  buildDashboardHref,
-  buildPlanHref,
-  DASHBOARD_NAV,
+  prepNavigation,
   dashboardTabFromSearch,
 } from "@/lib/dashboard-nav";
 
@@ -51,27 +49,14 @@ export function LandingNavLinks({ onNavigate, className = "" }: Props) {
     );
   }
 
-  const planActive = pathname === "/plan" || pathname.startsWith("/prep");
 
   return (
     <div className={`landing-nav-desktop--signed-in ${className}`.trim()}>
-      {DASHBOARD_NAV.map(({ id, label }) => (
-        <Link
-          key={id}
-          href={buildDashboardHref(resumeId, id)}
-          className={linkClass(activeTab === id)}
-          onClick={onNavigate}
-        >
+      {prepNavigation(resumeId, pathname, activeTab).map(({ href, label, active }) => (
+        <Link key={label} href={href} className={linkClass(active)} aria-current={active ? "page" : undefined} onClick={onNavigate}>
           {label}
         </Link>
       ))}
-      <Link
-        href={buildPlanHref(resumeId)}
-        className={planActive ? "landing-nav-plan landing-nav-plan--active" : "landing-nav-plan"}
-        onClick={onNavigate}
-      >
-        Plan
-      </Link>
       <LandingNavUserMenu onNavigate={onNavigate} />
     </div>
   );

@@ -40,7 +40,6 @@ import {
   getScore,
 } from "@/lib/api";
 import { QUIZ_START_HANDOFF_KEY, type QuizStartHandoff } from "@/lib/interview-quiz-start-handoff";
-import { openQuizStartInNewTab } from "@/lib/open-quiz-start-tab";
 import {
   parseInterviewQuizScores,
   type StoredQuizScore,
@@ -419,6 +418,8 @@ export function RoastDashboard() {
       "Software Engineer";
     const handoff: QuizStartHandoff = {
       resumeId: resolvedResumeId,
+      origin: "dashboard",
+      return_to: buildDashboardHref(resolvedResumeId, "questions"),
       role,
       hard_mode: false,
       question_count: quizCountForLength(quizLength),
@@ -430,7 +431,7 @@ export function RoastDashboard() {
       return;
     }
     setQuizStarting(true);
-    openQuizStartInNewTab(window.location.origin, (path) => router.push(path));
+    router.push("/quiz/start");
     window.setTimeout(() => setQuizStarting(false), 900);
   }
 
@@ -591,6 +592,13 @@ export function RoastDashboard() {
             className="animate-dashboard-main-in flex-1 overflow-y-auto px-4 pb-16 pt-4 lg:px-8 lg:pt-6"
             aria-label="Resume prep detail"
           >
+            {["score", "insights", "review"].includes(resultTab) ? (
+              <nav className="report-navigation" aria-label="Resume report">
+                {([{ id: "score", label: "Resume Score" }, { id: "insights", label: "AI Insights" }, { id: "review", label: "In-depth review" }] as const).map(({ id, label }) => (
+                  <Link key={id} href={buildDashboardHref(resolvedResumeId, id)} aria-current={resultTab === id ? "page" : undefined}>{label}</Link>
+                ))}
+              </nav>
+            ) : null}
             {resultTab === "review" && resolvedResumeId ? (
               <div
                 className="animate-dashboard-panel-in mx-auto w-full max-w-[960px]"
@@ -688,14 +696,6 @@ export function RoastDashboard() {
 
               {resultTab === "questions" ? (
                 <div className="space-y-8">
-                  <QuizHistoryList sessions={quizHistory} loading={quizHistoryLoading} />
-
-                  {quizScores.length > 0 ? (
-                    <div>
-                      <QuizImprovementChart scores={quizScores} />
-                    </div>
-                  ) : null}
-
                   <div className="quiz-session-setup">
                     <div>
                       <h3 className="text-lg font-semibold tracking-tight text-lc-text">Practice your interview</h3>
@@ -737,6 +737,14 @@ export function RoastDashboard() {
                       </p>
                     ) : null}
                   </div>
+                  <QuizHistoryList sessions={quizHistory} loading={quizHistoryLoading} />
+
+                  {quizScores.length > 0 ? (
+                    <div>
+                      <QuizImprovementChart scores={quizScores} />
+                    </div>
+                  ) : null}
+
                 </div>
               ) : null}
 

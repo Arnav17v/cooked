@@ -1,5 +1,7 @@
 "use client";
 
+import { quizReturnHref } from "@/lib/dashboard-nav";
+
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -98,7 +100,7 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
     if (!seed) {
       const raw = localStorage.getItem(skey) ?? sessionStorage.getItem(skey);
       if (!raw) {
-        setInitError("Start the quiz from your roast dashboard (quiz me on this).");
+        setInitError("Start a quiz from Practice.");
         return;
       }
       try {
@@ -110,8 +112,9 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
         }
         seed = parsed;
         seedHandoffBySessionId.set(sessionId, seed);
+        // Keep the question seed in this tab until submission, so reload/back can restore drafts.
+        sessionStorage.setItem(skey, raw);
         localStorage.removeItem(skey);
-        sessionStorage.removeItem(skey);
       } catch {
         setInitError("Could not load this quiz session.");
         return;
@@ -274,6 +277,7 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
       }
       try {
         localStorage.removeItem(answersStorageKey(sessionId));
+        sessionStorage.removeItem(SEED_PREFIX + sessionId);
       } catch {
         /* ignore */
       }
@@ -291,7 +295,7 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
   if (result) {
     const headline =
       result.one_liner?.trim() ||
-      "Technically solid in places, but gaps show when you go deeper on fundamentals.";
+      "Review your answers and feedback below.";
 
     const pa = Array.isArray(result.per_answer) ? result.per_answer : [];
     const nReport = Math.max(nq, pa.length, 1);
@@ -309,7 +313,7 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
 
     const meta = readQuizSessionMeta(sessionId);
     const planReturn =
-      meta?.origin === "plan" && meta.return_to?.trim() ? meta.return_to.trim() : null;
+      meta?.origin === "plan" && meta.return_to?.trim() ? quizReturnHref(meta.return_to, meta.resumeId) : null;
 
     if (planReturn) {
       return (
@@ -334,7 +338,9 @@ export function InterviewQuiz({ sessionId }: { sessionId: string }) {
         questions={questions}
         answers={trimmedAnswers}
         submitError={submitError}
-        onBackToDashboard={() => router.push("/dashboard")}
+        resumeId={meta?.resumeId}
+        backLabel={meta?.origin === "notes" ? "Back to notes" : "Back to practice"}
+        onBackToDashboard={() => router.push(quizReturnHref(meta?.return_to, meta?.resumeId))}
       />
     );
   }
