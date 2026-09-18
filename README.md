@@ -1,63 +1,56 @@
 # Get Uncooked
 
-AI resume roast and interview-prep app. Upload a resume, pick a target role, get a brutally honest **Cooked Score**, red flags with rewrites, and 10–15 interview questions pulled from your actual bullets.
+Interview preparation built from a resume. This monorepo combines a Next.js interface with a FastAPI backend for resume analysis, AI Insights, in-depth reviews, personalized interview questions, practice, notes, and prep plans.
 
-Monorepo. v1 runs on a completely free stack: Gemini 2.0 Flash + Groq Llama 3.3 70B, FastAPI on Render, Postgres on Railway, R2 for PDFs, Clerk for auth, PostHog for analytics.
+[Project website](https://getuncooked.pro) · [Backend](backend/) · [Engineering decisions](plans/decisions.md)
 
-> **New agents / contributors start here**: read [`AGENTS.md`](./AGENTS.md), then [`plans/`](./plans/README.md). The full knowledge base is in `plans/`. Cursor auto-loads [`.cursor/rules/*.mdc`](./.cursor/rules/).
+## Engineering highlights
 
-## Layout
+- Python API with async SQLAlchemy, PostgreSQL persistence, and versioned Alembic migrations.
+- Resume text/PDF intake and a background analysis pipeline with Server-Sent Events for progress.
+- A shared LLM router that chooses providers by task and falls back across Google and Groq on recoverable failures.
+- S3-compatible PDF storage, Clerk authentication integration, and scheduled maintenance/reminder tasks.
+- Next.js 15, React, TypeScript, and Tailwind CSS for the frontend.
 
-```
-cooked/
-├── AGENTS.md                # entry point for AI agents
-├── .cursor/rules/           # always-loaded rules
-├── plans/                   # persistent knowledge base (long form)
-├── frontend/                # Next.js 15 (App Router) — Vercel
-└── backend/                 # FastAPI + SQLAlchemy + Alembic — Render
-```
+## Architecture
 
-## Quick start
+The frontend calls FastAPI through `frontend/src/lib/api.ts`. Routes under `backend/app/api/v1/` delegate to services for parsing, analysis, questions, and prep plans. SQLAlchemy models store application state; Alembic tracks schema changes. PDF blobs use S3-compatible storage through `core/storage.py`.
 
-You need:
+Analysis runs through `services/resume/pipeline.py`; the browser receives progress through an SSE endpoint. Provider SDKs live under `services/llm/`, with routing and degraded-result handling in `router.py`.
 
-- Node.js 20+ for the frontend.
-- Python 3.11+ for the backend.
-- A local Postgres or a Railway connection string.
+## Run locally
+
+Prerequisites: Node.js 20+, Python 3.11+, and PostgreSQL. Configure your own database and service credentials; the full AI/auth/PDF flows require the corresponding providers.
 
 ```bash
-# Frontend
-cd frontend
-npm install
-npm run dev                  # http://localhost:3000
-
-# Backend (in a second terminal)
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-cp .env.example .env         # fill in keys
+git clone https://github.com/Arnav17v/cooked.git
+cd cooked/backend
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+cp .env.example .env
+# Edit .env before continuing: DATABASE_URL, AI keys, Clerk and storage settings.
 alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Full setup details, env vars, and troubleshooting: [`plans/setup.md`](./plans/setup.md).
+In a second terminal, from the repository root:
 
-## Phase
+```bash
+cd frontend
+npm install
+# Create .env.local with NEXT_PUBLIC_API_URL=http://localhost:8000
+# and your Clerk configuration (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY).
+npm run dev
+```
 
-v1, free-stack, three must-have features only:
+Open `http://localhost:3000`. Backend health: `http://localhost:8000/api/v1/health`.
+On Windows, activate the virtual environment with `.venv\Scripts\activate`.
 
-1. Resume upload + screenshot-able **Cooked Score** card
-2. Red-flag detection with suggested rewrites
-3. 10–15 personalized interview questions
+See `backend/.env.example` and `backend/app/core/config.py` for current settings. Apply existing migrations with `alembic upgrade head`; a fresh checkout does not need a new initial migration.
 
-See [`plans/current-goals.md`](./plans/current-goals.md) and the 8-step [`plans/tasks.md`](./plans/tasks.md).
+## Status and scope
 
-## The one metric
+This is an evolving application. Provider availability and configured credentials affect the live workflows; no accuracy, latency, usage, or hiring-outcome claims are made here. Some planning documents describe earlier phases; the source code and current settings are the implementation reference.
 
-**Does someone screenshot the Cooked Score and share it?**
-
-If yes, v1 worked. Everything else is secondary. See [D-010](./plans/decisions.md#d-010-v1-scope-locked-at-3-must-haves-success--screenshot-and-share).
-
-## License
-
-Private project. Not open source.
+Contributors: start with [AGENTS.md](AGENTS.md) and [plans/](plans/README.md). The existing project licensing position remains unchanged: no open-source license is granted by this README.

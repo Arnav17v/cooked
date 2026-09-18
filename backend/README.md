@@ -9,7 +9,6 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env             # fill in keys
-alembic revision --autogenerate -m "init"   # generates the first migration (Step 1)
 alembic upgrade head
 python -m uvicorn app.main:app --reload --port 8000
 ```
@@ -30,7 +29,7 @@ backend/
     ├── core/
     │   ├── config.py            # pydantic-settings
     │   ├── scheduler.py         # APScheduler (D-015)
-    │   ├── security.py          # Clerk JWT (stubbed pre-Step-6)
+    │   ├── security.py          # Clerk JWT integration
     │   └── storage.py           # R2 client (S3-compatible)
     ├── db/
     │   ├── session.py           # async SQLAlchemy
@@ -38,7 +37,7 @@ backend/
     ├── models/                  # users, resumes, analyses, questions, practice_sessions
     ├── services/
     │   ├── llm/                 # router + gemini + groq — single LLM boundary (D-011)
-    │   ├── resume/              # parser (pymupdf, 4000-word cap), analyzer, scorer, retention
+    │   ├── resume/              # parser (PDF text extraction and word cap), analyzer, scorer, retention
     │   └── questions/           # generator, evaluator
     └── api/v1/                  # routes/ + router.py aggregator
 ```
@@ -49,7 +48,7 @@ backend/
 - **No Redis, no Celery.** `BackgroundTasks` + SSE + APScheduler only.
 - **All schema changes are Alembic migrations.** No manual `ALTER TABLE`.
 - **Never expose `id` in public URLs.** Use `share_slug`.
-- **3 analyses/user/day** enforced in code before the LLM call.
+- Analysis limits are configurable; see `app/core/config.py` and `app/services/users/limits.py`.
 - **4000-word cap** enforced in `parser.py` before storage.
 - **Raw resume text:** kept by default; optional 24h-style delete if `RAW_TEXT_RETENTION_ENABLED=true` (retention sweep).
 
